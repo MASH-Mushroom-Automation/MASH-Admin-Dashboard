@@ -78,7 +78,7 @@ export function LoginForm() {
         </div>
 
         {/* Remember Me & Forgot Password */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between my-6">
           <div className="flex items-center gap-2">
             <Checkbox
               id="remember"
@@ -100,7 +100,7 @@ export function LoginForm() {
         {/* Login Button */}
         <Button
           type="submit"
-          className="w-full bg-green-700 py-3 text-white hover:bg-green-800"
+          className="w-full bg-green-700 py-6 text-white hover:bg-green-800"
         >
           Login
         </Button>
