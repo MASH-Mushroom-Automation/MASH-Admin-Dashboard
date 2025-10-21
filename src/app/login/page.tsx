@@ -1,5 +1,6 @@
 import { LoginForm } from "@/app/login/login-form";
 import { Header } from "@/app/login/header";
+import { Footer } from "@/app/login/footer";
 
 export default function LoginPage() {
   return (
@@ -8,6 +9,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center px-4 py-12">
         <LoginForm />
       </div>
+      <Footer />
     </div>
   );
 }

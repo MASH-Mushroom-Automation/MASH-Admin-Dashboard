@@ -23,7 +23,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md border border-gray-300 bg-white p-8 shadow-sm">
       {/* User Icon */}
-      <div className="mb-6 flex justify-center">
+      <div className=" flex justify-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
           <User className="h-8 w-8 text-teal-600" />
         </div>
@@ -36,28 +36,49 @@ export function LoginForm() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email Input */}
-        <div>
+        <div className="relative">
           <Input
+            id="email"
             type="email"
-            placeholder="Email or Phone Number"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-600"
+            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-4 pt-4 pb-2 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-0"
+            placeholder="Email or Phone Number"
             required
           />
+          <label
+            htmlFor="email"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base transition-all 
+      peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-gray-400 
+      peer-placeholder-shown:text-base 
+      peer-focus:top-1 peer-focus:text-sm peer-focus:text-blue-600 
+      bg-gray-50 px-1"
+          >
+            Email or Phone Number
+          </label>
         </div>
 
         {/* Password Input */}
-        <div>
+        <div className="relative mt-6">
           <Input
+            id="password"
             type="password"
-            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-600"
+            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-4 pt-4 pb-2 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-0"
+            placeholder="Password"
             required
           />
+          <label
+            htmlFor="password"
+            className="absolute left-4 top-0.5 -translate-y-1/2 text-gray-500 text-base transition-all 
+      peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-gray-400 
+      peer-placeholder-shown:text-base 
+      peer-focus:top-1 peer-focus:text-sm peer-focus:text-blue-600 
+      bg-gray-50 px-1"
+          >
+            Password
+          </label>
         </div>
 
         {/* Remember Me & Forgot Password */}
@@ -67,6 +88,9 @@ export function LoginForm() {
               id="remember"
               checked={rememberMe}
               onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              className="w-5 h-5 border border-gray-300 rounded-sm 
+             data-[state=checked]:bg-green-700 
+             data-[state=checked]:border-green-700"
             />
             <label htmlFor="remember" className="text-sm text-gray-700">
               Remember Me
@@ -87,7 +111,7 @@ export function LoginForm() {
       </form>
 
       {/* Divider */}
-      <div className="my-6 flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <div className="flex-1 border-t border-gray-300" />
         <span className="text-sm text-gray-500">or</span>
         <div className="flex-1 border-t border-gray-300" />
