@@ -23,12 +23,12 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md border border-gray-300 bg-white p-8 shadow-sm">
       {/* User Icon */}
-      <div className=" flex justify-center">
+      <div className="flex justify-center">
         <img src="/mash-grow-logo.png" alt="M" className="w-15 h-15" />
       </div>
 
       {/* Heading */}
-      <h1 className="mb-8 text-center text-2xl font-bold text-gray-900">
+      <h1 className=" text-center text-2xl font-bold text-gray-900">
         Login to your account
       </h1>
 
@@ -40,17 +40,16 @@ export function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-4 pt-4 pb-2 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-0"
-            placeholder="Email or Phone Number"
-            required
+            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
+            placeholder=""
           />
           <label
             htmlFor="email"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base transition-all 
-      peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-gray-400 
-      peer-placeholder-shown:text-base 
-      peer-focus:top-1 peer-focus:text-sm peer-focus:text-blue-600 
-      bg-gray-50 px-1"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-white-500 text-base transition-all 
+            peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-gray-400 
+            peer-placeholder-shown:text-base 
+            peer-focus:top-[-1] peer-focus:text-sm peer-focus:text-green-700 
+             bg-gray-50  "
           >
             Email or Phone Number
           </label>
@@ -63,16 +62,15 @@ export function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-4 pt-4 pb-2 text-gray-900 placeholder-transparent focus:border-blue-500 focus:ring-0"
-            placeholder="Password"
-            required
+            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
+            placeholder=""
           />
           <label
             htmlFor="password"
             className="absolute left-4 top-0.5 -translate-y-1/2 text-gray-500 text-base transition-all 
       peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-gray-400 
       peer-placeholder-shown:text-base 
-      peer-focus:top-1 peer-focus:text-sm peer-focus:text-blue-600 
+      peer-focus:top-[-1] peer-focus:text-sm peer-focus:text-green-700 
       bg-gray-50 px-1"
           >
             Password
@@ -109,14 +107,14 @@ export function LoginForm() {
       </form>
 
       {/* Divider */}
-      <div className="flex items-center gap-4">
+      {/* <div className="flex items-center gap-4">
         <div className="flex-1 border-t border-gray-300" />
         <span className="text-sm text-gray-500">or</span>
         <div className="flex-1 border-t border-gray-300" />
-      </div>
+      </div> */}
 
       {/* Google Sign In */}
-      <Button
+      {/* <Button
         type="button"
         variant="outline"
         className="w-full border border-gray-300 py-3 text-gray-900 hover:bg-gray-50 bg-transparent"
@@ -140,7 +138,7 @@ export function LoginForm() {
           />
         </svg>
         Sign in with Google
-      </Button>
+      </Button> */}
     </Card>
   );
 }
