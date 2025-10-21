@@ -38,19 +38,19 @@ export default function ECommerceSection() {
             <CardDescription>Today's performance</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div>
                 <p className="text-3xl font-bold text-foreground">₱310,820</p>
                 <p className="text-sm text-muted-foreground">Total Sales</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-xl font-bold text-foreground">200</p>
-                  <p className="text-xs text-muted-foreground">Orders</p>
+                  <p className="text-3xl font-bold text-foreground">200</p>
+                  <p className="text-sm text-muted-foreground">Orders</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold text-foreground">₱12,450</p>
-                  <p className="text-xs text-muted-foreground">Today</p>
+                  <p className="text-3xl font-bold text-foreground">₱12,450</p>
+                  <p className="text-sm text-muted-foreground">Today</p>
                 </div>
               </div>
             </div>

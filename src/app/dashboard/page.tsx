@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import Navbar from "@/components/admin-view/navbar"
-import Sidebar from "@/components/admin-view/sidebar"
-import DashboardContent from "@/components/admin-view/dashboard-content"
+import Navbar from "@/components/dashboard/navbar"
+import Sidebar from "@/components/dashboard/sidebar"
+import DashboardContent from "@/components/dashboard/dashboard-content"
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)

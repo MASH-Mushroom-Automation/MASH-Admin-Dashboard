@@ -63,7 +63,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             >
               <span className="flex items-center gap-3">
                 <ShoppingCart className="w-5 h-5" />
-                {isOpen && <span>Management</span>}
+                {isOpen && <span>E-commerce</span>}
               </span>
               {isOpen && (
                 <ChevronDown
