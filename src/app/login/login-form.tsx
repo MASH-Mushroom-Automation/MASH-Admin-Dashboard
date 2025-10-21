@@ -24,9 +24,7 @@ export function LoginForm() {
     <Card className="w-full max-w-md border border-gray-300 bg-white p-8 shadow-sm">
       {/* User Icon */}
       <div className=" flex justify-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
-          <User className="h-8 w-8 text-teal-600" />
-        </div>
+        <img src="/mash-grow-logo.png" alt="M" className="w-15 h-15" />
       </div>
 
       {/* Heading */}
