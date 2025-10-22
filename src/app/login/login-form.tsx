@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,16 +16,25 @@ export function LoginForm() {
   const { login, isAuthenticated, user, error } = useAuthStore();
   const router = useRouter();
 
+  // Ensure initial state is set on client to avoid hydration mismatch
+  useEffect(() => {
+    // This effect runs only on the client, ensuring state alignment
+    const storedUser = useAuthStore.getState().user;
+    if (storedUser) {
+      router.push("/dashboard");
+    }
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("ogin form submitted");
+    console.log("Login form submitted");
     console.log("Input values:", { email, password, rememberMe });
 
     try {
       console.log("Attempting login...");
-      const response = await login(email, password, rememberMe);
-      console.log("Login successful:", response);
+      await login(email, password, rememberMe);
+      console.log("Login successful");
 
       // Clear form after success
       setEmail("");
@@ -45,7 +54,7 @@ export function LoginForm() {
   };
 
   if (isAuthenticated && user) {
-    router.push("/dashboard");
+    // Avoid rendering on server; handle redirect on client
     return null;
   }
 
@@ -65,6 +74,8 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
+            placeholder=""
+            suppressHydrationWarning // Prevent hydration warning for initial value
           />
           <label
             htmlFor="email"
@@ -84,6 +95,8 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
+            placeholder=""
+            suppressHydrationWarning
           />
           <label
             htmlFor="password"
@@ -106,6 +119,7 @@ export function LoginForm() {
               className="w-5 h-5 border border-gray-300 rounded-sm 
               data-[state=checked]:bg-green-700 
               data-[state=checked]:border-green-700"
+              suppressHydrationWarning // Prevent hydration warning for initial checked state
             />
             <label htmlFor="remember" className="text-sm text-gray-700">
               Remember Me
