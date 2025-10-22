@@ -3,7 +3,8 @@
 import { useState } from "react"
 import Navbar from "@/components/dashboard/navbar"
 import Sidebar from "@/components/sidebar"
-import DashboardContent from "@/components/dashboard/dashboard-content"
+import RegisterChamber from "@/components/mash-grow/register-content"
+import UsersContent from "@/components/ecommerce/content/users-content"
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -16,7 +17,7 @@ export default function Home() {
       <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 overflow-auto">
-          <DashboardContent />
+          <RegisterChamber />
         </main>
       </div>
     </div>

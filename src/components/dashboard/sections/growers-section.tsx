@@ -12,7 +12,7 @@ const applicationData = [
 ]
 
 const pendingApplications = [
-  { name: "John Doe", role: "Grower", location: "Mindanao", date: "2024-10-10", days: 5 },
+  { name: "Mika Dela Cruz", role: "Grower", location: "Mindanao", date: "2024-10-10", days: 5 },
   { name: "Maria Santos", role: "Seller", location: "Caloocan", date: "2024-10-08", days: 7 },
   { name: "Pedro Reyes", role: "Grower", location: "Negros", date: "2024-10-05", days: 10 },
 ]
