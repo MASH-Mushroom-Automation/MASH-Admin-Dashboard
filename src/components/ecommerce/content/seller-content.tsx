@@ -25,7 +25,7 @@ export function SellerContent() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="mb-6">
-          <TabsList className="grid w-full max-w-md grid-cols-4">
+          <TabsList className="flex w-full ">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="approval">For Approval</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -44,13 +44,13 @@ export function SellerContent() {
               className="pl-10"
             />
           </div>
-          <Button variant="outline" size="icon">
+          {/* <Button variant="outline" size="icon">
             <Filter className="w-4 h-4" />
-          </Button>
-          <Button className="gap-2">
+          </Button> */}
+          {/* <Button className="gap-2">
             <Plus className="w-4 h-4" />
             Create Seller
-          </Button>
+          </Button> */}
         </div>
 
         {/* Table Section */}

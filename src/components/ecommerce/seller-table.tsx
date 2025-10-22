@@ -16,39 +16,26 @@ interface Seller {
 const mockSellers: Seller[] = [
   {
     id: "1",
-    name: "John Smith",
+    name: "Jin Failana",
     storeName: "Smith Electronics",
     email: "john@smithelectronics.com",
     status: "pending",
   },
   {
     id: "2",
-    name: "Sarah Johnson",
-    storeName: "Johnson Fashion",
-    email: "sarah@johnsonfashion.com",
+    name: "Karen Smith",
+    storeName: "Smith Electronics",
+    email: "john@smithelectronics.com",
     status: "approved",
   },
   {
     id: "3",
-    name: "Mike Chen",
-    storeName: "Chen Home Goods",
-    email: "mike@chenhomegoods.com",
+    name: "Anne Curtis",
+    storeName: "Smith Electronics",
+    email: "john@smithelectronics.com",
     status: "rejected",
   },
-  {
-    id: "4",
-    name: "Emma Davis",
-    storeName: "Davis Books",
-    email: "emma@davisbooks.com",
-    status: "approved",
-  },
-  {
-    id: "5",
-    name: "Alex Wilson",
-    storeName: "Wilson Sports",
-    email: "alex@wilsonsports.com",
-    status: "pending",
-  },
+ 
 ]
 
 export function SellerTable({ activeTab, searchQuery }: { activeTab: TabType; searchQuery: string }) {

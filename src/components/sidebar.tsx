@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, LayoutDashboard, Settings, ShoppingCart } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useState, useEffect } from "react"
+import { ChevronDown, LayoutDashboard, Sprout, ShoppingCart } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -13,14 +13,24 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
-  const [managementOpen, setManagementOpen] = useState(true)
+  const [isMashMarketOpen, setIsMashMarketOpen] = useState(false)
+  const [isMashGrowOpen, setIsMashGrowOpen] = useState(false)
   const pathname = usePathname()
 
-  const managementChildren = ["Users", "Sellers", "Orders", "Content Management System"]
+  // Keep the correct section open based on current route
+  useEffect(() => {
+    if (pathname.startsWith("/mash-market")) setIsMashMarketOpen(true)
+    if (pathname.startsWith("/mash-grow")) setIsMashGrowOpen(true)
+  }, [pathname])
 
-  // Detect if any management route is active
-  const isManagementActive = managementChildren.some((child) =>
-    pathname.startsWith(`/ecommerce/${child.toLowerCase()}`)
+  const mashMarketChildren = ["Users", "Sellers", "Orders", "CMS"]
+  const mashGrowChildren = ["User", "CMS"]
+
+  const isMashMarketActive = mashMarketChildren.some((child) =>
+    pathname.startsWith(`/mash-market/${child.toLowerCase()}`)
+  )
+  const isMashGrowActive = mashGrowChildren.some((child) =>
+    pathname.startsWith(`/mash-grow/${child.toLowerCase()}`)
   )
 
   return (
@@ -45,6 +55,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           )}
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {/* Dashboard */}
           <NavItem
@@ -55,92 +66,43 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             pathname={pathname}
           />
 
-          {/* Management Section */}
-          <div>
-            <button
-              onClick={() => setManagementOpen(!managementOpen)}
-              className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition-colors
-                ${
-                  isManagementActive
-                    ? "bg-primary/15 text-primary font-semibold"
-                    : "text-gray-400 font-normal hover:text-gray-400 hover:bg-primary/15"
-                }`}
-              title={isOpen ? "" : "MashMarket"}
-            >
-              <span className="flex items-center gap-3">
-                <ShoppingCart className="w-5 h-5" />
-                {isOpen && <span>MashMarket</span>}
-              </span>
-              {isOpen && (
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${managementOpen ? "rotate-180" : ""}`}
-                />
-              )}
-            </button>
-
-            {/* Sub Items */}
-            {managementOpen && isOpen && (
-              <div className="ml-4 mt-2 space-y-1 border-l border-sidebar-border pl-4">
-                <SubNavItem label="Users" href="/ecommerce/user" pathname={pathname} />
-                <SubNavItem label="Sellers" href="/ecommerce/seller" pathname={pathname} />
-                <SubNavItem label="Orders" href="/ecommerce/order" pathname={pathname} />
-                <SubNavItem label="CMS" href="/ecommerce/cms" pathname={pathname} />
-              </div>
-            )}
-          </div>
-
+          {/* MashMarket Section */}
+          <CollapsibleSection
+            title="MashMarket"
+            icon={<ShoppingCart className="w-5 h-5" />}
+            isOpen={isOpen}
+            isActive={isMashMarketActive}
+            isExpanded={isMashMarketOpen}
+            onToggle={() => setIsMashMarketOpen((prev) => !prev)}
+          >
+            <SubNavItem label="Users" href="/mash-market/user" pathname={pathname} />
+            <SubNavItem label="Sellers" href="/mash-market/seller" pathname={pathname} />
+            <SubNavItem label="Orders" href="/mash-market/order" pathname={pathname} />
+            <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} />
+          </CollapsibleSection>
 
           {/* MashGrow Section */}
-  <div>
-            <button
-              onClick={() => setManagementOpen(!managementOpen)}
-              className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition-colors
-                ${
-                  isManagementActive
-                    ? "bg-primary/15 text-primary font-semibold"
-                    : "text-gray-400 font-normal hover:text-gray-400 hover:bg-primary/15"
-                }`}
-              title={isOpen ? "" : "MashGrow"}
-            >
-              <span className="flex items-center gap-3">
-                <ShoppingCart className="w-5 h-5" />
-                {isOpen && <span>MashGrow</span>}
-              </span>
-              {isOpen && (
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${managementOpen ? "rotate-180" : ""}`}
-                />
-              )}
-            </button>
-
-            {/* Sub Items */}
-            {managementOpen && isOpen && (
-              <div className="ml-4 mt-2 space-y-1 border-l border-sidebar-border pl-4">
-                <SubNavItem label="user" href="/mashgrow/user" pathname={pathname} />
-                <SubNavItem label="register" href="/mashgrow/seller" pathname={pathname} />
-              </div>
-            )}
-          </div>
-
-
-
-          {/* Settings */}
-          <NavItem
-            icon={<Settings className="w-5 h-5" />}
-            label="Settings"
-            href="/settings"
+          <CollapsibleSection
+            title="MashGrow"
+            icon={<Sprout className="w-5 h-5" />}
             isOpen={isOpen}
-            pathname={pathname}
-          />
+            isActive={isMashGrowActive}
+            isExpanded={isMashGrowOpen}
+            onToggle={() => setIsMashGrowOpen((prev) => !prev)}
+          >
+            <SubNavItem label="User" href="/mash-grow/user" pathname={pathname} />
+            <SubNavItem label="CMS" href="/mash-grow/cms" pathname={pathname} />
+          </CollapsibleSection>
         </nav>
 
         {/* User Info */}
         <div className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10 flex-shrink-0">
-              <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" />
-              <AvatarFallback>AU</AvatarFallback>
-            </Avatar>
+            <div className="pointer-events-none">
+              <Avatar className="w-10 h-10">
+                <AvatarFallback>AU</AvatarFallback>
+              </Avatar>
+            </div>
             {isOpen && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
@@ -157,6 +119,60 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   )
 }
 
+/* -------------------- Collapsible Section -------------------- */
+function CollapsibleSection({
+  title,
+  icon,
+  isOpen,
+  isActive,
+  isExpanded,
+  onToggle,
+  children,
+}: {
+  title: string
+  icon: React.ReactNode
+  isOpen: boolean
+  isActive: boolean
+  isExpanded: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggle()
+        }}
+        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition-colors
+          ${
+            isActive
+              ? "bg-primary/15 text-primary font-semibold"
+              : "text-gray-400 font-normal hover:text-gray-400 hover:bg-primary/15"
+          }`}
+        title={isOpen ? "" : title}
+      >
+        <span className="flex items-center gap-3">
+          {icon}
+          {isOpen && <span>{title}</span>}
+        </span>
+        {isOpen && (
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+          />
+        )}
+      </button>
+
+      {isExpanded && isOpen && (
+        <div className="ml-4 mt-2 space-y-1 border-l border-sidebar-border pl-4">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* -------------------- NavItem -------------------- */
 function NavItem({
   icon,
   label,
@@ -189,6 +205,7 @@ function NavItem({
   )
 }
 
+/* -------------------- SubNavItem -------------------- */
 function SubNavItem({
   label,
   href,

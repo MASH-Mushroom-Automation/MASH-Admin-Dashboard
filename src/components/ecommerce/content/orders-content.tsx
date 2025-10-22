@@ -37,9 +37,9 @@ export interface OrderLog {
 const mockOrderLogs: OrderLog[] = [
   {
     id: "1",
-    sellerName: "TechStore Pro",
+    sellerName: "Mushroom Hut",
     orderId: "ORD-2024-001",
-    buyerName: "John Doe",
+    buyerName: "Maria Angela",
     orderDate: "2024-10-20",
     amount: 299.99,
     status: "pending-payment",
@@ -49,88 +49,52 @@ const mockOrderLogs: OrderLog[] = [
   },
   {
     id: "2",
-    sellerName: "Fashion Hub",
+    sellerName: "Kyzie Mushroom",
     orderId: "ORD-2024-002",
-    buyerName: "Jane Smith",
+    buyerName: "Ellaine Pollocino",
     orderDate: "2024-10-19",
     amount: 149.5,
     status: "shipment",
     lastUpdated: "2024-10-22 13:15",
-    paymentMethod: "Debit Card",
+    paymentMethod: "GCas",
     notes: "In transit to buyer",
   },
   {
     id: "3",
-    sellerName: "Electronics World",
+    sellerName: "Fungi Farm",
     orderId: "ORD-2024-003",
-    buyerName: "Mike Johnson",
+    buyerName: "Mike Reyes",
     orderDate: "2024-10-18",
     amount: 599.99,
-    status: "failed-delivery",
+    status: "completed",
     lastUpdated: "2024-10-22 12:00",
-    paymentMethod: "PayPal",
+    paymentMethod: "GCash",
     notes: "Delivery address not accessible",
   },
   {
     id: "4",
-    sellerName: "TechStore Pro",
+    sellerName: "shroom Spot",
     orderId: "ORD-2024-004",
-    buyerName: "Sarah Williams",
+    buyerName: "John Pascal",
     orderDate: "2024-10-21",
     amount: 89.99,
-    status: "completed",
+    status: "canceled",
     lastUpdated: "2024-10-22 11:45",
-    paymentMethod: "Credit Card",
+    paymentMethod: "GCash",
     notes: "Successfully delivered",
   },
   {
     id: "5",
-    sellerName: "Home Essentials",
+    sellerName: "Mushroom Spot",
     orderId: "ORD-2024-005",
-    buyerName: "Robert Brown",
+    buyerName: "Donny Cruz",
     orderDate: "2024-10-20",
     amount: 249.0,
     status: "refund-return",
     lastUpdated: "2024-10-22 10:30",
-    paymentMethod: "Debit Card",
+    paymentMethod: "GCash",
     notes: "Return initiated by buyer",
-  },
-  {
-    id: "6",
-    sellerName: "Fashion Hub",
-    orderId: "ORD-2024-006",
-    buyerName: "Emily Davis",
-    orderDate: "2024-10-17",
-    amount: 179.99,
-    status: "canceled",
-    lastUpdated: "2024-10-22 09:20",
-    paymentMethod: "Credit Card",
-    notes: "Canceled by seller",
-  },
-  {
-    id: "7",
-    sellerName: "Electronics World",
-    orderId: "ORD-2024-007",
-    buyerName: "David Wilson",
-    orderDate: "2024-10-16",
-    amount: 459.99,
-    status: "dispute",
-    lastUpdated: "2024-10-22 08:15",
-    paymentMethod: "PayPal",
-    notes: "Dispute raised by buyer",
-  },
-  {
-    id: "8",
-    sellerName: "TechStore Pro",
-    orderId: "ORD-2024-008",
-    buyerName: "Lisa Anderson",
-    orderDate: "2024-10-15",
-    amount: 329.5,
-    status: "payment-verification",
-    lastUpdated: "2024-10-22 07:00",
-    paymentMethod: "Bank Transfer",
-    notes: "Payment verification in progress",
-  },
+  }
 ]
 
 export function OrdersContent() {
@@ -178,15 +142,15 @@ export function OrdersContent() {
         {/* Tabs and Controls */}
         <div className="mb-6">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OrderStatus)}>
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="pending-payment">Pending</TabsTrigger>
-              <TabsTrigger value="shipment">Shipment</TabsTrigger>
-              <TabsTrigger value="failed-delivery">Failed</TabsTrigger>
+              {/* <TabsTrigger value="shipment">Shipment</TabsTrigger> */}
+              {/* <TabsTrigger value="failed-delivery">Failed</TabsTrigger> */}
               <TabsTrigger value="completed">Completed</TabsTrigger>
               <TabsTrigger value="refund-return">Refund</TabsTrigger>
               <TabsTrigger value="canceled">Canceled</TabsTrigger>
-              <TabsTrigger value="dispute">Dispute</TabsTrigger>
+              {/* <TabsTrigger value="dispute">Dispute</TabsTrigger> */}
               <TabsTrigger value="payment-verification">Verification</TabsTrigger>
             </TabsList>
 
@@ -213,12 +177,12 @@ export function OrdersContent() {
             {[
               "all",
               "pending-payment",
-              "shipment",
+              // "shipment",
               "failed-delivery",
               "completed",
               "refund-return",
               "canceled",
-              "dispute",
+              // "dispute",
               "payment-verification",
             ].map((tab) => (
               <TabsContent key={tab} value={tab} className="mt-6">

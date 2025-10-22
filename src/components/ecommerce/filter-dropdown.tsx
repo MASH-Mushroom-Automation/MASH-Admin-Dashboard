@@ -13,8 +13,8 @@ interface FilterDropdownProps {
   setFilterConfig: (config: { seller: string; paymentMethod: string; dateRange: string }) => void
 }
 
-const sellers = ["all", "TechStore Pro", "Fashion Hub", "Electronics World", "Home Essentials"]
-const paymentMethods = ["all", "Credit Card", "Debit Card", "PayPal", "Bank Transfer"]
+const sellers = ["all", "MashMushroom Hut", "Mushroom Spot", "Kyzie Mushroom", "Fungi Farm"]
+const paymentMethods = ["all", "Credit Card", "GCash"]
 const dateRanges = [
   { value: "all", label: "All Time" },
   { value: "today", label: "Today" },
