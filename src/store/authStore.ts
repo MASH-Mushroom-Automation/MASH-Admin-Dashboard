@@ -15,9 +15,23 @@ interface AuthState {
 }
 
 interface LoginResponse {
-  message: string;
-  token: string;
-  user: { email: string };
+  success: boolean;
+  statusCode: number;
+  data: {
+    success: boolean;
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+  };
+  timestamp: string;
+  path: string;
+  correlationId: string;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,18 +55,27 @@ export const useAuthStore = create<AuthState>()(
 
           if (!response.ok) {
             const data = await response.json();
-            throw new Error(data.message || "Login failed");
+            throw new Error(
+              data.data?.message || data.message || "Login failed"
+            );
           }
 
           const data: LoginResponse = await response.json();
 
+          // Validate the response structure
+          if (!data.data?.user?.email || !data.data?.accessToken) {
+            throw new Error(
+              "Invalid API response: Missing email or accessToken"
+            );
+          }
+
           // Set the authToken cookie
-          document.cookie = `authToken=${data.token}; path=/; ${
-            rememberMe ? "max-age=604800" : "" // 7 days if rememberMe is true
+          document.cookie = `authToken=${data.data.accessToken}; path=/; ${
+            rememberMe ? "max-age=604800" : ""
           }`;
 
           set({
-            user: { email: data.user.email, token: data.token },
+            user: { email: data.data.user.email, token: data.data.accessToken },
             isAuthenticated: true,
             error: null,
           });

@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -43,12 +44,18 @@ export function LoginForm() {
 
       console.log("Redirecting to /dashboard...");
       router.push("/dashboard");
-    } catch (err: any) {
-      console.error("Login failed:", err);
-      if (err.response) {
-        console.error("Backend error response:", err.response.data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Login failed:", err.message);
+      } else if (err && typeof err === "object" && "response" in err) {
+        const axiosErr = err as { response: { data: unknown } };
+        const dataStr =
+          typeof axiosErr.response.data === "object"
+            ? JSON.stringify(axiosErr.response.data)
+            : String(axiosErr.response.data);
+        console.error("Backend error response:", dataStr);
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unexpected error:", err);
       }
     }
   };
@@ -61,7 +68,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md border border-gray-300 bg-white p-8 shadow-sm">
       <div className="flex justify-center">
-        <img src="/mash-grow-logo.png" alt="M" className="w-15 h-15" />
+        <Image src="/mash-grow-logo.png" alt="M" className="w-15 h-15" />
       </div>
       <h1 className="text-center text-2xl font-bold text-gray-900">
         Login to your account
