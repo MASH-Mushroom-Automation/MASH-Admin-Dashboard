@@ -15,7 +15,7 @@ export default function DashboardContent() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your business today.</p>
+        <p className="text-muted-foreground mt-1">Welcome back! Here&apos;s what&apos;s happening with your business today.</p>
       </div>
 
       {/* Stats Cards */}

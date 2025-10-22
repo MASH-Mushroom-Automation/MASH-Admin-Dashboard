@@ -73,7 +73,7 @@ export default function RegisterChamber() {
     setDeleteUserId(null)
   }
 
-  const handleRegisterSave = (data: any) => {
+  const handleRegisterSave = (data: { chamberName: string; address: string; contactNumber: string }) => {
     const newUser: User = {
       id: String(users.length + 1),
       chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
@@ -111,7 +111,7 @@ export default function RegisterChamber() {
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+          <Select value={statusFilter} onValueChange={(value: "Active" | "Inactive" | "All") => setStatusFilter(value)}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>

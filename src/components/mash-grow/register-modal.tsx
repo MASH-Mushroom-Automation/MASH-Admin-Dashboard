@@ -31,10 +31,20 @@ function generateLocationYear(address: string): string {
   return `${location}${year}`
 }
 
+interface RegisterData {
+  chamberName: string
+  contactNumber: string
+  address: string
+  model: string
+  locationYear: string
+  uniqueDecimal: string
+  deviceId: string
+}
+
 interface RegisterModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave?: (data: any) => void
+  onSave?: (data: RegisterData) => void
 }
 
 export default function RegisterModal({ open, onOpenChange, onSave }: RegisterModalProps) {

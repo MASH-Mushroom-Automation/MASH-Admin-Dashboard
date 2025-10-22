@@ -64,7 +64,7 @@ export default function CMSDashboard() {
   ])
 
 
-  const handleSaveContent = (data: any) => {
+  const handleSaveContent = (data: Partial<Content>) => {
     if (editingContent) {
       // Compare ids as strings to handle numeric or string IDs
       setContents((prev) =>
@@ -217,15 +217,15 @@ export default function CMSDashboard() {
         <ContentForm
           content={
             editingContent
-              ? ({
+              ? {
                   title: editingContent.title,
                   type: editingContent.type,
                   author: editingContent.author,
-                  status: editingContent.status,
+                  status: editingContent.status as "Draft" | "Published",
                   slug: (editingContent.title || "").toLowerCase().replace(/\s+/g, "-"),
                   content: "",
-                  thumbnail: "",
-                } as any)
+                  thumbnail: null,
+                }
               : null
           }
           onSave={handleSaveContent}

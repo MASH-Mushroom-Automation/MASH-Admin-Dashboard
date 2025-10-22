@@ -35,7 +35,7 @@ export default function ECommerceSection() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Sales Summary</CardTitle>
-            <CardDescription>Today's performance</CardDescription>
+            <CardDescription>Today&apos;s performance</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
