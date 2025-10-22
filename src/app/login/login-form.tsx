@@ -19,27 +19,27 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("🟢 Login form submitted");
-    console.log("👉 Input values:", { email, password, rememberMe });
+    console.log("ogin form submitted");
+    console.log("Input values:", { email, password, rememberMe });
 
     try {
-      console.log("🚀 Attempting login...");
+      console.log("Attempting login...");
       const response = await login(email, password, rememberMe);
-      console.log("✅ Login successful:", response);
+      console.log("Login successful:", response);
 
       // Clear form after success
       setEmail("");
       setPassword("");
       setRememberMe(false);
 
-      console.log("➡️ Redirecting to /dashboard...");
+      console.log("Redirecting to /dashboard...");
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("❌ Login failed:", err);
+      console.error("Login failed:", err);
       if (err.response) {
-        console.error("🔍 Backend error response:", err.response.data);
+        console.error("Backend error response:", err.response.data);
       } else {
-        console.error("⚠️ Unexpected error:", err.message || err);
+        console.error("Unexpected error:", err.message || err);
       }
     }
   };
@@ -65,7 +65,6 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
-            placeholder=""
           />
           <label
             htmlFor="email"
@@ -85,7 +84,6 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
-            placeholder=""
           />
           <label
             htmlFor="password"
@@ -113,7 +111,10 @@ export function LoginForm() {
               Remember Me
             </label>
           </div>
-          <a href="/forgot-password" className="text-sm text-teal-600 hover:underline">
+          <a
+            href="/forgot-password"
+            className="text-sm text-teal-600 hover:underline"
+          >
             Forgot Password?
           </a>
         </div>
