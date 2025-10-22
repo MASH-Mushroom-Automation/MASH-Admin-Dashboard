@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
     return levels[Math.min(strength, 5)]
   }
 
-  const strength = getPasswordStrength(password)
+  // Removed: const strength = getPasswordStrength(password) - feature is commented out below
 
   const onSubmit = async (data: ResetFormData) => {
     setIsLoading(true)

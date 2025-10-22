@@ -52,7 +52,7 @@ export default function VerifyOTPPage() {
     resolver: zodResolver(otpSchema),
   })
 
-  const onSubmit = async (data: OTPFormData) => {
+  const onSubmit = async (_data: OTPFormData) => {
     setIsLoading(true)
     try {
       // Simulate successful OTP verification
