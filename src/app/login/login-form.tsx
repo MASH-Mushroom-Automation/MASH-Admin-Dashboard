@@ -8,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 
 export function LoginForm() {
@@ -96,7 +95,7 @@ export function LoginForm() {
               setEmail(e.target.value);
               validateEmail(e.target.value);
             }}
-            className={`peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0 ${
+            className={`peer block w-full rounded-md border border-gray-300 bg-white px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0 ${
               emailError ? "border-red-500" : ""
             }`}
             placeholder=""
@@ -108,7 +107,7 @@ export function LoginForm() {
             peer-placeholder-shown:top-1/3 peer-placeholder-shown:text-gray-400 
             peer-placeholder-shown:text-base 
             peer-focus:top-[-1] peer-focus:text-sm peer-focus:text-green-700 
-            bg-gray-50 px-1"
+            bg-white px-1"
           >
             Email
           </label>
@@ -124,7 +123,7 @@ export function LoginForm() {
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="peer block w-full rounded-md border border-gray-300 bg-transparent px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
+            className="peer block w-full rounded-md border border-gray-300 bg-white px-6 pt-7 pb-5 text-gray-900 placeholder-transparent focus:border-green-700 focus:ring-0"
             placeholder=""
             suppressHydrationWarning
           />
@@ -141,7 +140,7 @@ export function LoginForm() {
             peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-gray-400 
             peer-placeholder-shown:text-base 
             peer-focus:top-[-1] peer-focus:text-sm peer-focus:text-green-700 
-            bg-gray-50 px-1"
+            bg-white px-1"
           >
             Password
           </label>
