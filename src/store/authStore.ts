@@ -36,7 +36,7 @@ interface LoginResponse {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set: (partial: Partial<AuthState>) => void) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
