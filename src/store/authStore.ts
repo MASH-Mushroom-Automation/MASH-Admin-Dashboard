@@ -64,19 +64,17 @@ export const useAuthStore = create<AuthState>()(
       },
       login: async (email: string, password: string, rememberMe: boolean) => {
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://mash-backend-api.up.railway.app";
-          console.log("Calling login API:", `${apiUrl}/api/v1/auth/login`);
-          const response = await fetch(
-            `${apiUrl}/api/v1/auth/login`,
-            {
-              method: "POST",
-              headers: { 
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-              },
-              body: JSON.stringify({ email, password }),
-            }
-          );
+          // Use local serverless route to proxy the login to the backend.
+          // This avoids CORS issues in production and allows setting HttpOnly cookies from the same origin.
+          console.log("Calling local proxy /api/auth/login");
+          const response = await fetch(`/api/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify({ email, password, remember: rememberMe }),
+          });
 
           console.log("Response status:", response.status);
 
