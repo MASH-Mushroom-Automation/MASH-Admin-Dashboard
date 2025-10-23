@@ -27,7 +27,16 @@ interface LoginResponse {
     message: string;
     accessToken: string;
     refreshToken: string;
-    user: User;
+// <<<<<<< integration-login-api
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+// =======
+//     user: User;
+// >>>>>>> main
   };
   timestamp: string;
   path: string;
@@ -80,28 +89,52 @@ export const useAuthStore = create<AuthState>()(
           console.log("Response status:", response.status);
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: "Login failed" }));
-            throw new Error(errorData.message || "Invalid credentials");
+// <<<<<<< integration-login-api
+            const data = await response.json();
+            throw new Error(
+              data.data?.message || data.message || "Login failed"
+            );
+// =======
+//             const errorData = await response.json().catch(() => ({ message: "Login failed" }));
+//             throw new Error(errorData.message || "Invalid credentials");
+// >>>>>>> main
           }
 
           const result: LoginResponse = await response.json();
           console.log("Login response:", result);
 
-          if (!result.success || !result.data) {
-            throw new Error(result.data?.message || "Login failed");
+// <<<<<<< integration-login-api
+          // Validate the response structure
+          if (!data.data?.user?.email || !data.data?.accessToken) {
+            throw new Error(
+              "Invalid API response: Missing email or accessToken"
+            );
           }
 
-          const { accessToken, refreshToken, user } = result.data;
-
-          // Set cookies for tokens
-          const maxAge = rememberMe ? 604800 : 86400; // 7 days if remember me, 1 day otherwise
-          document.cookie = `authToken=${accessToken}; path=/; max-age=${maxAge}; SameSite=Strict`;
-          document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${maxAge * 30}; SameSite=Strict`; // Refresh token lasts longer
+          // Set the authToken cookie
+          document.cookie = `authToken=${data.data.accessToken}; path=/; ${
+            rememberMe ? "max-age=604800" : ""
+          }`;
 
           set({
-            user,
-            accessToken,
-            refreshToken,
+            user: { email: data.data.user.email, token: data.data.accessToken },
+// =======
+//           if (!result.success || !result.data) {
+//             throw new Error(result.data?.message || "Login failed");
+//           }
+
+//           const { accessToken, refreshToken, user } = result.data;
+
+//           // Set cookies for tokens
+//           const maxAge = rememberMe ? 604800 : 86400; // 7 days if remember me, 1 day otherwise
+//           document.cookie = `authToken=${accessToken}; path=/; max-age=${maxAge}; SameSite=Strict`;
+//           document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${maxAge * 30}; SameSite=Strict`; // Refresh token lasts longer
+
+//           set({
+//             user,
+//             accessToken,
+//             refreshToken,
+// >>>>>>> main
             isAuthenticated: true,
             error: null,
           });
