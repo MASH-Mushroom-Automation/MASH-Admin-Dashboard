@@ -57,8 +57,11 @@ export default function VerifyOTPPage() {
     resolver: zodResolver(otpSchema),
   });
 
+
   const onSubmit = async (data: OTPFormData) => {
     setIsLoading(true);
+//   const onSubmit = async (_data: OTPFormData) => {
+//     setIsLoading(true)
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/verify-email`,

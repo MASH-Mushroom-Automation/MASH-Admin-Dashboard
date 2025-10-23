@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -68,6 +69,11 @@ export function LoginForm() {
         console.error("Backend error response:", dataStr);
       } else {
         console.error("Unexpected error:", err);
+//       console.error("Login failed:", err);
+//       if (err && typeof err === 'object' && 'response' in err) {
+//         console.error("Backend error response:", (err as { response: { data: unknown } }).response.data);
+//       } else {
+//         console.error("Unexpected error:", err instanceof Error ? err.message : err);
       }
     } finally {
       setIsLoading(false);
@@ -81,7 +87,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md border border-gray-300 bg-white p-8 shadow-sm">
       <div className="flex justify-center">
-        <img src="/mash-grow-logo.png" alt="M" className="w-15 h-15" />
+        <Image src="/mash-grow-logo.png" alt="M" width={60} height={60} />
       </div>
       <h1 className="text-center text-2xl font-bold text-gray-900">
         Login to your account

@@ -1,17 +1,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface AuthState {
-  user: { email: string; token: string } | null;
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   error: string | null;
-  setUser: (user: { email: string; token: string } | null) => void;
+  setUser: (user: User | null, accessToken?: string, refreshToken?: string) => void;
   logout: () => void;
-  login: (
-    email: string,
-    password: string,
-    rememberMe: boolean
-  ) => Promise<void>;
+  login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
 }
 
 interface LoginResponse {
@@ -22,12 +27,16 @@ interface LoginResponse {
     message: string;
     accessToken: string;
     refreshToken: string;
+// <<<<<<< integration-login-api
     user: {
       id: string;
       email: string;
       firstName: string;
       lastName: string;
     };
+// =======
+//     user: User;
+// >>>>>>> main
   };
   timestamp: string;
   path: string;
@@ -38,30 +47,63 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
       error: null,
-      setUser: (user) => set({ user, isAuthenticated: !!user, error: null }),
-      logout: () => set({ user: null, isAuthenticated: false, error: null }),
+      setUser: (user, accessToken, refreshToken) =>
+        set({
+          user,
+          accessToken: accessToken || null,
+          refreshToken: refreshToken || null,
+          isAuthenticated: !!user,
+          error: null,
+        }),
+      logout: () => {
+        // Clear cookies
+        document.cookie = "authToken=; path=/; max-age=0";
+        document.cookie = "refreshToken=; path=/; max-age=0";
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          error: null,
+        });
+      },
       login: async (email: string, password: string, rememberMe: boolean) => {
         try {
+          console.log("Calling login API...");
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`,
+            "https://mash-backend-api.up.railway.app/api/v1/auth/login",
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              },
               body: JSON.stringify({ email, password }),
             }
           );
 
+          console.log("Response status:", response.status);
+
           if (!response.ok) {
+// <<<<<<< integration-login-api
             const data = await response.json();
             throw new Error(
               data.data?.message || data.message || "Login failed"
             );
+// =======
+//             const errorData = await response.json().catch(() => ({ message: "Login failed" }));
+//             throw new Error(errorData.message || "Invalid credentials");
+// >>>>>>> main
           }
 
-          const data: LoginResponse = await response.json();
+          const result: LoginResponse = await response.json();
+          console.log("Login response:", result);
 
+// <<<<<<< integration-login-api
           // Validate the response structure
           if (!data.data?.user?.email || !data.data?.accessToken) {
             throw new Error(
@@ -76,13 +118,39 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: { email: data.data.user.email, token: data.data.accessToken },
+// =======
+//           if (!result.success || !result.data) {
+//             throw new Error(result.data?.message || "Login failed");
+//           }
+
+//           const { accessToken, refreshToken, user } = result.data;
+
+//           // Set cookies for tokens
+//           const maxAge = rememberMe ? 604800 : 86400; // 7 days if remember me, 1 day otherwise
+//           document.cookie = `authToken=${accessToken}; path=/; max-age=${maxAge}; SameSite=Strict`;
+//           document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${maxAge * 30}; SameSite=Strict`; // Refresh token lasts longer
+
+//           set({
+//             user,
+//             accessToken,
+//             refreshToken,
+// >>>>>>> main
             isAuthenticated: true,
             error: null,
           });
+
+          console.log("Login successful, user:", user);
         } catch (err) {
+          console.error("Login error:", err);
           const errorMessage =
-            err instanceof Error ? err.message : "An error occurred";
-          set({ error: errorMessage });
+            err instanceof Error ? err.message : "An error occurred during login";
+          set({ 
+            error: errorMessage,
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+            isAuthenticated: false
+          });
           throw err;
         }
       },
