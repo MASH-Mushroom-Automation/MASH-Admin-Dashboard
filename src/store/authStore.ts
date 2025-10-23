@@ -64,9 +64,10 @@ export const useAuthStore = create<AuthState>()(
       },
       login: async (email: string, password: string, rememberMe: boolean) => {
         try {
-          console.log("Calling login API...");
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://mash-backend-api.up.railway.app";
+          console.log("Calling login API:", `${apiUrl}/api/v1/auth/login`);
           const response = await fetch(
-            "https://mash-backend-api.up.railway.app/api/v1/auth/login",
+            `${apiUrl}/api/v1/auth/login`,
             {
               method: "POST",
               headers: { 
