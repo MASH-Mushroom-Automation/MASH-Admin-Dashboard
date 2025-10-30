@@ -1,12 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, Users, Package } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, Users, Package, Warehouse, ArrowRight } from "lucide-react"
 import ChamberInventorySection from "../dashboard/sections/chamber-inventory"
-import GrowersSection from "../dashboard/sections/growers-section"
-import BuyersSection from "../dashboard/sections/buyers-section"
 import ECommerceSection from "../dashboard/sections/ecommerce-section"
 
 export default function DashboardContent() {
@@ -14,76 +12,106 @@ export default function DashboardContent() {
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back! Here&apos;s what&apos;s happening with your business today.</p>
+        <h1 className="text-3xl font-bold text-primary">Welcome Back!</h1>
+        <p className="text-muted-foreground mt-1 mb-5">
+          Discover the latest updates in your business today.
+        </p>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
+          <StatCard
+            title="Chambers"
+            primaryValue="420"
+            primaryLabel="Active"
+            secondaryValue="45"
+            secondaryLabel="Inactive"
+            icon={<Warehouse className="w-5 h-5" />}
+          />
+          <StatCard
+            title="Orders"
+            primaryValue="10k"
+            primaryLabel="Completed"
+            secondaryValue="200"
+            secondaryLabel="Pending"
+            icon={<Users className="w-5 h-5" />}
+          />
+          <StatCard
+            title="Products"
+            primaryValue="900"
+            primaryLabel="Pending"
+            secondaryValue="300"
+            secondaryLabel="Approved"
+            icon={<Package className="w-5 h-5" />}
+          />
+          <StatCard
+            title=" Seller Applications"
+            primaryValue="10"
+            primaryLabel="Pending"
+            secondaryValue="10"
+            secondaryLabel="Approved"
+            icon={<AlertCircle className="w-5 h-5" />}
+          />
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Active Chambers" value="45" total="50" offline="2" icon={<Package className="w-5 h-5" />} />
-        <StatCard title="Total Buyers" value="300" new="25" icon={<Users className="w-5 h-5" />} />
-        <StatCard title="Approved Products" value="300" pending="25" icon={<Users className="w-5 h-5" />} />
-
-        <StatCard
-          title="Pending Applications"
-          value="10"
-          subInfo={[
-            { label: "Growers", value: "8" },
-            { label: "Sellers", value: "2" }
-          ]}
-          icon={<AlertCircle className="w-5 h-5" />}
-        />
+      <div className="space-y-6 pt-4">
+        <h1 className="text-xl font-bold text-foreground -mb-0">Overview</h1>
+        <p>Monitor sales, user roles, and active chambers.</p>
+        <ECommerceSection />
+         <ChamberInventorySection />
       </div>
-
-      {/* Chamber Inventory Section */}
-      <ChamberInventorySection />
-
-      {/* Growers/Sellers Section */}
-      <GrowersSection />
-
-      {/* E-Commerce Section */}
-      <ECommerceSection />
     </div>
   )
 }
 
 interface StatCardProps {
   title: string
-  value: string
-  total?: string
-  offline?: string
-  new?: string
-  pending?: string
-  subInfo?: Array<{ label: string; value: string }>
+  primaryValue: string
+  primaryLabel: string
+  secondaryValue: string
+  secondaryLabel: string
   icon: React.ReactNode
 }
 
-function StatCard({ title, value, total, offline, new: newVal, pending, subInfo, icon }: StatCardProps) {
+function StatCard({
+  title,
+  primaryValue,
+  primaryLabel,
+  secondaryValue,
+  secondaryLabel,
+  icon,
+}: StatCardProps) {
+  
   return (
-    <Card>
-      <CardHeader>
+    <Card className="relative overflow-hidden border-1 border-primary/30 rounded-xl">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
           <div className="p-2 rounded-lg bg-primary/10 text-primary">{icon}</div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-          {total && <p className="text-xs text-muted-foreground">Total: {total}</p>}
-          {offline && <p className="text-xs text-muted-foreground">Offline: {offline}</p>}
-          {newVal && <p className="text-xs text-muted-foreground">New: {newVal}</p>}
-          {pending && <p className="text-xs text-muted-foreground">Pending: {pending}</p>}
-          {subInfo && (
-            <div className="space-y-1 pt-2 border-t border-border">
-              {subInfo.map((info, idx) => (
-                <div key={idx} className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">{info.label}</span>
-                  <span className="font-medium">{info.value}</span>
-                </div>
-              ))}
-            </div>
-          )}
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-foreground">{primaryValue}</p>
+            <p className="text-xs text-muted-foreground">{primaryLabel}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-foreground">{secondaryValue}</p>
+            <p className="text-xs text-muted-foreground">{secondaryLabel}</p>
+          </div>
+        </div>
+
+        {/* View more button */}
+       <div className="border-t pt-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-full justify-between px-2 text-xs font-medium text-foreground hover:bg-primary/5"
+          >
+            View more
+            <ArrowRight className="ml-1 h-3 w-3" />
+          </Button>
         </div>
       </CardContent>
     </Card>

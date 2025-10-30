@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Search } from "lucide-react"
-import UserActionsMenu from "@/components/mash-grow/user-actions-menu"
+import UserActionsMenu from "@/components/user-actions-menu"
 import DeleteConfirmation from "@/components/mash-grow/delete-confirmation"
 import RegisterModal from "@/components/mash-grow/register-modal"
 

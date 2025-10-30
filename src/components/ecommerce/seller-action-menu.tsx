@@ -3,7 +3,8 @@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreVertical, Eye, Edit, Check, X, Trash2 } from "lucide-react"
-import type { TabType } from "@/components/ecommerce/content/seller-content"
+import { useRouter } from "next/navigation"
+import type { TabType } from "@/app/mash-market/seller/page"
 import type { ComponentType, SVGProps } from "react"
 
 interface Seller {
@@ -22,6 +23,7 @@ interface SellerActionMenuProps {
   onAccept: () => void
 }
 export function SellerActionMenu({ seller, activeTab, onReject, onDelete, onAccept }: SellerActionMenuProps) {
+  const router = useRouter()
   interface MenuItem {
     label: string
     icon: ComponentType<SVGProps<SVGSVGElement>>
@@ -34,7 +36,8 @@ export function SellerActionMenu({ seller, activeTab, onReject, onDelete, onAcce
       {
         label: "View",
         icon: Eye,
-        action: () => console.log("View seller:", seller.id),
+        // navigate to the account details page with seller id as query param
+        action: () => router.push(`/mash-market/account-details?id=${seller.id}`),
       },
     ]
 
