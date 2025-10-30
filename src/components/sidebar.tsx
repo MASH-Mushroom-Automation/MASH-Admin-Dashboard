@@ -17,13 +17,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [isMashGrowOpen, setIsMashGrowOpen] = useState(false)
   const pathname = usePathname()
 
-  // Keep the correct section open based on current route
   useEffect(() => {
     if (pathname.startsWith("/mash-market")) setIsMashMarketOpen(true)
     if (pathname.startsWith("/mash-grow")) setIsMashGrowOpen(true)
   }, [pathname])
 
-  const mashMarketChildren = ["Users", "Sellers", "Orders", "CMS"]
+  const mashMarketChildren = ["User", "Seller", "Order", "Product", "CMS"]
   const mashGrowChildren = ["User", "CMS"]
 
   const isMashMarketActive = mashMarketChildren.some((child) =>
@@ -41,22 +40,20 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           isOpen ? "w-64" : "w-20"
         } bg-sidebar border-r border-sidebar-border transition-all duration-300 overflow-hidden flex flex-col`}
       >
-        {/* Logo */}
         <div className="p-2 border-b border-sidebar-border flex items-center justify-center">
-          {isOpen && (
-            <Image
-              src="/pictures/logo.png"
-              alt="Toggle Sidebar"
-              width={65}
-              height={65}
-              className="cursor-pointer"
-              onClick={onToggle}
-            />
-          )}
+          <Image
+            src="/pictures/logo.png"
+            alt="Logo"
+            width={isOpen ? 65 : 32}
+            height={isOpen ? 65 : 32}
+            className={`cursor-pointer transition-all duration-300 ${isOpen ? "" : ""}`}
+            onClick={onToggle}
+          />
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          
           {/* Dashboard */}
           <NavItem
             icon={<LayoutDashboard className="w-5 h-5" />}
@@ -78,6 +75,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <SubNavItem label="Users" href="/mash-market/user" pathname={pathname} />
             <SubNavItem label="Sellers" href="/mash-market/seller" pathname={pathname} />
             <SubNavItem label="Orders" href="/mash-market/order" pathname={pathname} />
+            <SubNavItem label="Products" href="/mash-market/product" pathname={pathname} />
             <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} />
           </CollapsibleSection>
 
@@ -90,7 +88,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             isExpanded={isMashGrowOpen}
             onToggle={() => setIsMashGrowOpen((prev) => !prev)}
           >
-            <SubNavItem label="User" href="/mash-grow/user" pathname={pathname} />
+            <SubNavItem label="Users" href="/mash-grow/user" pathname={pathname} />
             <SubNavItem label="CMS" href="/mash-grow/cms" pathname={pathname} />
           </CollapsibleSection>
         </nav>

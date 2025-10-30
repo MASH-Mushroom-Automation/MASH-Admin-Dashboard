@@ -7,19 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 import {
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
   CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
 const salesData = [
@@ -32,144 +27,113 @@ const salesData = [
   { day: "Sun", sales: 4300 },
 ];
 
-const orderStatusData = [
-  { name: "Fulfilled", value: 140, color: "#10b981" },
-  { name: "Pending", value: 40, color: "#f59e0b" },
-  { name: "Canceled", value: 20, color: "#ef4444" },
-];
-
-const recentActivity = [
-  {
-    timestamp: "2024-10-15 14:30",
-    event: "Order #1234 Placed",
-    status: "Completed",
-  },
-  {
-    timestamp: "2024-10-15 13:15",
-    event: "Payment Received",
-    status: "Completed",
-  },
-  {
-    timestamp: "2024-10-15 12:00",
-    event: "Shipment Dispatched",
-    status: "In Progress",
-  },
-  {
-    timestamp: "2024-10-15 10:45",
-    event: "Order #1233 Placed",
-    status: "Completed",
-  },
-];
+// Dynamic calculations
+const totalSales = salesData.reduce((sum, item) => sum + item.sales, 0);
+const totalOrders = salesData.length; // or use real order count
+const todaySales = salesData[salesData.length - 1].sales; // Last day = today
 
 export default function ECommerceSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Sales Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Sales Summary</CardTitle>
-          <CardDescription>Today&apos;s performance</CardDescription>
+      {/* ---------- Sales Summary ---------- */}
+      <Card className="border-1 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-semibold text-foreground">
+            Sales Summary
+          </CardTitle>
+          <CardDescription>
+            Today&apos;s performance
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-8">
-            <div>
-              <p className="text-3xl font-bold text-foreground">₱310,820</p>
-              <p className="text-sm text-muted-foreground">Total Sales</p>
+
+        <CardContent className="space-y-5 pt-2">
+          {/* Total Sales */}
+          <div className="text-center">
+            <p className="text-4xl font-bold text-primary tracking-tight">
+              ₱{totalSales.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
+              Total Sales this month
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-border/60" />
+
+          {/* Mini Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/30">
+              <p className="text-2xl font-bold text-foreground">{totalOrders}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Orders</p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <p className="text-3xl font-bold text-foreground">200</p>
-                <p className="text-sm text-muted-foreground">Orders</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-foreground">₱12,450</p>
-                <p className="text-sm text-muted-foreground">Today</p>
-              </div>
+            <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/30">
+              <p className="text-2xl font-bold text-foreground">
+                ₱{todaySales.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Today</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Daily Sales Chart */}
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-lg">Daily Sales</CardTitle>
+      {/* ---------- Daily Sales Chart ---------- */}
+      <Card className="lg:col-span-2 border-1 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold text-foreground">
+            Daily Sales
+          </CardTitle>
+          <CardDescription>
+            Sales performance over the last week
+          </CardDescription>
         </CardHeader>
+
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={salesData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="day" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
-              <Tooltip />
-              <Bar dataKey="sales" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            <BarChart
+              data={salesData}
+              margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="50%" stopColor="#58B33A" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#2E5E4E" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid
+                strokeDasharray="4 4"
+                stroke="#f1f5f9"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="day"
+                tick={{ fill: "#64748b", fontSize: 12 }}
+                axisLine={false}
+              />
+              <YAxis
+                tick={{ fill: "#64748b", fontSize: 12 }}
+                axisLine={false}
+                tickFormatter={(v) => `₱${v / 1000}k`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                }}
+                formatter={(v: number) => `₱${v.toLocaleString()}`}
+              />
+              <Bar
+                dataKey="sales"
+                fill="url(#barGradient)"
+                radius={[8, 8, 0, 0]}
+                barSize={36}
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
-
-      {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"> */}
-      {/* Order Status */}
-      {/* <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Order Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={orderStatusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {orderStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2 mt-4">
-              {orderStatusData.map((item) => (
-                <div key={item.name} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{item.name}</span>
-                  <span className="font-medium">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card> */}
-
-      {/* Recent Activity */}
-      {/* <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Activity Log</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentActivity.map((activity, idx) => (
-                <div key={idx} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{activity.event}</p>
-                    <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-                      activity.status === "Completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                    }`}
-                  >
-                    {activity.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card> */}
-      {/* </div> */}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { TabType } from "./content/seller-content"
+import type { TabType } from "@/app/mash-market/seller/page"
 import { SellerActionMenu } from "./seller-action-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
 

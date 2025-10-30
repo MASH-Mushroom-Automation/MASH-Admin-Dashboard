@@ -4,7 +4,6 @@ import { useState } from "react"
 import Navbar from "@/components/dashboard/navbar"
 import Sidebar from "@/components/sidebar"
 import RegisterChamber from "@/components/mash-grow/register-content"
-import UsersContent from "@/components/ecommerce/content/users-content"
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)

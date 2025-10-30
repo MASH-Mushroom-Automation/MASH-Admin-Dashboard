@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Search } from "lucide-react"
-import UserActionsMenu from "@/components/mash-grow/user-actions-menu"
+import { ActionsMenu } from "@/components/user-actions-menu"
 import DeleteConfirmation from "@/components/mash-grow/delete-confirmation"
 import RegisterModal from "@/components/mash-grow/register-modal"
 
@@ -156,7 +156,11 @@ export default function RegisterChamber() {
                     </TableCell>
                     <TableCell>{user.registrationDate}</TableCell>
                     <TableCell className="text-center">
-                      <UserActionsMenu user={user} onDelete={() => setDeleteUserId(user.id)} />
+                      <ActionsMenu
+                        id={user.id}
+                        viewUrl={`/users/view/${user.id}`}
+                        onDelete={() => setDeleteUserId(user.id)}
+                      />
                     </TableCell>
                   </TableRow>
                 ))
