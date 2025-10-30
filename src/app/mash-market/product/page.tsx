@@ -166,7 +166,7 @@ export default function AdminProductsPage() {
             <p className="text-muted-foreground">Review and manage seller-submitted products</p>
           </div>
           <Button
-            onClick={() => router.push("/mash-market/pending-product")}
+            onClick={() => router.push("/mash-market/product/pending-product")}
             className="bg-yellow-600 hover:bg-yellow-700 gap-2"
           >
             Pending Products

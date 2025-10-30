@@ -38,7 +38,7 @@ export default function ECommerceSection() {
       {/* ---------- Sales Summary ---------- */}
       <Card className="border-1 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-foreground">
+          <CardTitle>
             Sales Summary
           </CardTitle>
           <CardDescription>
@@ -49,7 +49,7 @@ export default function ECommerceSection() {
         <CardContent className="space-y-5 pt-2">
           {/* Total Sales */}
           <div className="text-center">
-            <p className="text-4xl font-bold text-primary tracking-tight">
+            <p className="sm:text-4xl text-2xl font-bold text-primary tracking-tight">
               ₱{totalSales.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1 font-medium">
@@ -61,18 +61,25 @@ export default function ECommerceSection() {
           <div className="h-px bg-border/60" />
 
           {/* Mini Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/30">
-              <p className="text-2xl font-bold text-foreground">{totalOrders}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Orders</p>
-            </div>
-            <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/30">
-              <p className="text-2xl font-bold text-foreground">
-                ₱{todaySales.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Today</p>
-            </div>
-          </div>
+<div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 w-full">
+  <div className="bg-muted/40 rounded-lg p-3 sm:p-4 text-center border border-border/30">
+    <p className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
+      {totalOrders}
+    </p>
+    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+      Orders
+    </p>
+  </div>
+  <div className="bg-muted/40 rounded-lg p-3 sm:p-4 text-center border border-border/30">
+    <p className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
+      ₱{todaySales.toLocaleString()}
+    </p>
+    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+      Today
+    </p>
+  </div>
+</div>
+
         </CardContent>
       </Card>
 

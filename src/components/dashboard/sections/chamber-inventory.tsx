@@ -2,6 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
 
 const chamberData = [
   { name: "Grower", value: 70, color: "#58B33A" },
@@ -21,73 +23,72 @@ export default function ChamberInventorySection() {
   return (
     <div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 sm:gap-6 gap-y-6">
         {/* Overview Card */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Users</CardTitle>
-            <CardDescription>Overview of all user roles</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={chamberData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {chamberData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-x-7 flex justify-center text-center">
-                {chamberData.map((item) => (
-                  <div key={item.name} className="text-sm">
-                    <span className="font-medium flex justify-center items-center">{item.value}</span>
-                    <span className="text-muted-foreground">{item.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>       
+        <Card>
+  <CardHeader>
+    <CardTitle>Users</CardTitle>
+    <CardDescription>
+      Overview of all user roles
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="flex flex-col items-center justify-center space-y-3">
+    <div className="w-32 h-32 sm:w-40 sm:h-40">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={chamberData}
+            cx="50%"
+            cy="50%"
+            innerRadius="65%"
+            outerRadius="85%"
+            paddingAngle={2}
+            dataKey="value"
+          >
+            {chamberData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+
+      <div className="sm:space-x-7 space-x-4 flex justify-center text-center">
+        {chamberData.map((item) => (
+        <div key={item.name} className="text-xs sm:text-sm">
+          <span className="font-semibold block">{item.value}</span>
+          <span className="text-muted-foreground">{item.name}</span>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
 
       {/* Chamber Registry Table */}
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle className="text-lg">Chamber Registry</CardTitle>
+          <CardTitle>Chamber Registry</CardTitle>
           <CardDescription>List of registered chambers
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Chamber ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Grower Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Location</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-
-                  {/* <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th> */}
-                </tr>
-              </thead>
-              <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Grower Name</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
                 {registryData.map((row) => (
-                  <tr key={row.id} className="border-b border-border hover:bg-secondary/50">
-                    <td className="py-3 px-4 text-foreground">{row.id}</td>
-                    <td className="py-3 px-4 text-foreground">{row.grower}</td>
-                    <td className="py-3 px-4 text-foreground">{row.location}</td>
-                    <td className="py-3 px-4">
+                  <TableRow key={row.id} className="border-b border-border hover:bg-secondary/50">
+                    <TableCell>{row.id}</TableCell>
+                    <TableCell>{row.grower}</TableCell>
+                    <TableCell>{row.location}</TableCell>
+                    <TableCell>
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
                           row.status === "Active" ? "text-green-700" : " text-red-700"
@@ -95,12 +96,12 @@ export default function ChamberInventorySection() {
                       >
                         {row.status}
                       </span>
-                    </td>
+                    </TableCell>
   
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+          </TableBody>
+        </Table>
           </div>
         </CardContent>
       </Card>
