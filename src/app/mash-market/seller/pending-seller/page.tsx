@@ -4,15 +4,15 @@ import { useState } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Search,  ChevronRight } from "lucide-react"
+import { Search, ChevronLeft } from "lucide-react"
 import { SellerTable } from "@/components/ecommerce/seller-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
-export type TabType = "all" | "approval" | "approved" | "rejected"
+export type TabType = "approval" | "rejected"
 
 export default function SellerContent() {
-  const [activeTab, setActiveTab] = useState<TabType>("all")
+  const [activeTab, setActiveTab] = useState<TabType>("approval")
   const [searchQuery, setSearchQuery] = useState("")
   const router = useRouter()
 
@@ -21,25 +21,23 @@ export default function SellerContent() {
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-           <div>
-      <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-        All Sellers
-      </h1>
-      <p className="text-muted-foreground text-sm sm:text-base">
-        Manage seller accounts
-      </p>
-    </div>
+            <div className="flex items-center gap-4 mb-4">
+                        <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">
+                          <ChevronLeft className="h-4 w-4" />
+                          Back
+                        </Button>
+                      </div>
+          <h1 className="sm:text-3xl text-2xl font-bold text-foreground mb-2">Pending Sellers</h1>
+          <p className="text-muted-foreground sm:text-base text-sm">Review seller application</p>
+        </div>
 
-    <Button
-      onClick={() => router.push("/mash-market/seller/pending-seller")}
-      className="bg-yellow-600 hover:bg-yellow-700 gap-2 w-full sm:w-auto justify-center"
-    >
-      Pending Seller
-      <ChevronRight className="h-4 w-4" />
-    </Button>
-  </div>
-</div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="mb-6">
+          <TabsList className="flex w-full ">
+            <TabsTrigger value="approval">Pending</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Controls Section */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -57,12 +55,7 @@ export default function SellerContent() {
 
         {/* Table Section */}
         <Card className="overflow-hidden">
-          <SellerTable 
-            activeTab={activeTab} 
-            searchQuery={searchQuery} 
-            showStatus={false}
-            mode="all"
-            />
+          <SellerTable activeTab={activeTab} searchQuery={searchQuery} />
         </Card>
       </div>
     </div>

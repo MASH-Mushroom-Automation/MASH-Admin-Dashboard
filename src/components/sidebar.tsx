@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             alt="Logo"
             width={isOpen ? 65 : 32}
             height={isOpen ? 65 : 32}
-            className={`cursor-pointer transition-all duration-300 ${isOpen ? "" : ""}`}
+            className={`cursor-pointer transition-all duration-300 ${isOpen ? "" : "py-3"}`}
             onClick={onToggle}
           />
         </div>

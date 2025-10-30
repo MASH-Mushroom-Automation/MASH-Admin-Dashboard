@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ChevronLeft, ChevronRight, MoreVertical } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import UserAvatar from "@/components/ecommerce/user-avatar"
 import StatusBadge from "@/components/ecommerce/status-badge"
@@ -243,11 +241,6 @@ export default function UsersManagement() {
     </Pagination>
   </div>
 </div>
-
-
-
-
-
 
         {showDeleteConfirm && (
         <ConfirmationPopover
