@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { useEffect } from "react"
 import type { TabType } from "@/app/mash-market/seller/page"
 import { SellerActionMenu } from "./seller-action-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface Seller {
   id: string
@@ -14,69 +16,30 @@ interface Seller {
   address?: string
 }
 
-const mockSellers: Seller[] = [
-  {
-    id: "1",
-    name: "Jin Failana",
-    storeName: "Smith Electronics",
-    email: "john@smithelectronics.com",
-    status: "pending",
-    address: "Caloocan City",
-  },
-  {
-    id: "2",
-    name: "Karen Smith",
-    storeName: "Karen’s Boutique",
-    email: "karen@boutique.com",
-    status: "approved",
-    address: "Quezon City",
-  },
-  {
-    id: "3",
-    name: "Anne Curtis",
-    storeName: "Anne’s Beauty Hub",
-    email: "anne@beautyhub.com",
-    status: "rejected",
-    address: "Makati City",
-  },
-]
-
 export function SellerTable({
+  sellers: mockSellers,
   activeTab,
-  searchQuery,
   showStatus = true,
   mode = "default",
 }: {
+  sellers: Seller[]
   activeTab: TabType
   searchQuery: string
   showStatus?: boolean
   mode?: "default" | "all" | "pending"
 }) {
+ 
   const [sellers, setSellers] = useState<Seller[]>(mockSellers)
+
+  useEffect(() => {
+    setSellers(mockSellers)
+  }, [mockSellers])
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string
     action: "reject" | "delete"
   } | null>(null)
 
-  const filteredSellers = sellers.filter((seller) => {
-    const matchesSearch =
-      seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.storeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.email.toLowerCase().includes(searchQuery.toLowerCase())
-
-    if (!matchesSearch) return false
-
-    switch (activeTab) {
-      case "approval":
-        return seller.status === "pending"
-      case "approved":
-        return seller.status === "approved"
-      case "rejected":
-        return seller.status === "rejected"
-      default:
-        return true
-    }
-  })
+ const filteredSellers = sellers
 
   const handleConfirmAction = () => {
     if (!confirmAction) return
@@ -110,31 +73,30 @@ export function SellerTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Seller Name</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Store Name</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Address</th>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Seller Name</TableHead>
+              <TableHead>Store Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Address</TableHead>
               {showStatus && (
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+                <TableHead>Status</TableHead>
               )}
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredSellers.map((seller) => (
-              <tr
+              <TableRow
                 key={seller.id}
-                className="border-b hover:bg-muted/30 transition-colors rounded-lg"
               >
-                <td className="px-6 py-4 text-sm text-foreground">{seller.name}</td>
-                <td className="px-6 py-4 text-sm text-foreground">{seller.storeName}</td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">{seller.email}</td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">{seller.address || "—"}</td>
+                <TableCell>{seller.name}</TableCell>
+                <TableCell>{seller.storeName}</TableCell>
+                <TableCell>{seller.email}</TableCell>
+                <TableCell>{seller.address || "—"}</TableCell>
                 {showStatus && (
-                  <td className="px-6 py-4 text-sm">
+                  <TableCell className="px-6 py-4 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
                         seller.status
@@ -142,9 +104,9 @@ export function SellerTable({
                     >
                       {seller.status === "pending" ? "For Approval" : seller.status}
                     </span>
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-6 py-4 text-sm">
+                <TableCell>
                   <SellerActionMenu
                     seller={seller}
                     activeTab={activeTab}
@@ -163,11 +125,11 @@ export function SellerTable({
                       )
                     }
                   />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {filteredSellers.length === 0 && (

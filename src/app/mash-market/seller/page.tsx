@@ -1,20 +1,71 @@
 "use client"
 
 import { useState } from "react"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Search,  ChevronRight } from "lucide-react"
 import { SellerTable } from "@/components/ecommerce/seller-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import PaginationWrapper from "@/components/pagination"
+
+
 
 export type TabType = "all" | "approval" | "approved" | "rejected"
 
+interface Seller {
+  id: string
+  name: string
+  storeName: string
+  email: string
+  status: "pending" | "approved" | "rejected"
+  address?: string
+}
+
+const mockSellers: Seller[] = [
+  { id: "1", name: "Jin Failana", storeName: "Smith Electronics", email: "john@smithelectronics.com", status: "approved", address: "Caloocan City" },
+  { id: "2", name: "Karen Smith", storeName: "Karen’s Boutique", email: "karen@boutique.com", status: "approved", address: "Quezon City" },
+  { id: "3", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
+  { id: "4", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
+  { id: "5", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
+  { id: "6", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
+
+
+]
+
 export default function SellerContent() {
-  const [activeTab, setActiveTab] = useState<TabType>("all")
+  const [activeTab, setActiveTab] = useState<TabType>("approved")
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
   const router = useRouter()
+
+   const filteredSellers = mockSellers.filter((seller) => {
+  // filter by tab
+  const matchesTab =
+    activeTab === "all" ||
+    (activeTab === "approval" && seller.status === "pending") ||
+    (activeTab === "approved" && seller.status === "approved") ||
+    (activeTab === "rejected" && seller.status === "rejected")
+
+  // filter by search
+  const matchesSearch =
+    seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.storeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.email.toLowerCase().includes(searchQuery.toLowerCase())
+
+  return matchesTab && matchesSearch
+})
+
+
+  const totalPages = Math.ceil(filteredSellers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedSellers = filteredSellers.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -33,7 +84,7 @@ export default function SellerContent() {
 
     <Button
       onClick={() => router.push("/mash-market/seller/pending-seller")}
-      className="bg-yellow-600 hover:bg-yellow-700 gap-2 w-full sm:w-auto justify-center"
+      className="bg-primary hover:bg-primary/80 gap-2 w-full sm:w-auto justify-center"
     >
       Pending Seller
       <ChevronRight className="h-4 w-4" />
@@ -58,12 +109,23 @@ export default function SellerContent() {
         {/* Table Section */}
         <Card className="overflow-hidden">
           <SellerTable 
+            sellers={paginatedSellers}
             activeTab={activeTab} 
             searchQuery={searchQuery} 
             showStatus={false}
             mode="all"
             />
         </Card>
+
+   {/* Pagination Section */}
+        <PaginationWrapper
+            totalItems={filteredSellers.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            label="sellers"
+        />
+
       </div>
     </div>
   )

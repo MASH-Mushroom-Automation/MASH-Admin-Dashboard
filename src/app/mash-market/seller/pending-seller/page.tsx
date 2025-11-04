@@ -8,13 +8,59 @@ import { Search, ChevronLeft } from "lucide-react"
 import { SellerTable } from "@/components/ecommerce/seller-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import PaginationWrapper from "@/components/pagination"
 
-export type TabType = "approval" | "rejected"
+export type TabType = "pending" | "rejected"
+
+interface Seller {
+  id: string
+  name: string
+  storeName: string
+  email: string
+  status: "pending" | "approved" | "rejected"
+  address?: string
+}
+
+const mockSellers: Seller[] = [
+  { id: "1", name: "Jin Failana", storeName: "Smith Electronics", email: "john@smithelectronics.com", status: "pending", address: "Caloocan City" },
+  { id: "2", name: "Karen Smith", storeName: "Karen Boutique", email: "karen@boutique.com", status: "approved", address: "Quezon City" },
+  { id: "3", name: "Anne Curtis", storeName: "Anne Beauty Hub", email: "anne@beautyhub.com", status: "rejected", address: "Makati City" },
+  { id: "4", name: "John Doe", storeName: "John's Store", email: "john@store.com", status: "rejected", address: "Cebu City" },
+    { id: "5", name: "John Doe", storeName: "John's Store", email: "john@store.com", status: "rejected", address: "Cebu City" },
+  { id: "6", name: "John Doe", storeName: "John's Store", email: "john@store.com", status: "rejected", address: "Cebu City" },
+  { id: "7", name: "John Doe", storeName: "John's Store", email: "john@store.com", status: "rejected", address: "Cebu City" },
+  { id: "8", name: "John Doe", storeName: "John's Store", email: "john@store.com", status: "rejected", address: "Cebu City" },
+
+
+]
 
 export default function SellerContent() {
-  const [activeTab, setActiveTab] = useState<TabType>("approval")
+  const [activeTab, setActiveTab] = useState<TabType>("pending")
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
   const router = useRouter()
+
+  const tabFilteredSellers = mockSellers.filter((seller) => {
+  if (activeTab === "pending") return seller.status === "pending"
+  if (activeTab === "rejected") return seller.status === "rejected"
+  return true
+})
+
+  const filteredSellers = tabFilteredSellers.filter((seller) =>
+    seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.storeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const totalPages = Math.ceil(filteredSellers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedSellers = filteredSellers.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -34,7 +80,7 @@ export default function SellerContent() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="mb-6">
           <TabsList className="flex w-full ">
-            <TabsTrigger value="approval">Pending</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -55,8 +101,23 @@ export default function SellerContent() {
 
         {/* Table Section */}
         <Card className="overflow-hidden">
-          <SellerTable activeTab={activeTab} searchQuery={searchQuery} />
-        </Card>
+  <SellerTable 
+    sellers={paginatedSellers.filter(seller => seller.status === activeTab)}
+    activeTab={activeTab as any}
+    searchQuery={searchQuery}
+  />
+</Card>
+
+
+        {/* Pagination Section */}
+             <PaginationWrapper 
+              totalItems={filteredSellers.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              label="Pending"
+            />
+
       </div>
     </div>
   )

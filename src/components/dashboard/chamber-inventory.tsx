@@ -72,8 +72,8 @@ export default function ChamberInventorySection() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div>
-        <Table>
+          <div className="flex w-full overflow-x-auto">
+            <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Title</TableHead>
@@ -85,9 +85,9 @@ export default function ChamberInventorySection() {
           <TableBody>
                 {registryData.map((row) => (
                   <TableRow key={row.id} className="border-b border-border hover:bg-secondary/50">
-                    <TableCell>{row.id}</TableCell>
-                    <TableCell>{row.grower}</TableCell>
-                    <TableCell>{row.location}</TableCell>
+                    <TableCell className="whitespace-nowrap">{row.id}</TableCell>
+                    <TableCell className="min-w-0 truncate">{row.grower}</TableCell>
+                    <TableCell className="min-w-0 truncate">{row.location}</TableCell>
                     <TableCell>
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
@@ -101,7 +101,7 @@ export default function ChamberInventorySection() {
                   </TableRow>
                 ))}
           </TableBody>
-        </Table>
+            </Table>
           </div>
         </CardContent>
       </Card>

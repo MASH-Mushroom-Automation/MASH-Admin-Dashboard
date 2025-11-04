@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation"
 import { ProductTable } from "@/components/ecommerce/product-table"
 import { ProductDetailsModal } from "@/components/ecommerce/product-details-modal"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ChevronRight } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { toast } from "sonner"
+import PaginationWrapper from "@/components/pagination"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 
 export type ProductStatus = "pending" | "approved" | "rejected" | "archived"
 
@@ -24,7 +24,6 @@ export interface Product {
   submittedAt: string
 }
 
-// Mock data - replace with API call
 const MOCK_PRODUCTS: Product[] = [
   {
     id: "1",
@@ -116,7 +115,6 @@ const MOCK_PRODUCTS: Product[] = [
   },
 ]
 
-const CATEGORIES = ["All Categories", "Fresh Mushroom", "Processed Mushroom", "Mushroom Cultivation Supplies"]
 const ITEMS_PER_PAGE = 5
 
 export default function AdminProductsPage() {
@@ -124,7 +122,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All Categories")
+  const [selectedCategory, setSelectedCategory] = useState<"All" | "Fresh Mushroom" | "Processed Mushroom" | "Cultivation Supplies">("All")
   const [currentPage, setCurrentPage] = useState(1)
 
   const filteredProducts = useMemo(() => {
@@ -132,12 +130,11 @@ export default function AdminProductsPage() {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.seller.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === "All Categories" || product.category === selectedCategory
+      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory
       return matchesSearch && matchesCategory
     })
   }, [products, searchQuery, selectedCategory])
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE)
@@ -157,135 +154,85 @@ export default function AdminProductsPage() {
   const rejectedCount = products.filter((p) => p.status === "rejected").length
 
   return (
-    <main className="bg-background">
-      <div className="container px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Product Management</h1>
-            <p className="text-muted-foreground">Review and manage seller-submitted products</p>
-          </div>
-          <Button
-            onClick={() => router.push("/mash-market/product/pending-product")}
-            className="bg-yellow-600 hover:bg-yellow-700 gap-2"
-          >
-            Pending Products
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+    <div className="w-full px-4 py-8 overflow-x-hidden">
+      {/* Header */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Product Management</h1>
+          <p className="text-muted-foreground mt-1 sm:text-base text-sm">
+            Review and manage seller-submitted products
+          </p>
         </div>
+        <Button
+          onClick={() => router.push("/mash-market/product/pending-product")}
+          className="bg-primary hover:bg-primary/80 gap-2 w-full sm:w-auto justify-center"
+        >
+          Pending Products
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Pending Review</p>
-                <p className="text-3xl font-bold text-foreground">{pendingCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-                <span className="text-xl">⏳</span>
-              </div>
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {[
+          { label: "Pending Review", count: pendingCount, color: "bg-yellow-100 dark:bg-yellow-900/30", icon: "⏳" },
+          { label: "Approved", count: approvedCount, color: "bg-green-100 dark:bg-green-900/30", icon: "✓" },
+          { label: "Rejected", count: rejectedCount, color: "bg-red-100 dark:bg-red-900/30", icon: "✕" },
+        ].map((stat, index) => (
+          <div key={index} className="bg-card border border-border rounded-lg p-6 flex justify-between items-center">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+              <p className="text-3xl font-bold text-foreground">{stat.count}</p>
+            </div>
+            <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+              <span className="text-xl">{stat.icon}</span>
             </div>
           </div>
+        ))}
+      </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Approved</p>
-                <p className="text-3xl font-bold text-foreground">{approvedCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                <span className="text-xl">✓</span>
-              </div>
-            </div>
-          </div>
+      {/* Search and Filter */}
+      <div className="mb-6">
+        <SearchFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder="Search by name, seller, or category..."
+          filter1Label="Category"
+          filter1Value={selectedCategory}
+          onFilter1Change={(c: string) => {
+            setSelectedCategory(c as typeof selectedCategory)
+            setCurrentPage(1)
+          }}
+          filter1Options={[
+            { value: "All", label: "All Categories" },
+            { value: "Fresh Mushroom", label: "Fresh Mushroom" },
+            { value: "Processed Mushroom", label: "Processed Mushroom" },
+            { value: "Cultivation Supplies", label: "Cultivation Supplies" },
+          ]}
+        />
+      </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Rejected</p>
-                <p className="text-3xl font-bold text-foreground">{rejectedCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                <span className="text-xl">✕</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Product Table */}
+      <div className="overflow-x-auto">
+        <ProductTable
+          products={paginatedProducts}
+          onViewDetails={handleViewDetails}
+          onApprove={() => {}}
+          onReject={() => {}}
+          onArchive={handleArchive}
+          showApproveReject={false}
+        />
+      </div>
 
-        <div className="bg-card border border-border rounded-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by product name or seller..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <Select
-              value={selectedCategory}
-              onValueChange={(value) => {
-                setSelectedCategory(value)
-                setCurrentPage(1)
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Product Table */}
-        <div className="border border-border rounded-lg mb-6">
-          <ProductTable
-            products={paginatedProducts}
-            onViewDetails={handleViewDetails}
-            onApprove={() => {}}
-            onReject={() => {}}
-            onArchive={handleArchive}
-            showApproveReject={false}
-          />
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
+      {/* Pagination */}
+      <div className="mt-6 flex justify-center">
+        <PaginationWrapper
+          totalItems={filteredProducts.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          label="products"
+        />
       </div>
 
       {/* Modals */}
@@ -298,6 +245,6 @@ export default function AdminProductsPage() {
           showActions={false}
         />
       )}
-    </main>
+    </div>
   )
 }

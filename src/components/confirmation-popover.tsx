@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 
 interface ConfirmationPopoverProps {
-  action: "accept" | "reject" | "delete"
-  entity?: string 
+  action: "accept" | "reject" | "delete" | "logout"
+  entity?: string
   onConfirm: () => void
   onCancel: () => void
 }
@@ -36,10 +36,15 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
     message = "Are you sure you want to reject this seller?"
     confirmText = "Reject"
   } else if (action === "delete") {
-  const target = entity ? entity.toLowerCase() : "this item"
-  title = `Delete ${entity || "Item"}`
-  message = `Are you sure you want to delete this ${target}? This action cannot be undone.`
-  confirmText = "Delete"
+    const target = entity ? entity.toLowerCase() : "this item"
+    title = `Delete ${entity || "Item"}`
+    message = `Are you sure you want to delete this ${target}? This action cannot be undone.`
+    confirmText = "Delete"
+  } else if (action === "logout") {
+    // Special case for logout so callers can show a clear logout confirmation
+    title = "Logout?"
+    message = "Are you sure you want to logout?"
+    confirmText = "Logout"
   } else if (action === "accept") {
     title = "Accept Seller"
     message = "Are you sure you want to accept this seller?"
@@ -61,9 +66,9 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
         <div className="bg-card border border-border rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-6 w-6 text-destructive" />
-            </div>
+            <div className="shrink-0">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
               <p className="text-sm text-muted-foreground mb-6">{message}</p>

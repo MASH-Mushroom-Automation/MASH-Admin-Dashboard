@@ -1,15 +1,10 @@
 "use client"
 
 import type { Product } from "@/app/mash-market/product/page"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ActionsMenu } from "@/components/user-actions-menu"
+import { Check, X, Archive } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { MoreVertical, Eye, Check, X, Archive } from "lucide-react"
 
 interface ProductTableProps {
   products: Product[]
@@ -29,111 +24,108 @@ export function ProductTable({
   showApproveReject = true,
 }: ProductTableProps) {
   const formatPrice = (price: number) => `$${price.toFixed(2)}`
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     })
-  }
 
   return (
-    <div className="overflow-x-auto">
-          <table className="w-full">
-        <thead>
-          <tr className="border-b border-border bg-muted/50">
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Product</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Seller</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Price</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Category</th>
+    <div className="w-full overflow-x-auto rounded-md border">
+      <Table className="min-w-full text-sm sm:text-base">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Product</TableHead>
+            <TableHead>Seller</TableHead>
+            <TableHead>Price</TableHead>
+            <TableHead>Category</TableHead>
             {showApproveReject && (
               <>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Date Submitted</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+                <TableHead>Date Submitted</TableHead>
+                <TableHead>Status</TableHead>
               </>
             )}
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody>
           {products.map((product) => (
-            <tr key={product.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-              <td className="px-6 py-4">
+            <TableRow key={product.id} className="hover:bg-muted/50">
+              <TableCell>
                 <div className="flex items-center gap-3">
                   <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
                     className="w-10 h-10 rounded object-cover"
                   />
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{product.name}</p>
-                  </div>
+                  <p className="font-medium truncate">{product.name}</p>
                 </div>
-              </td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">{product.seller}</td>
-              <td className="px-6 py-4 text-sm font-medium text-foreground">{formatPrice(product.price)}</td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">{product.category}</td>
+              </TableCell>
+              <TableCell>{product.seller}</TableCell>
+              <TableCell>{formatPrice(product.price)}</TableCell>
+              <TableCell className="truncate">{product.category}</TableCell>
+
               {showApproveReject && (
                 <>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {product.submittedAt ? formatDate(product.submittedAt) : "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Pending
-                    </span>
-                  </td>
+                  <TableCell>{product.submittedAt ? formatDate(product.submittedAt) : "N/A"}</TableCell>
+                  <TableCell className="capitalize">
+                    {product.status === "pending" && (
+                      <span className="text-yellow-600 font-medium">Pending</span>
+                    )}
+                    {product.status === "approved" && (
+                      <span className="text-green-600 font-medium">Approved</span>
+                    )}
+                    {product.status === "rejected" && (
+                      <span className="text-red-600 font-medium">Rejected</span>
+                    )}
+                  </TableCell>
                 </>
               )}
-              <td className="px-6 py-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">Open menu</span>
+
+              {/* ✅ ActionsMenu integrated here */}
+              <TableCell>
+                {showApproveReject && product.status === "pending" ? (
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onApprove(product)}
+                      className="text-green-600 border-green-600 hover:bg-green-50"
+                    >
+                      <Check className="h-4 w-4 mr-1" /> Approve
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onViewDetails(product)} className="cursor-pointer">
-                      <Eye className="mr-2 h-4 w-4" />
-                      <span>View Details</span>
-                    </DropdownMenuItem>
-                    {showApproveReject && product.status === "pending" && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onApprove(product)} className="cursor-pointer text-green-600">
-                          <Check className="mr-2 h-4 w-4" />
-                          <span>Approve</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onReject(product)} className="cursor-pointer text-red-600">
-                          <X className="mr-2 h-4 w-4" />
-                          <span>Reject</span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {!showApproveReject && onArchive && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onArchive(product)} className="cursor-pointer text-orange-600">
-                          <Archive className="mr-2 h-4 w-4" />
-                          <span>Archive</span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </td>
-            </tr>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onReject(product)}
+                      className="text-red-600 border-red-600 hover:bg-red-50"
+                    >
+                      <X className="h-4 w-4 mr-1" /> Reject
+                    </Button>
+                  </div>
+                ) : (
+                  <ActionsMenu
+                    id={product.id}
+                    viewUrl={`/mash-market/product/${product.id}`}
+                    onDelete={() => onArchive?.(product)}
+                    showView={true}
+                    showEdit={false}
+                    deleteLabel={onArchive ? "Archive" : "Delete"}
+                  />
+                )}
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
 
       {products.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No products found</p>
+        <div className="text-center text-muted-foreground py-6">
+          No products found
         </div>
       )}
     </div>

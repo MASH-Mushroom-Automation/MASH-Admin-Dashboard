@@ -1,14 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { RefreshCw, Search } from "lucide-react"
+import { SearchFilterBar } from "@/components/search-filter-bar"
 import { OrderLogsTable } from "@/components/ecommerce/order-logs-table"
 import { OrderDetailsDrawer } from "@/components/ecommerce/order-details-drawer"
-import { FilterDropdown } from "@/components/ecommerce/filter-dropdown"
+import PaginationWrapper from "@/components/pagination"
 
 export type OrderStatus =
   | "all"
@@ -56,7 +54,7 @@ const mockOrderLogs: OrderLog[] = [
     amount: 149.5,
     status: "shipment",
     lastUpdated: "2024-10-22 13:15",
-    paymentMethod: "GCas",
+    paymentMethod: "GCash",
     notes: "In transit to buyer",
   },
   {
@@ -73,7 +71,7 @@ const mockOrderLogs: OrderLog[] = [
   },
   {
     id: "4",
-    sellerName: "shroom Spot",
+    sellerName: "Shroom Spot",
     orderId: "ORD-2024-004",
     buyerName: "John Pascal",
     orderDate: "2024-10-21",
@@ -94,7 +92,31 @@ const mockOrderLogs: OrderLog[] = [
     lastUpdated: "2024-10-22 10:30",
     paymentMethod: "GCash",
     notes: "Return initiated by buyer",
-  }
+  },
+  {
+    id: "6",
+    sellerName: "Mushroom Hub",
+    orderId: "ORD-2024-006",
+    buyerName: "Alex Cruz",
+    orderDate: "2024-10-19",
+    amount: 200.0,
+    status: "completed",
+    lastUpdated: "2024-10-22 09:30",
+    paymentMethod: "GCash",
+    notes: "Delivered successfully",
+  },
+  {
+    id: "7",
+    sellerName: "Mushroom Lane",
+    orderId: "ORD-2024-007",
+    buyerName: "Jane Doe",
+    orderDate: "2024-10-18",
+    amount: 150.0,
+    status: "pending-payment",
+    lastUpdated: "2024-10-22 08:15",
+    paymentMethod: "Credit Card",
+    notes: "Awaiting confirmation",
+  },
 ]
 
 export default function OrdersContent() {
@@ -102,102 +124,113 @@ export default function OrdersContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedOrder, setSelectedOrder] = useState<OrderLog | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
   const [filterConfig, setFilterConfig] = useState({
     seller: "all",
     paymentMethod: "all",
     dateRange: "all",
   })
 
-  const filteredLogs = mockOrderLogs.filter((log) => {
-    const matchesTab = activeTab === "all" || log.status === activeTab
-    const matchesSearch =
-      searchQuery === "" ||
-      log.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.buyerName.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesSeller = filterConfig.seller === "all" || log.sellerName === filterConfig.seller
-    const matchesPaymentMethod =
-      filterConfig.paymentMethod === "all" || log.paymentMethod === filterConfig.paymentMethod
-    return matchesTab && matchesSearch && matchesSeller && matchesPaymentMethod
-  })
+  const filteredLogs = useMemo(() => {
+
+    return mockOrderLogs.filter((log) => {
+      const matchesTab = activeTab === "all" || log.status === activeTab
+      const matchesSearch =
+        searchQuery === "" ||
+        log.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.buyerName.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSeller = filterConfig.seller === "all" || log.sellerName === filterConfig.seller
+      const matchesPayment =
+        filterConfig.paymentMethod === "all" || log.paymentMethod === filterConfig.paymentMethod
+      return matchesTab && matchesSearch && matchesSeller && matchesPayment
+    })
+  }, [activeTab, searchQuery, filterConfig])
+
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage)
+  const sellerOptions = useMemo(() => {
+    const sellers = Array.from(new Set(mockOrderLogs.map((m) => m.sellerName)))
+    return [{ value: "all", label: "All Sellers" }, ...sellers.map((s) => ({ value: s, label: s }))]
+  }, [])
+
+  const paymentOptions = useMemo(() => {
+    const payments = Array.from(new Set(mockOrderLogs.map((m) => m.paymentMethod || "unknown")))
+    return [{ value: "all", label: "All Payments" }, ...payments.map((p) => ({ value: p, label: p }))]
+  }, [])
 
   const handleRowClick = (order: OrderLog) => {
     setSelectedOrder(order)
     setIsDrawerOpen(true)
   }
 
-  const handleRefresh = () => {
-    console.log("Refreshing logs...")
-  }
-
   return (
     <main className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Seller Order Logs</h1>
-          <p className="mt-2 text-muted-foreground">Monitor real-time updates on seller transactions and deliveries.</p>
+          <h1 className="sm:text-3xl text-2xl font-bold">Seller Order Logs</h1>
+          <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
+            Monitor real-time updates on seller transactions and deliveries.
+          </p>
         </div>
 
-        {/* Tabs and Controls */}
-        <div className="mb-6">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as OrderStatus)}>
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="pending-payment">Pending</TabsTrigger>
-              {/* <TabsTrigger value="shipment">Shipment</TabsTrigger> */}
-              {/* <TabsTrigger value="failed-delivery">Failed</TabsTrigger> */}
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-              <TabsTrigger value="refund-return">Refund</TabsTrigger>
-              <TabsTrigger value="canceled">Canceled</TabsTrigger>
-              {/* <TabsTrigger value="dispute">Dispute</TabsTrigger> */}
-              <TabsTrigger value="payment-verification">Verification</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value as OrderStatus)
+          setCurrentPage(1)
+        }}>
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 mb-16 sm:mb-2">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="pending-payment">Pending</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="refund-return">Refund</TabsTrigger>
+            <TabsTrigger value="canceled">Canceled</TabsTrigger>
+            <TabsTrigger value="payment-verification">Verification</TabsTrigger>
+          </TabsList>
 
-            {/* Search and Filter Bar */}
-            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by seller name, order ID, or buyer name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2">
-                <FilterDropdown filterConfig={filterConfig} setFilterConfig={setFilterConfig} />
-                <Button variant="outline" size="icon" onClick={handleRefresh} title="Refresh logs">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
+          <SearchFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={(q) => {
+              setSearchQuery(q)
+              setCurrentPage(1)
+            }}
+            placeholder="Search by seller, order ID, or buyer..."
+
+            filter1Value={filterConfig.seller}
+            onFilter1Change={(val) => setFilterConfig({ ...filterConfig, seller: val })}
+            filter1Options={sellerOptions}
+            filter1Label="All Sellers"
+
+            filter2Value={filterConfig.paymentMethod}
+            onFilter2Change={(val) => setFilterConfig({ ...filterConfig, paymentMethod: val })}
+            filter2Options={paymentOptions}
+            filter2Label="All Payments"
+          />
+          <TabsContent value={activeTab}>
+            <Card>
+              <OrderLogsTable logs={paginatedLogs} onRowClick={handleRowClick} />
+            </Card>
+
+            {/* Pagination */}
+            <div className="mt-4">
+              <PaginationWrapper
+                totalItems={filteredLogs.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                label="orders"
+              />
             </div>
-
-            {/* Tab Contents - All tabs show filtered data */}
-            {[
-              "all",
-              "pending-payment",
-              // "shipment",
-              "failed-delivery",
-              "completed",
-              "refund-return",
-              "canceled",
-              // "dispute",
-              "payment-verification",
-            ].map((tab) => (
-              <TabsContent key={tab} value={tab} className="mt-6">
-                <Card>
-                  <OrderLogsTable logs={filteredLogs} onRowClick={handleRowClick} />
-                </Card>
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Order Details Drawer */}
       {selectedOrder && (
-        <OrderDetailsDrawer order={selectedOrder} isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+        <OrderDetailsDrawer
+          order={selectedOrder}
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+        />
       )}
     </main>
   )

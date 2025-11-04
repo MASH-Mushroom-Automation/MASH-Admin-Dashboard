@@ -4,8 +4,8 @@ import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Users, Package, Warehouse, ArrowRight } from "lucide-react"
-import ChamberInventorySection from "../dashboard/sections/chamber-inventory"
-import ECommerceSection from "../dashboard/sections/ecommerce-section"
+import ChamberInventorySection from "./chamber-inventory"
+import ECommerceSection from "./ecommerce-section"
 
 export default function DashboardContent() {
   return (
