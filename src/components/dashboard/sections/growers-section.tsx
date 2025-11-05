@@ -1,21 +1,16 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Check, X } from "lucide-react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
-
-const applicationData = [
-  { name: "Approved", value: 12, color: "#10b981" },
-  { name: "Pending", value: 3, color: "#f59e0b" },
-  { name: "Rejected", value: 2, color: "#ef4444" },
-]
-
-const pendingApplications = [
-  { name: "Mika Dela Cruz", role: "Grower", location: "Mindanao", date: "2024-10-10", days: 5 },
-  { name: "Maria Santos", role: "Seller", location: "Caloocan", date: "2024-10-08", days: 7 },
-  { name: "Pedro Reyes", role: "Grower", location: "Negros", date: "2024-10-05", days: 10 },
-]
+// Unused data for future implementation
+// const applicationData = [
+//   { name: "Approved", value: 12, color: "#10b981" },
+//   { name: "Pending", value: 3, color: "#f59e0b" },
+//   { name: "Rejected", value: 2, color: "#ef4444" },
+// ]
+// const pendingApplications = [
+//   { name: "Mika Dela Cruz", role: "Grower", location: "Mindanao", date: "2024-10-10", days: 5 },
+//   { name: "Maria Santos", role: "Seller", location: "Caloocan", date: "2024-10-08", days: 7 },
+//   { name: "Pedro Reyes", role: "Grower", location: "Negros", date: "2024-10-05", days: 10 },
+// ]
 
 export default function GrowersSection() {
   return (

@@ -39,36 +39,34 @@ export default function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<ResetFormData>({
     resolver: zodResolver(resetSchema),
   });
 
-  const password = watch("newPassword");
-
-  const getPasswordStrength = (pwd: string) => {
-    if (!pwd) return { strength: 0, label: "", color: "" };
-    let strength = 0;
-    if (pwd.length >= 8) strength++;
-    if (pwd.length >= 12) strength++;
-    if (/[A-Z]/.test(pwd)) strength++;
-    if (/[0-9]/.test(pwd)) strength++;
-    if (/[^A-Za-z0-9]/.test(pwd)) strength++;
-
-    const levels = [
-      { strength: 0, label: "", color: "" },
-      { strength: 1, label: "Weak", color: "bg-destructive" },
-      { strength: 2, label: "Fair", color: "bg-yellow-500" },
-      { strength: 3, label: "Good", color: "bg-blue-500" },
-      { strength: 4, label: "Strong", color: "bg-green-500" },
-      { strength: 5, label: "Very Strong", color: "bg-green-600" },
-    ];
-
-    return levels[Math.min(strength, 5)];
-  };
-
-  const strength = getPasswordStrength(password);
+  // Uncomment below to display password strength indicator
+  // const password = watch("newPassword");
+  // const getPasswordStrength = (pwd: string) => {
+  //   if (!pwd) return { strength: 0, label: "", color: "" };
+  //   let strength = 0;
+  //   if (pwd.length >= 8) strength++;
+  //   if (pwd.length >= 12) strength++;
+  //   if (/[A-Z]/.test(pwd)) strength++;
+  //   if (/[0-9]/.test(pwd)) strength++;
+  //   if (/[^A-Za-z0-9]/.test(pwd)) strength++;
+  //
+  //   const levels = [
+  //     { strength: 0, label: "", color: "" },
+  //     { strength: 1, label: "Weak", color: "bg-destructive" },
+  //     { strength: 2, label: "Fair", color: "bg-yellow-500" },
+  //     { strength: 3, label: "Good", color: "bg-blue-500" },
+  //     { strength: 4, label: "Strong", color: "bg-green-500" },
+  //     { strength: 5, label: "Very Strong", color: "bg-green-600" },
+  //   ];
+  //
+  //   return levels[Math.min(strength, 5)];
+  // };
+  // const strength = getPasswordStrength(password);
 
   const onSubmit = async (data: ResetFormData) => {
     setIsLoading(true);

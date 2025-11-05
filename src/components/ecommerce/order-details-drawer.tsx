@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderLog } from "./content/orders-content";
+import type { OrderLog } from "@/app/mash-market/order/page";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 

@@ -23,15 +23,16 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(backendRes.data, { status: backendRes.status });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { data?: { message?: string }; status?: number }; message?: string };
     console.error(
       "[forgot-password proxy] error:",
-      error.response?.data || error.message
+      axiosError.response?.data || axiosError.message
     );
-    const message = error.response?.data?.message || "Request failed";
+    const message = axiosError.response?.data?.message || "Request failed";
     return NextResponse.json(
       { success: false, message },
-      { status: error.response?.status || 500 }
+      { status: axiosError.response?.status || 500 }
     );
   }
 }

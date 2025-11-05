@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Image from "next/image";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 
@@ -29,9 +28,10 @@ export default function ForgotPasswordPage() {
       await forgotPassword(email);
       setMessage("Password reset link sent to your email.");
       setEmail("");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { message?: string };
       console.error("Forgot password failed:", err);
-      setMessage(err?.message || "Failed to send reset link");
+      setMessage(error?.message || "Failed to send reset link");
     } finally {
       setIsLoading(false);
     }

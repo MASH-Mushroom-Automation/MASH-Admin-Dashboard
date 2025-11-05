@@ -133,7 +133,6 @@ import {
 import ChamberInventorySection from "../dashboard/sections/chamber-inventory";
 import ECommerceSection from "../dashboard/sections/ecommerce-section";
 import { useDashboardStore } from "../../store/dashboardStore";
-import { useEffect } from "react";
 
 export default function DashboardContent() {
   const { overview, loading } = useDashboardStore();

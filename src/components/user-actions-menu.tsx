@@ -22,7 +22,6 @@ interface ActionsMenuProps {
 }
 
 export function ActionsMenu({
-  id,
   viewUrl,
   editUrl,
   onDelete,

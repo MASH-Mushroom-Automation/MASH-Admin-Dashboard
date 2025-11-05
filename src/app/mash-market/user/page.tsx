@@ -10,7 +10,6 @@ import { SearchFilterBar } from "@/components/search-filter-bar"
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -93,10 +92,11 @@ export default function UsersManagement() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
-  const handleFilterChange = (callback: () => void) => {
-    setCurrentPage(1)
-    callback()
-  }
+  // Uncomment if needed for filter changes
+  // const handleFilterChange = (callback: () => void) => {
+  //   setCurrentPage(1)
+  //   callback()
+  // }
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)

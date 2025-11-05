@@ -18,6 +18,7 @@ export const useDashboardData = () => {
     fetchChambers(1, 10);
     fetchUsersStats();
     fetchCards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 
   return { loading };

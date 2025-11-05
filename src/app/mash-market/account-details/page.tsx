@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { ChevronLeft, Settings2 } from "lucide-react"
+import { ChevronLeft } from "lucide-react"
+import Image from "next/image"
 
-export default function AccountDetailsPage() {
+function AccountDetailsContent() {
   const [status, setStatus] = useState<"pending" | "accepted" | "rejected" | null>(null)
   const searchParams = useSearchParams()
   const sellerId = searchParams?.get("id")
@@ -67,8 +68,8 @@ export default function AccountDetailsPage() {
           <div className="flex items-start gap-8">
             {/* Profile Image */}
             <div className="shrink-0">
-              <div className="w-40 h-40 bg-linear-to-br from-yellow-200 to-green-200 rounded-lg overflow-hidden">
-                  <img src="/woman-profile-photo.jpg" alt="Profile" className="w-full h-full object-cover" />
+              <div className="w-40 h-40 bg-linear-to-br from-yellow-200 to-green-200 rounded-lg overflow-hidden relative">
+                  <Image src="/woman-profile-photo.jpg" alt="Profile" fill className="object-cover" />
               </div>
             </div>
 
@@ -299,5 +300,13 @@ export default function AccountDetailsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function AccountDetailsPage() {
+  return (
+    <Suspense fallback={<div className="p-8">Loading...</div>}>
+      <AccountDetailsContent />
+    </Suspense>
   )
 }

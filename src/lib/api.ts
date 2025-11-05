@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
         "authToken cookie visible:",
         hasToken ? "YES (not HttpOnly!)" : "none (correct – HttpOnly)"
       );
-    } catch (e) {
+    } catch {
       console.log("api ->", config.method, config.url, "(cookie check failed)");
     }
   }

@@ -48,9 +48,7 @@ export default function ChamberInventorySection() {
 
   // Debug: log registry to help verify data arrives and is mapped correctly
   if (typeof window !== "undefined") {
-    // eslint-disable-next-line no-console
     console.log("[ChamberInventory] registry (showing up to 5):", registry);
-    // eslint-disable-next-line no-console
     console.log("[ChamberInventory] usersStats:", usersStats);
   }
 

@@ -56,9 +56,6 @@ interface DashboardState {
   fetchCards: () => Promise<void>;
 }
 
-// Using axios baseURL (includes /api/v1)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
-
 export const useDashboardStore = create<DashboardState>()(
   devtools((set, get) => ({
     overview: null,
@@ -123,26 +120,26 @@ export const useDashboardStore = create<DashboardState>()(
         });
 
         // API may return wrapped payload: { success, statusCode, data: { labels: [...], values: [...] } }
-        const payload = res.data as any;
+        const payload = res.data as Record<string, unknown>;
 
         let mapped: DailySale[] = [];
 
         if (Array.isArray(payload)) {
           // legacy: array of { day, sales }
           mapped = payload as DailySale[];
-        } else if (payload?.data?.labels && payload?.data?.values) {
-          const labels: string[] = payload.data.labels || [];
-          const values: number[] = payload.data.values || [];
-          mapped = labels.map((lbl, idx) => ({
-            day: lbl,
-            sales: Number(values[idx] ?? 0),
-          }));
-        } else if (Array.isArray(payload?.data)) {
-          // sometimes data is already an array of objects
-          mapped = payload.data as DailySale[];
-        } else {
-          // fallback: try using payload directly if it matches
-          mapped = (payload as any) ?? [];
+        } else if (payload?.data && typeof payload.data === 'object') {
+          const data = payload.data as { labels?: string[]; values?: number[] };
+          if (data.labels && data.values) {
+            const labels: string[] = data.labels || [];
+            const values: number[] = data.values || [];
+            mapped = labels.map((lbl, idx) => ({
+              day: lbl,
+              sales: Number(values[idx] ?? 0),
+            }));
+          } else if (Array.isArray(data)) {
+            // sometimes data is already an array of objects
+            mapped = data as DailySale[];
+          }
         }
 
         set({ sales: mapped, loading: { ...get().loading, sales: false } });
@@ -170,16 +167,17 @@ export const useDashboardStore = create<DashboardState>()(
 
         // The API response is wrapped. Example shape:
         // { success, statusCode, data: { data: [ ...items ], meta: { total, page, limit } } }
-        const payload = res.data as any;
-        const items = (payload?.data?.data || []) as any[];
-        const meta = payload?.data?.meta || {};
+        const payload = res.data as Record<string, unknown>;
+        const dataObj = payload?.data as { data?: unknown[]; meta?: Record<string, unknown> } | undefined;
+        const items = (dataObj?.data || []) as Record<string, unknown>[];
+        const meta = (dataObj?.meta || {}) as { total?: number; page?: number; limit?: number };
 
         // Map API fields to internal Chamber type
         const mapped: Chamber[] = items.map((it) => ({
-          id: it.chamberId ?? it.id ?? "",
-          grower: it.growerName ?? it.grower ?? "",
-          location: it.location ?? "",
-          status: it.status ?? "",
+          id: String(it.chamberId ?? it.id ?? ""),
+          grower: String(it.growerName ?? it.grower ?? ""),
+          location: String(it.location ?? ""),
+          status: String(it.status ?? ""),
         }));
 
         const chamberRegistry: ChamberRegistry = {
@@ -210,8 +208,8 @@ export const useDashboardStore = create<DashboardState>()(
         const res = await api.get(`v1/super-admin/dashboard/users-stats`);
 
         // API returns: { success, statusCode, data: { USER: 1, BUYER: 5, ... } }
-        const payload = res.data as any;
-        const data: UsersStats = payload?.data || {};
+        const payload = res.data as Record<string, unknown>;
+        const data: UsersStats = (payload?.data as UsersStats) || {};
 
         set({
           usersStats: data,

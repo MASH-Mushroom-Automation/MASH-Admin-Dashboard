@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Navbar from "@/components/dashboard/navbar"
 import Sidebar from "@/components/sidebar"
-import RegisterChamber from "@/components/mash-grow/register-content"
 import CmsContent from "@/components/mash-grow/cms-content"
 
 export default function Home() {

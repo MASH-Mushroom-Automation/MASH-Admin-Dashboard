@@ -23,7 +23,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
       error: null,
@@ -86,13 +86,14 @@ export const useAuthStore = create<AuthState>()(
               "[authStore] authToken cookie visible to JS:",
               hasAuth ? "YES (not HttpOnly!)" : "none (correct – HttpOnly)"
             );
-          } catch (e) {
-            console.warn("Cookie check failed", e);
+          } catch {
+            console.warn("Cookie check failed");
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const error = err as { message?: string };
           console.error("Login error:", err);
           set({
-            error: err.message || "Login failed",
+            error: error.message || "Login failed",
             user: null,
             isAuthenticated: false,
           });
@@ -126,9 +127,10 @@ export const useAuthStore = create<AuthState>()(
 
           // success - don't change auth state, just clear error
           set({ error: null });
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const error = err as { message?: string };
           console.error("forgotPassword error:", err);
-          set({ error: err?.message || "Failed to request password reset" });
+          set({ error: error?.message || "Failed to request password reset" });
           throw err;
         }
       },

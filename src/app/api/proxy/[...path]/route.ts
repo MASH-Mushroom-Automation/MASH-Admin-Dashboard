@@ -32,7 +32,7 @@ async function handler(
         { status: 502 }
       );
     }
-  } catch (e) {
+  } catch {
     // If URL parsing fails, continue and let fetch handle errors.
   }
 
@@ -60,9 +60,9 @@ async function handler(
 
     console.log(`[PROXY] Response status: ${res.status}`);
 
-    let json: any;
+    let json: Record<string, unknown>;
     try {
-      json = JSON.parse(data);
+      json = JSON.parse(data) as Record<string, unknown>;
     } catch {
       json = { message: data };
     }
@@ -82,8 +82,9 @@ async function handler(
     }
 
     return response;
-  } catch (error: any) {
-    console.error("[PROXY] Fetch error:", error.message);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("[PROXY] Fetch error:", err.message);
     return NextResponse.json({ error: "Proxy failed" }, { status: 502 });
   }
 }

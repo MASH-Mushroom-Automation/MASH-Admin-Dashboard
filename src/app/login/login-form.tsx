@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -80,7 +81,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md border border-gray-300 bg-white p-8 shadow-sm">
       <div className="flex justify-center">
-        <img src="/mash-grow-logo.png" alt="M" className="w-15 h-15" />
+        <Image src="/mash-grow-logo.png" alt="M" width={60} height={60} />
       </div>
       <h1 className="text-center text-2xl font-bold text-gray-900">
         Login to your account

@@ -46,15 +46,16 @@ export async function POST(request: NextRequest) {
     response.cookies.set(cookieOpts("refreshToken", refreshToken, 30)); // 30 days
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { data?: { message?: string }; status?: number }; message?: string };
     console.error(
       "[login proxy] error:",
-      error.response?.data || error.message
+      axiosError.response?.data || axiosError.message
     );
-    const message = error.response?.data?.message || "Login failed";
+    const message = axiosError.response?.data?.message || "Login failed";
     return NextResponse.json(
       { success: false, message },
-      { status: error.response?.status || 500 }
+      { status: axiosError.response?.status || 500 }
     );
   }
 }

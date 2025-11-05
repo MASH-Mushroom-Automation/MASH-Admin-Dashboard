@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Search,  ChevronRight } from "lucide-react"
@@ -12,7 +11,7 @@ import { Button } from "@/components/ui/button"
 export type TabType = "all" | "approval" | "approved" | "rejected"
 
 export default function SellerContent() {
-  const [activeTab, setActiveTab] = useState<TabType>("all")
+  const [activeTab] = useState<TabType>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const router = useRouter()
 

@@ -3,6 +3,7 @@
 import type { Product } from "@/app/mash-market/product/page"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
+import Image from "next/image"
 
 interface ProductDetailsModalProps {
   product: Product
@@ -37,11 +38,14 @@ export function ProductDetailsModal({
         <div className="p-6 space-y-6">
           {/* Product Image */}
           <div className="flex justify-center">
-            <img
-              src={product.image || "/placeholder.svg"}
-              alt={product.name}
-              className="w-64 h-64 rounded-lg object-cover"
-            />
+            <div className="relative w-64 h-64">
+              <Image
+                src={product.image || "/placeholder.svg"}
+                alt={product.name}
+                fill
+                className="rounded-lg object-cover"
+              />
+            </div>
           </div>
 
           {/* Product Info */}
