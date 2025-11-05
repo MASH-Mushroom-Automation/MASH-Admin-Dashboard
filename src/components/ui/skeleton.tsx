@@ -15,14 +15,19 @@
 // components/ui/skeleton.tsx
 import { cn } from "@/lib/utils";
 
-interface SkeletonProps {
+import React from "react";
+
+interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   children?: React.ReactNode;
 }
 
-export function Skeleton({ className, children }: SkeletonProps) {
+export function Skeleton({ className, children, ...props }: SkeletonProps) {
   return (
-    <div className={cn("animate-pulse rounded-md bg-muted/50", className)}>
+    <div
+      className={cn("animate-pulse rounded-md bg-muted/50", className)}
+      {...props}
+    >
       {children}
     </div>
   );
