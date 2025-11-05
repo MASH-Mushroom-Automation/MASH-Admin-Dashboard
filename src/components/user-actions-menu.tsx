@@ -15,19 +15,21 @@ interface ActionsMenuProps {
   id: string
   viewUrl?: string     
   editUrl?: string   
-  onDelete: () => void
+  onView?: () => void
+  onArchive: () => void
   showView?: boolean
   showEdit?: boolean
-  deleteLabel?: string
+  ArchiveLabel?: string
 }
 
 export function ActionsMenu({
   viewUrl,
   editUrl,
-  onDelete,
+  onArchive,
+  onView,
   showView = true,
   showEdit = true,
-  deleteLabel = "Delete",
+  ArchiveLabel = "Archive",
 }: ActionsMenuProps) {
   return (
     <DropdownMenu>
@@ -37,14 +39,19 @@ export function ActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {showView && viewUrl && (
+        {showView && (onView ? (
+          <DropdownMenuItem onClick={onView} className="flex items-center gap-2 cursor-pointer">
+            <Eye className="h-4 w-4" />
+            View
+          </DropdownMenuItem>
+        ) : viewUrl ? (
           <DropdownMenuItem asChild>
             <Link href={viewUrl} className="flex items-center gap-2 cursor-pointer">
               <Eye className="h-4 w-4" />
               View
             </Link>
           </DropdownMenuItem>
-        )}
+        ) : null)}
         {showEdit && editUrl && (
           <DropdownMenuItem asChild>
             <Link href={editUrl} className="flex items-center gap-2 cursor-pointer">
@@ -54,11 +61,11 @@ export function ActionsMenu({
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
-          onClick={onDelete}
-          className="text-destructive cursor-pointer flex items-center gap-2"
+          onClick={onArchive}
+          className="text-destructive hover:text-destructive cursor-pointer flex items-center gap-2"
         >
           <Trash2 className="h-4 w-4 text-destructive" />
-          {deleteLabel}
+          {ArchiveLabel}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

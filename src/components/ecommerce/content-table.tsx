@@ -29,13 +29,13 @@ interface ContentItem {
 interface ContentTableProps {
   contents: ContentItem[]
   onEdit: (content: ContentItem) => void
-  onDelete: (id: ID) => void
+  onArchive: (id: ID) => void
   onPublishToggle: (id: ID) => void
   onPreview: (content: ContentItem) => void
 }
 
-export default function ContentTable({ contents, onEdit, onDelete, onPublishToggle, onPreview }: ContentTableProps) {
-  const [deleteId, setDeleteId] = useState<ID | null>(null)
+export default function ContentTable({ contents, onEdit, onArchive, onPublishToggle, onPreview }: ContentTableProps) {
+  const [ArchiveId, setArchiveId] = useState<ID | null>(null)
 
   const getStatusColor = (status: string): string => {
     switch (status) {
@@ -110,9 +110,9 @@ export default function ContentTable({ contents, onEdit, onDelete, onPublishTogg
                             </>
                           )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDeleteId(content.id)} className="text-destructive">
+                        <DropdownMenuItem onClick={() => setArchiveId(content.id)} className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          Archive
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -124,25 +124,25 @@ export default function ContentTable({ contents, onEdit, onDelete, onPublishTogg
         </Table>
       </div>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
+      {/* Archive Confirmation */}
+      <AlertDialog open={ArchiveId !== null} onOpenChange={() => setArchiveId(null)}>
         <AlertDialogContent>
-          <AlertDialogTitle>Delete Content</AlertDialogTitle>
+          <AlertDialogTitle>Archive Content</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this content? This action cannot be undone.
+            Are you sure you want to Archive this content? This action cannot be undone.
           </AlertDialogDescription>
           <div className="flex gap-3 justify-end">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (deleteId !== null) {
-                  onDelete(deleteId)
+                if (ArchiveId !== null) {
+                  onArchive(ArchiveId)
                 }
-                setDeleteId(null)
+                setArchiveId(null)
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Archive
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

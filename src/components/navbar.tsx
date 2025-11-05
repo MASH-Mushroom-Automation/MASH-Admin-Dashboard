@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { PanelLeftOpen, PanelLeftClose } from "lucide-react"
+import { PanelLeftOpen, PanelLeftClose, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface NavbarProps {
@@ -25,11 +25,16 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
         className="text-foreground hover:bg-accent"
         title="Toggle sidebar"
       >
-        {isSidebarOpen ? (
-          <PanelLeftClose className="w-5 h-5" />
-        ) : (
-          <PanelLeftOpen className="w-5 h-5" />
-        )}
+        <span className="md:hidden">
+          <Menu className="w-5 h-5" />
+        </span>
+        <span className="hidden md:inline-flex">
+          {isSidebarOpen ? (
+            <PanelLeftClose className="w-5 h-5" />
+          ) : (
+            <PanelLeftOpen className="w-5 h-5" />
+          )}
+        </span>
       </Button>
     </nav>
   )

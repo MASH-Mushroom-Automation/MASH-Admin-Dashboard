@@ -18,11 +18,12 @@ interface Seller {
 
 interface SellerActionMenuProps {
   seller: Seller
-  activeTab?: TabType
+  activeTab?: TabType | string
   mode?: "default" | "all" | "pending"
   onReject?: () => void
-  onDelete: () => void
+  onArchive: () => void
   onAccept?: () => void
+  onView?: () => void
 }
 
 export function SellerActionMenu({
@@ -30,8 +31,9 @@ export function SellerActionMenu({
   activeTab,
   mode = "default",
   onReject,
-  onDelete,
+  onArchive,
   onAccept,
+  onView,
 }: SellerActionMenuProps) {
   const router = useRouter()
 
@@ -44,10 +46,14 @@ export function SellerActionMenu({
 
   const getMenuItems = (): MenuItem[] => {
     const baseItems: MenuItem[] = [
-      {
+          {
         label: "View",
         icon: Eye,
-        action: () => router.push(`/mash-market/account-details?id=${seller.id}`),
+        action: () => {
+          if (onView) return onView()
+          // Navigate to the seller detail page instead of an account-details modal
+          return router.push(`/mash-market/seller/${seller.id}`)
+        },
       },
     ]
 
@@ -56,9 +62,9 @@ export function SellerActionMenu({
       return [
         ...baseItems,
         {
-          label: "Delete",
+          label: "Archive",
           icon: Trash2,
-          action: onDelete,
+          action: onArchive,
           destructive: true,
         },
       ]
@@ -92,12 +98,12 @@ export function SellerActionMenu({
         return [
           ...baseItems,
           { label: "Edit", icon: Edit, action: () => console.log("Edit", seller.id) },
-          { label: "Delete", icon: Trash2, action: onDelete, destructive: true },
+          { label: "Archive", icon: Trash2, action: onArchive, destructive: true },
         ]
       case "rejected":
         return [
           ...baseItems,
-          { label: "Delete", icon: Trash2, action: onDelete, destructive: true },
+          { label: "Archive", icon: Trash2, action: onArchive, destructive: true },
         ]
       default:
         return baseItems
