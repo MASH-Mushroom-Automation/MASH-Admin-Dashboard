@@ -16,6 +16,26 @@ async function handler(
 
   console.log(`[PROXY] ${req.method} → ${url}`);
 
+  // Safety: avoid proxying to the same Next.js server (common accidental misconfiguration)
+  try {
+    const reqHost = req.nextUrl.host; // host:port of incoming request
+    const backendHost = new URL(BACKEND_URL).host;
+    if (reqHost === backendHost) {
+      console.error(
+        `[PROXY] Misconfigured BACKEND_URL: proxy target (${backendHost}) matches the Next.js host (${reqHost}). This would create a request loop.`
+      );
+      return NextResponse.json(
+        {
+          error:
+            "Proxy misconfigured: set NEXT_PUBLIC_API_URL to your backend URL",
+        },
+        { status: 502 }
+      );
+    }
+  } catch (e) {
+    // If URL parsing fails, continue and let fetch handle errors.
+  }
+
   const cookie = req.headers.get("cookie") || "";
   const tokenMatch = cookie.match(/authToken=([^;]+)/);
   const token = tokenMatch ? tokenMatch[1] : null;

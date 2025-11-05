@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { LoginForm } from "./login-form";
+import { Footer } from "./footer";
 
 export default function LoginPage() {
   return (
@@ -13,7 +14,9 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center">
               <Image src="/pictures/logo.png" alt="M" width={40} height={36} />
             </div>
-            <span className="text-lg font-bold text-green-600 mt-6">M.A.S.H.</span>
+            <span className="text-lg font-bold text-green-600 mt-6">
+              M.A.S.H.
+            </span>
           </div>
         </div>
       </header>
@@ -24,14 +27,7 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-300 bg-white py-4">
-        <div className="mx-auto max-w-7xl px-4">
-          <p className="text-center text-sm text-gray-600">
-            © 2024 M.A.S.H. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
-

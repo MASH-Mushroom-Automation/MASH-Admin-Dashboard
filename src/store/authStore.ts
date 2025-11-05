@@ -18,6 +18,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   logout: () => void;
   login: (email: string, password: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -95,6 +96,39 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
           });
+          throw err;
+        }
+      },
+
+      forgotPassword: async (email: string) => {
+        try {
+          set({ error: null });
+          const response = await fetch(`/api/auth/forgot-password`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          if (!response.ok) {
+            const err = await response
+              .json()
+              .catch(() => ({ message: "Request failed" }));
+            throw new Error(err.message || "Request failed");
+          }
+
+          const result = await response.json().catch(() => ({ success: true }));
+
+          if (!result.success) {
+            throw new Error(result.message || "Failed to send reset link");
+          }
+
+          // success - don't change auth state, just clear error
+          set({ error: null });
+        } catch (err: any) {
+          console.error("forgotPassword error:", err);
+          set({ error: err?.message || "Failed to request password reset" });
           throw err;
         }
       },
