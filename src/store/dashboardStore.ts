@@ -98,8 +98,20 @@ export const useDashboardStore = create<DashboardState>()(
 
         const res = await api.get(`v1/super-admin/dashboard/overview`);
 
-        const data: Overview = res.data;
-        set({ overview: data, loading: { ...get().loading, overview: false } });
+        // Some backend responses are wrapped: { success, statusCode, data: { ... } }
+        // Normalize to the inner data object if present.
+        const payload = res.data as any;
+        const data: Overview = (payload && payload.data) ? payload.data : payload;
+
+        // Defensive normalization: ensure nested objects exist to avoid runtime errors
+        const normalized: Overview = {
+          chambers: data?.chambers ?? { active: 0, inactive: 0 },
+          orders: data?.orders ?? { completed: 0, pending: 0 },
+          products: data?.products ?? { pending: 0, approved: 0 },
+          sellerApplications: data?.sellerApplications ?? { pending: 0, approved: 0 },
+        };
+
+        set({ overview: normalized, loading: { ...get().loading, overview: false } });
       } catch (err) {
         console.error("Failed to fetch overview:", err);
         set({
