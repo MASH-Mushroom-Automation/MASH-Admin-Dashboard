@@ -7,7 +7,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, remember } = body;
+    const { email, password, rememberMe } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const backendRes = await axios.post(`${BACKEND_URL}/api/v1/auth/login`, {
       email,
       password,
-      remember,
+      rememberMe,
     });
 
     const { accessToken, refreshToken, user } = backendRes.data.data;

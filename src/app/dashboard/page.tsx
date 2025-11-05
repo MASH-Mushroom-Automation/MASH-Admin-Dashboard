@@ -1,22 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "@/components/dashboard/navbar";
 import Sidebar from "@/components/sidebar";
 import DashboardContent from "@/components/dashboard/dashboard-content";
 import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { useDashboardLoading } from "@/hooks/useDashboardLoading";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Auto-fetch all endpoints on mount
-  useDashboardData();
+  const {
+    fetchOverview,
+    fetchSales,
+    fetchChambers,
+    fetchUsersStats,
+    fetchCards,
+  } = useDashboardStore();
 
-  // Detect if ANY request is in progress
+  useEffect(() => {
+    fetchOverview();
+
+    // -------------------------------------------------
+    // SALES – keep the default 7 days
+    // -------------------------------------------------
+    fetchSales(7);
+
+    // -------------------------------------------------
+    // CHAMBERS – explicit page/limit + debug logs
+    // -------------------------------------------------
+    const page = 1;
+    const limit = 10;
+    console.log(`[Dashboard] fetching chambers → page=${page}, limit=${limit}`);
+    fetchChambers(page, limit);
+
+    fetchUsersStats();
+    fetchCards();
+  }, [fetchOverview, fetchSales, fetchChambers, fetchUsersStats, fetchCards]);
   const isLoading = useDashboardLoading();
-
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}

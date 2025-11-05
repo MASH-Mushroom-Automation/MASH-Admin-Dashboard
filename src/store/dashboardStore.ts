@@ -1,3 +1,4 @@
+// src/store/dashboardStore.ts
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { api } from "../lib/api";
@@ -86,9 +87,10 @@ export const useDashboardStore = create<DashboardState>()(
             .split(";")
             .map((p) => p.trim())
             .find((p) => p.startsWith("authToken="));
-          const tokenValue = tokenPair
-            ? decodeURIComponent(tokenPair.split("=")[1] || "")
-            : undefined;
+          let tokenValue: string | undefined = undefined;
+          if (tokenPair) {
+            tokenValue = decodeURIComponent(tokenPair.split("=")[1] || "");
+          }
           console.log(
             "[dashboard] authToken present:",
             !!tokenValue,
@@ -97,16 +99,15 @@ export const useDashboardStore = create<DashboardState>()(
               : "none"
           );
         } catch (e) {
-          console.warn("[dashboard] cookie parse failed", e);
+          console.warn("[dashboard] failed to parse cookie", e);
         }
-        const res = await api.get("v1/super-admin/dashboard/overview");
 
-        set({
-          overview: res.data,
-          loading: { ...get().loading, overview: false },
-        });
+        const res = await api.get(`v1/super-admin/dashboard/overview`);
+
+        const data: Overview = res.data;
+        set({ overview: data, loading: { ...get().loading, overview: false } });
       } catch (err) {
-        console.error("❌ Failed to fetch overview:", err);
+        console.error("Failed to fetch overview:", err);
         set({
           error: { ...get().error, overview: (err as Error).message },
           loading: { ...get().loading, overview: false },
@@ -139,12 +140,40 @@ export const useDashboardStore = create<DashboardState>()(
         loading: { ...get().loading, chambers: true },
         error: { ...get().error, chambers: null },
       });
+
+      console.log(
+        `[store] GET v1/super-admin/dashboard/chambers → page=${page}, limit=${limit}`
+      );
       try {
         const res = await api.get(`v1/super-admin/dashboard/chambers`, {
           params: { page, limit },
         });
-        const data: ChamberRegistry = res.data;
-        set({ chambers: data, loading: { ...get().loading, chambers: false } });
+
+        // The API response is wrapped. Example shape:
+        // { success, statusCode, data: { data: [ ...items ], meta: { total, page, limit } } }
+        const payload = res.data as any;
+        const items = (payload?.data?.data || []) as any[];
+        const meta = payload?.data?.meta || {};
+
+        // Map API fields to internal Chamber type
+        const mapped: Chamber[] = items.map((it) => ({
+          id: it.chamberId ?? it.id ?? "",
+          grower: it.growerName ?? it.grower ?? "",
+          location: it.location ?? "",
+          status: it.status ?? "",
+        }));
+
+        const chamberRegistry: ChamberRegistry = {
+          chambers: mapped,
+          total: meta.total ?? mapped.length,
+          page: meta.page ?? page,
+          limit: meta.limit ?? limit,
+        };
+
+        set({
+          chambers: chamberRegistry,
+          loading: { ...get().loading, chambers: false },
+        });
       } catch (err) {
         set({
           error: { ...get().error, chambers: (err as Error).message },

@@ -1,12 +1,12 @@
-// lib/api.ts
+// src/lib/api.ts
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "/api/proxy", // PROXY PATH
+  baseURL: "/api/proxy",
   withCredentials: true,
 });
 
-// Debug log (will show "none" for HttpOnly — that's correct!)
+// Debug log
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     try {

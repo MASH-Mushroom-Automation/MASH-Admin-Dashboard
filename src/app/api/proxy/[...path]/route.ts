@@ -21,7 +21,7 @@ async function handler(
   const token = tokenMatch ? tokenMatch[1] : null;
 
   console.log(`[PROXY] Cookie:`, cookie ? "YES" : "NO");
-  console.log(`[PROXY] Token:`, token ? "YES" : "NO");
+  console.log(`[PROXY] Token extracted:`, token ? "YES" : "NO");
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
