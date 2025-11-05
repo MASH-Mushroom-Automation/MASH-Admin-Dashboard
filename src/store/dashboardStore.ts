@@ -122,8 +122,30 @@ export const useDashboardStore = create<DashboardState>()(
           params: { days },
         });
 
-        const data: DailySale[] = res.data;
-        set({ sales: data, loading: { ...get().loading, sales: false } });
+        // API may return wrapped payload: { success, statusCode, data: { labels: [...], values: [...] } }
+        const payload = res.data as any;
+
+        let mapped: DailySale[] = [];
+
+        if (Array.isArray(payload)) {
+          // legacy: array of { day, sales }
+          mapped = payload as DailySale[];
+        } else if (payload?.data?.labels && payload?.data?.values) {
+          const labels: string[] = payload.data.labels || [];
+          const values: number[] = payload.data.values || [];
+          mapped = labels.map((lbl, idx) => ({
+            day: lbl,
+            sales: Number(values[idx] ?? 0),
+          }));
+        } else if (Array.isArray(payload?.data)) {
+          // sometimes data is already an array of objects
+          mapped = payload.data as DailySale[];
+        } else {
+          // fallback: try using payload directly if it matches
+          mapped = (payload as any) ?? [];
+        }
+
+        set({ sales: mapped, loading: { ...get().loading, sales: false } });
       } catch (err) {
         set({
           error: { ...get().error, sales: (err as Error).message },
