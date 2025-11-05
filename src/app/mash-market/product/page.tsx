@@ -3,9 +3,17 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { ProductTable } from "@/components/ecommerce/product-table"
-import { ProductDetailsModal } from "@/components/ecommerce/product-details-modal"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { ChevronRight } from "lucide-react"
+import { Archive } from "lucide-react"
 import { toast } from "sonner"
 import PaginationWrapper from "@/components/pagination"
 import { SearchFilterBar } from "@/components/search-filter-bar"
@@ -31,6 +39,7 @@ export interface Product {
   }
   description: string
   status: ProductStatus
+  rejectReason?: string
   submittedAt: string
 }
 
@@ -170,33 +179,53 @@ const ITEMS_PER_PAGE = 5
 export default function AdminProductsPage() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  // no modal: view navigates to product page
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<"All" | "Fresh Mushroom" | "Processed Mushroom" | "Cultivation Supplies">("All")
+  // bulk filters
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+
+  const businessOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        products.map((p) => p.sellerInfo?.businessName).filter((b) => !!b) as string[]
+      )
+    )
+  }, [products])
+
+  const categoryOptions = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.category).filter(Boolean)))
+  }, [products])
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.seller.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory
-      return matchesSearch && matchesCategory
+        product.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.sellerInfo?.businessName || "").toLowerCase().includes(searchQuery.toLowerCase())
+
+      // Category matching (if any category checkboxes selected)
+      const matchesCategory = selectedCategories.length > 0 ? selectedCategories.includes(product.category) : true
+
+      const businessName = product.sellerInfo?.businessName
+      const matchesBusiness = selectedBusinesses.length > 0 ? (businessName ? selectedBusinesses.includes(businessName) : false) : true
+
+      return matchesSearch && matchesCategory && matchesBusiness
     })
-  }, [products, searchQuery, selectedCategory])
+  }, [products, searchQuery, selectedCategories, selectedBusinesses])
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredProducts, currentPage])
 
-  const handleViewDetails = (product: Product) => {
-    setSelectedProduct(product)
-  }
 
   const handleArchive = (product: Product) => {
     setProducts(products.map((p) => (p.id === product.id ? { ...p, status: "archived" } : p)))
     toast.success(`Product "${product.name}" has been archived.`)
+    // navigate to product archive page
+    router.push(`/mash-market/product/archive?id=${product.id}`)
   }
 
   const pendingCount = products.filter((p) => p.status === "pending").length
@@ -223,7 +252,7 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {[
           { label: "Pending Review", count: pendingCount, color: "bg-yellow-100 dark:bg-yellow-900/30", icon: "⏳" },
           { label: "Approved", count: approvedCount, color: "bg-green-100 dark:bg-green-900/30", icon: "✓" },
@@ -239,34 +268,112 @@ export default function AdminProductsPage() {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* Search and Filter */}
-      <div className="mb-6">
-        <SearchFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          placeholder="Search by name, seller, or category..."
-          filter1Label="Category"
-          filter1Value={selectedCategory}
-          onFilter1Change={(c: string) => {
-            setSelectedCategory(c as typeof selectedCategory)
-            setCurrentPage(1)
-          }}
-          filter1Options={[
-            { value: "All", label: "All Categories" },
-            { value: "Fresh Mushroom", label: "Fresh Mushroom" },
-            { value: "Processed Mushroom", label: "Processed Mushroom" },
-            { value: "Cultivation Supplies", label: "Cultivation Supplies" },
-          ]}
-        />
+      <div className="mb-2">
+        <div className="flex items-center">
+          <div className="flex-1">
+            <SearchFilterBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              placeholder="Search by name, seller, or category..."
+            />
+          </div>
+          <div className="flex items-center gap-2 -mt-6">
+            <div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center py-4.5">
+                      <span className="font-medium">Filters</span>
+                      { (selectedCategories.length + selectedBusinesses.length) > 0 && (
+                        <span className="inline-flex items-center justify-center rounded-full bg-emerald-700 py-0.5 text-xs text-white">
+                          {selectedCategories.length + selectedBusinesses.length}
+                        </span>
+                      )}
+                    </Button>
+                </DropdownMenuTrigger>
+
+                    <DropdownMenuContent className="w-64 p-2">
+                      <DropdownMenuLabel>Category</DropdownMenuLabel>
+                      <div className="px-1">
+                        {categoryOptions.map((c) => (
+                          <label key={c} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
+                            <input
+                              type="checkbox"
+                              className="rounded-sm"
+                              checked={selectedCategories.includes(c)}
+                              onChange={(e) => {
+                                const val = e.target.checked
+                                setCurrentPage(1)
+                                setSelectedCategories((prev) => (val ? Array.from(new Set([...prev, c])) : prev.filter((x) => x !== c)))
+                              }}
+                            />
+                            <span className="text-sm">{c}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuLabel>Business name</DropdownMenuLabel>
+                      <div className="px-1">
+                        {businessOptions.map((b) => (
+                          <label key={b} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
+                            <input
+                              type="checkbox"
+                              className="rounded-sm"
+                              checked={selectedBusinesses.includes(b)}
+                              onChange={(e) => {
+                                const val = e.target.checked
+                                setCurrentPage(1)
+                                setSelectedBusinesses((prev) => (val ? Array.from(new Set([...prev, b])) : prev.filter((x) => x !== b)))
+                              }}
+                            />
+                            <span className="text-sm">{b}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      <div className="px-1">
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setSelectedCategories(categoryOptions.slice())
+                            setSelectedBusinesses(businessOptions.slice())
+                            setCurrentPage(1)
+                          }}
+                        >
+                          Select all
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setSelectedCategories([])
+                            setSelectedBusinesses([])
+                            setCurrentPage(1)
+                          }}
+                        >
+                          Clear
+                        </DropdownMenuItem>
+                      </div>
+                    </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div>
+              <Button variant="ghost" size="sm" onClick={() => router.push("/mash-market/product/archive")} aria-label="View product archives">
+                <Archive className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Product Table */}
       <div className="overflow-x-auto">
         <ProductTable
           products={paginatedProducts}
-          onViewDetails={handleViewDetails}
           onApprove={() => {}}
           onReject={() => {}}
           onArchive={handleArchive}
@@ -285,16 +392,7 @@ export default function AdminProductsPage() {
         />
       </div>
 
-      {/* Modals */}
-      {selectedProduct && (
-        <ProductDetailsModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onApprove={() => setSelectedProduct(null)}
-          onReject={() => setSelectedProduct(null)}
-          showActions={false}
-        />
-      )}
+      {/* Product details are now a page at /mash-market/product/[id] - modal removed */}
     </div>
   )
 }

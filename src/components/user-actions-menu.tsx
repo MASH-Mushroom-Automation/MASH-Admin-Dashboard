@@ -16,21 +16,21 @@ interface ActionsMenuProps {
   viewUrl?: string     
   editUrl?: string   
   onView?: () => void
-  onDelete: () => void
+  onArchive: () => void
   showView?: boolean
   showEdit?: boolean
-  deleteLabel?: string
+  ArchiveLabel?: string
 }
 
 export function ActionsMenu({
   id,
   viewUrl,
   editUrl,
-  onDelete,
+  onArchive,
   onView,
   showView = true,
   showEdit = true,
-  deleteLabel = "Delete",
+  ArchiveLabel = "Archive",
 }: ActionsMenuProps) {
   return (
     <DropdownMenu>
@@ -62,11 +62,11 @@ export function ActionsMenu({
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
-          onClick={onDelete}
+          onClick={onArchive}
           className="text-destructive hover:text-destructive cursor-pointer flex items-center gap-2"
         >
           <Trash2 className="h-4 w-4 text-destructive" />
-          {deleteLabel}
+          {ArchiveLabel}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

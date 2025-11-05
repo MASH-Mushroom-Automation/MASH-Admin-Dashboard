@@ -52,20 +52,18 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   }, [pathname])
 
   const mashMarketChildren = ["User", "Seller", "Order", "Product", "CMS"]
-  const mashGrowChildren = ["User", "CMS"]
+  const mashGrowChildren = ["devices", "registered-users", "cms"]
 
   const isMashMarketActive = mashMarketChildren.some((child) =>
     pathname.startsWith(`/mash-market/${child.toLowerCase()}`)
   )
-  const isMashGrowActive = mashGrowChildren.some((child) =>
-    pathname.startsWith(`/mash-grow/${child.toLowerCase()}`)
-  )
+  const isMashGrowActive = mashGrowChildren.some((child) => pathname.startsWith(`/mash-grow/${child}`))
 
   return (
     <>
       {/* Sidebar */}
       <aside
-        className={`bg-sidebar border-r border-sidebar-border transition-transform duration-300 overflow-y-auto flex flex-col min-h-screen h-screen md:h-auto
+        className={`bg-sidebar border-r border-sidebar-border overflow-y-auto flex flex-col min-h-screen h-screen md:h-auto
           ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
           ${isOpen ? "w-64 md:w-64" : "w-20 md:w-20"}
           fixed md:static top-0 bottom-0 left-0 z-50 md:z-auto`}
@@ -115,7 +113,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             onToggle={() => setIsMashMarketOpen((prev) => !prev)}
           >
             <SubNavItem label="Users" href="/mash-market/user" pathname={pathname} />
-            <SubNavItem label="Pending Sellers" href="/mash-market/seller" pathname={pathname} />
+            <SubNavItem label="Sellers" href="/mash-market/seller" pathname={pathname} />
             <SubNavItem label="Orders" href="/mash-market/order" pathname={pathname} />
             <SubNavItem label="Products" href="/mash-market/product" pathname={pathname} />
             <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} />
@@ -130,7 +128,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             isExpanded={isMashGrowOpen}
             onToggle={() => setIsMashGrowOpen((prev) => !prev)}
           >
-            <SubNavItem label="Users" href="/mash-grow/user" pathname={pathname} />
+            <SubNavItem label="Devices" href="/mash-grow/devices" pathname={pathname} />
+            <SubNavItem label="Registered Users" href="/mash-grow/registered-users" pathname={pathname} />
             <SubNavItem label="CMS" href="/mash-grow/cms" pathname={pathname} />
           </CollapsibleSection>
         </nav>

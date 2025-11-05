@@ -109,9 +109,9 @@ export default function CMSPage() {
     setIsModalOpen(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleArchive = (id: string) => {
     setArticles(articles.filter((article) => article.id !== id))
-    toast.success("Article deleted successfully")
+    toast.success("Article archived successfully")
   }
 
   return (
@@ -171,9 +171,9 @@ export default function CMSPage() {
                           <Edit2 className="w-4 h-4 text-blue-600" />
                         </button>
                         <button
-                          onClick={() => handleDelete(article.id)}
+                          onClick={() => handleArchive(article.id)}
                           className="p-2 hover:bg-muted rounded-md transition-colors"
-                          title="Delete"
+                          title="Archive"
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </button>

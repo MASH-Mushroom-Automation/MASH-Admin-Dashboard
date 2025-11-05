@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import  { Product } from "@/app/mash-market/product/page"
 import { ProductTable } from "@/components/ecommerce/product-table"
-import { ProductDetailsModal } from "@/components/ecommerce/product-details-modal"
+import ProductRejectReasonModal from "@/components/ecommerce/product-reject-reason-modal"
 import { ConfirmationModal } from "@/components/ecommerce/confirmation-modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -112,13 +112,32 @@ const ITEMS_PER_PAGE = 5
 export default function PendingProductsPage() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
+  // persist products to localStorage so reject reasons survive reload
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mash_products")
+      if (raw) {
+        setProducts(JSON.parse(raw))
+      } else {
+        localStorage.setItem("mash_products", JSON.stringify(MOCK_PRODUCTS))
+      }
+    } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mash_products", JSON.stringify(products))
+    } catch (e) {}
+  }, [products])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  // view navigates to product page; modal removed
   const [confirmAction, setConfirmAction] = useState<{
     product: Product
-    action: "approve" | "reject" | "delete"
+    action: "approve" | "reject" | "archive"
   } | null>(null)
+  const [productToReject, setProductToReject] = useState<Product | null>(null)
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
   const filteredProducts = useMemo(() => {
@@ -137,20 +156,20 @@ export default function PendingProductsPage() {
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredProducts, currentPage])
 
-  const handleViewDetails = (product: Product) => {
-    setSelectedProduct(product)
-  }
+  // handled by link to product page
 
   const handleApproveClick = (product: Product) => {
     setConfirmAction({ product, action: "approve" })
   }
 
   const handleRejectClick = (product: Product) => {
-    setConfirmAction({ product, action: "reject" })
+    // open reject reason modal for this product
+    setProductToReject(product)
+    setRejectModalOpen(true)
   }
 
-  const handleDeleteClick = (product: Product) => {
-    setConfirmAction({ product, action: "delete" })
+  const handleArchiveClick = (product: Product) => {
+    setConfirmAction({ product, action: "archive" })
   }
 
   const handleConfirmAction = () => {
@@ -158,9 +177,9 @@ export default function PendingProductsPage() {
 
     const { product, action } = confirmAction
 
-    if (action === "delete") {
+    if (action === "archive") {
       setProducts(products.filter((p) => p.id !== product.id))
-      toast.success(`Product "${product.name}" has been deleted.`)
+      toast.success(`Product "${product.name}" has been archived.`)
     } else {
       setProducts(
         products.map((p) => (p.id === product.id ? { ...p, status: action === "approve" ? "approved" : "rejected" } : p)),
@@ -171,6 +190,14 @@ export default function PendingProductsPage() {
     }
 
     setConfirmAction(null)
+  }
+
+  const handleRejectConfirm = (reason?: string) => {
+    if (!productToReject) return
+    setProducts((prev) => prev.map((p) => (p.id === productToReject.id ? { ...p, status: "rejected", rejectReason: reason } : p)))
+    toast.error(`Product "${productToReject.name}" rejected${reason ? ` — ${reason}` : ""}`)
+    setProductToReject(null)
+    setRejectModalOpen(false)
   }
 
   return (
@@ -189,9 +216,8 @@ export default function PendingProductsPage() {
         </div>
 
         {/* Search and Filter */}
-        <div className="bg-card border border-border rounded-lg p-6 mb-8">
+        {/* <div className="bg-card border border-border rounded-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -203,10 +229,10 @@ export default function PendingProductsPage() {
                 }}
                 className="pl-10"
               />
-            </div>
+            </div> */}
 
             {/* Category Filter */}
-            <Select
+            {/* <Select
               value={selectedCategory}
               onValueChange={(value) => {
                 setSelectedCategory(value)
@@ -225,17 +251,17 @@ export default function PendingProductsPage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </div> */}
 
         {/* Product Table */}
         <div className="bg-card border border-border rounded-lg mb-6">
           <ProductTable
             products={paginatedProducts}
-            onViewDetails={handleViewDetails}
             onApprove={handleApproveClick}
             onReject={handleRejectClick}
-            onArchive={handleDeleteClick}
+            onArchive={handleArchiveClick}
             showApproveReject={true}
+            viewBase="/mash-market/product/pending-product"
           />
         </div>
 
@@ -249,33 +275,19 @@ export default function PendingProductsPage() {
         />
       </div>
 
-      {/* Modals */}
-      {selectedProduct && (
-        <ProductDetailsModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onApprove={() => {
-            handleApproveClick(selectedProduct)
-            setSelectedProduct(null)
-          }}
-          onReject={() => {
-            handleRejectClick(selectedProduct)
-            setSelectedProduct(null)
-          }}
-          showActions={true}
-        />
-      )}
+      {/* Product details are now a page at /mash-market/product/[id] - modal removed */}
 
       {confirmAction && (
         <ConfirmationModal
-          title={`${confirmAction.action === "approve" ? "Accept" : confirmAction.action === "reject" ? "Reject" : "Delete"} Product`}
+          title={`${confirmAction.action === "approve" ? "Accept" : confirmAction.action === "reject" ? "Reject" : "Archive"} Product`}
           message={`Are you sure you want to ${confirmAction.action} "${confirmAction.product.name}"?`}
-          confirmText={confirmAction.action === "approve" ? "Accept" : confirmAction.action === "reject" ? "Reject" : "Delete"}
-          confirmVariant={confirmAction.action === "reject" || confirmAction.action === "delete" ? "destructive" : "default"}
+          confirmText={confirmAction.action === "approve" ? "Accept" : confirmAction.action === "reject" ? "Reject" : "Archive"}
+          confirmVariant={confirmAction.action === "reject" || confirmAction.action === "archive" ? "destructive" : "default"}
           onConfirm={handleConfirmAction}
           onCancel={() => setConfirmAction(null)}
         />
       )}
+      <ProductRejectReasonModal open={rejectModalOpen} onOpenChange={setRejectModalOpen} onConfirm={(reason) => handleRejectConfirm(reason)} />
     </main>
   )
 }

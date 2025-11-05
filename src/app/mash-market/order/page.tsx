@@ -7,6 +7,15 @@ import { SearchFilterBar } from "@/components/search-filter-bar"
 import { OrderLogsTable } from "@/components/ecommerce/order-logs-table"
 import { OrderDetailsDrawer } from "@/components/ecommerce/order-details-drawer"
 import PaginationWrapper from "@/components/pagination"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 
 export type OrderStatus =
   | "all"
@@ -126,27 +135,28 @@ export default function OrdersContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
-  const [filterConfig, setFilterConfig] = useState({
-    seller: "all",
-    paymentMethod: "all",
-    dateRange: "all",
-  })
+  // Bulk checkbox filters (status is handled by the tabs)
+  const [selectedPayments, setSelectedPayments] = useState<string[]>([])
+  const [selectedSellers, setSelectedSellers] = useState<string[]>([])
 
   const filteredLogs = useMemo(() => {
-
     return mockOrderLogs.filter((log) => {
-      const matchesTab = activeTab === "all" || log.status === activeTab
+      // Status matching is handled by the tabs only (no status checkboxes in the dropdown)
+      const matchesStatus = activeTab === "all" || log.status === activeTab
+
       const matchesSearch =
         searchQuery === "" ||
         log.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         log.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         log.buyerName.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesSeller = filterConfig.seller === "all" || log.sellerName === filterConfig.seller
-      const matchesPayment =
-        filterConfig.paymentMethod === "all" || log.paymentMethod === filterConfig.paymentMethod
-      return matchesTab && matchesSearch && matchesSeller && matchesPayment
+
+      const matchesPayment = selectedPayments.length > 0 ? selectedPayments.includes(log.paymentMethod || "unknown") : true
+
+      const matchesSeller = selectedSellers.length > 0 ? selectedSellers.includes(log.sellerName) : true
+
+      return matchesStatus && matchesSearch && matchesPayment && matchesSeller
     })
-  }, [activeTab, searchQuery, filterConfig])
+  }, [activeTab, searchQuery, selectedPayments, selectedSellers])
 
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage)
@@ -188,24 +198,109 @@ export default function OrdersContent() {
             <TabsTrigger value="payment-verification">Verification</TabsTrigger>
           </TabsList>
 
-          <SearchFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={(q) => {
-              setSearchQuery(q)
-              setCurrentPage(1)
-            }}
-            placeholder="Search by seller, order ID, or buyer..."
+          <div className="flex items-center">
+            <div className="flex-1">
+              <div className="flex items-center">
+                <div className="flex-1 -mb-6">
+                  <SearchFilterBar
+                    searchQuery={searchQuery}
+                    onSearchChange={(q) => {
+                      setSearchQuery(q)
+                      setCurrentPage(1)
+                    }}
+                    placeholder="Search by seller, order ID, or buyer..."
+                  />
+                </div>
 
-            filter1Value={filterConfig.seller}
-            onFilter1Change={(val) => setFilterConfig({ ...filterConfig, seller: val })}
-            filter1Options={sellerOptions}
-            filter1Label="All Sellers"
+                <div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center py-4.5">
+                        <span className="font-medium">Filters</span>
+                        { (selectedPayments.length + selectedSellers.length) > 0 && (
+                          <span className="inline-flex items-center justify-center rounded-full bg-emerald-700 px-2 py-0.5 text-xs text-white">
+                            {selectedPayments.length + selectedSellers.length}
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
 
-            filter2Value={filterConfig.paymentMethod}
-            onFilter2Change={(val) => setFilterConfig({ ...filterConfig, paymentMethod: val })}
-            filter2Options={paymentOptions}
-            filter2Label="All Payments"
-          />
+                    <DropdownMenuContent className="w-64 p-2">
+                      
+                      {/* Status removed from dropdown - tabs control status */}
+
+                      <DropdownMenuLabel>Payment</DropdownMenuLabel>
+                      <div className="px-1">
+                        {paymentOptions.map((p) => (
+                          <label key={p.value} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
+                            <input
+                              type="checkbox"
+                              className="rounded-sm"
+                              checked={selectedPayments.includes(p.value)}
+                              onChange={(e) => {
+                                const val = e.target.checked
+                                setCurrentPage(1)
+                                setSelectedPayments((prev) => (val ? Array.from(new Set([...prev, p.value])) : prev.filter((x) => x !== p.value)))
+                              }}
+                            />
+                            <span className="text-sm">{p.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuLabel>Seller</DropdownMenuLabel>
+                      <div className="px-1">
+                        {sellerOptions.slice(1).map((s) => (
+                          <label key={s.value} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
+                            <input
+                              type="checkbox"
+                              className="rounded-sm"
+                              checked={selectedSellers.includes(s.value)}
+                              onChange={(e) => {
+                                const val = e.target.checked
+                                setCurrentPage(1)
+                                setSelectedSellers((prev) => (val ? Array.from(new Set([...prev, s.value])) : prev.filter((x) => x !== s.value)))
+                              }}
+                            />
+                            <span className="text-sm">{s.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      <div className="px-1">
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setSelectedPayments(paymentOptions.map((p) => p.value))
+                            setSelectedSellers(sellerOptions.slice(1).map((s) => s.value))
+                            setCurrentPage(1)
+                          }}
+                        >
+                          Select all
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setSelectedPayments([])
+                            setSelectedPayments([])
+                            setSelectedSellers([])
+                            setCurrentPage(1)
+                          }}
+                        >
+                          Clear
+                        </DropdownMenuItem>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+
+            {/* spacer for alignment if needed */}
+            <div className="flex items-center -mt-2"></div>
+          </div>
           <TabsContent value={activeTab}>
             <Card>
               <OrderLogsTable logs={paginatedLogs} onRowClick={handleRowClick} />

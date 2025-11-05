@@ -15,7 +15,7 @@ const chamberData = [
 const registryData = [
   { id: "CH-001", grower: "Juan Dela Cruz", location: "Mindanao", status: "Active" },
   { id: "CH-002", grower: "Maria Santos", location: "Caloocan", status: "Active" },
-  { id: "CH-003", grower: "Pedro Reyes", location: "Negros", status: "Inactive" },
+  { id: "CH-003", grower: "Pedro Reyes", location: "Negros", status: "Active" },
   { id: "CH-004", grower: "Ana Garcia", location: "Mindanao", status: "Active" },
 ]
 
@@ -67,8 +67,8 @@ export default function ChamberInventorySection() {
       {/* Chamber Registry Table */}
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle>Chamber Registry</CardTitle>
-          <CardDescription>List of registered chambers
+          <CardTitle>Recent Growers</CardTitle>
+          <CardDescription>Newly Registered Mushroom Growers
           </CardDescription>
         </CardHeader>
         <CardContent>

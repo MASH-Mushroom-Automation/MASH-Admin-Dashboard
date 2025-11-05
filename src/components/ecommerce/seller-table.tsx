@@ -6,6 +6,7 @@ import { useEffect } from "react"
 import type { TabType } from "@/app/mash-market/seller/page"
 import { SellerActionMenu } from "./seller-action-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
+import RejectReasonModal from "@/components/ecommerce/reject-reason-modal"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 
@@ -15,6 +16,7 @@ interface Seller {
   storeName: string
   email: string
   status: "pending" | "approved" | "rejected"
+  rejectReason?: string
   address?: string
   username?: string
   phone?: string
@@ -30,7 +32,7 @@ export function SellerTable({
   onView,
   onAccept,
   onReject,
-  onDelete,
+  onArchive,
 }: {
   sellers: Seller[]
   activeTab: TabType
@@ -39,23 +41,23 @@ export function SellerTable({
   mode?: "default" | "all" | "pending"
   onView?: (seller: Seller) => void
   onAccept?: (id: string) => void
-  onReject?: (id: string) => void
-  onDelete?: (id: string) => void
+  onReject?: (id: string, reason?: string) => void
+  onArchive?: (id: string) => void
 }) {
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string
-    action: "reject" | "delete"
+    action: "reject" | "Archive"
   } | null>(null)
 
   const filteredSellers = mockSellers
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = (reason?: string) => {
     if (!confirmAction) return
 
     if (confirmAction.action === "reject") {
-      if (onReject) onReject(confirmAction.sellerId)
-    } else if (confirmAction.action === "delete") {
-      if (onDelete) onDelete(confirmAction.sellerId)
+      if (onReject) onReject(confirmAction.sellerId, reason)
+    } else if (confirmAction.action === "Archive") {
+      if (onArchive) onArchive(confirmAction.sellerId)
     }
 
     setConfirmAction(null)
@@ -85,7 +87,8 @@ export function SellerTable({
               <TableHead>Email</TableHead>
               <TableHead>Address</TableHead>
               {showStatus && <TableHead>Status</TableHead>}
-              <TableHead>Actions</TableHead>
+        {activeTab === "rejected" && <TableHead>Reason</TableHead>}
+        <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -118,13 +121,17 @@ export function SellerTable({
                   </TableCell>
                 )}
 
+                {activeTab === "rejected" && (
+                  <TableCell className="px-6 py-4 text-sm">{seller.rejectReason ?? "—"}</TableCell>
+                )}
+
                 <TableCell>
                   <SellerActionMenu
                     seller={seller}
                     activeTab={activeTab}
                     mode={mode}
                     onReject={() => setConfirmAction({ sellerId: seller.id, action: "reject" })}
-                    onDelete={() => setConfirmAction({ sellerId: seller.id, action: "delete" })}
+                    onArchive={() => setConfirmAction({ sellerId: seller.id, action: "Archive" })}
                     onAccept={() => {
                       if (onAccept) onAccept(seller.id)
                     }}
@@ -145,13 +152,21 @@ export function SellerTable({
         </div>
       )}
 
-      {confirmAction && (
+      {confirmAction && confirmAction.action === "reject" ? (
+        <RejectReasonModal
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setConfirmAction(null)
+          }}
+          onConfirm={(reason) => handleConfirmAction(reason)}
+        />
+      ) : confirmAction ? (
         <ConfirmationPopover
           action={confirmAction.action}
-          onConfirm={handleConfirmAction}
+          onConfirm={(reason) => handleConfirmAction(reason)}
           onCancel={() => setConfirmAction(null)}
         />
-      )}
+      ) : null}
     </>
   )
 }

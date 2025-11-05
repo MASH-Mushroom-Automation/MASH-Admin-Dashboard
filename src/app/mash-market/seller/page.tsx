@@ -1,16 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Search, ChevronLeft } from "lucide-react"
 import { SellerTable } from "@/components/ecommerce/seller-table"
-import UserDetailsModal from "@/components/user-details-modal"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import PaginationWrapper from "@/components/pagination"
+import { Archive } from "lucide-react"
 
 export type TabType = "pending" | "rejected"
 
@@ -21,6 +21,7 @@ interface Seller {
   username?: string
   email: string
   status: "pending" | "approved" | "rejected"
+  rejectReason?: string
   address?: string
   phone?: string
   businessName?: string
@@ -62,6 +63,7 @@ const mockSellers: Seller[] = [
     email: "anne@beautyhub.com",
     phone: "+63 912 222 3333",
     status: "rejected",
+    rejectReason: "Incomplete documents",
     address: "Makati City",
   },
   {
@@ -74,6 +76,7 @@ const mockSellers: Seller[] = [
     email: "john@store.com",
     phone: "+63 912 444 5555",
     status: "rejected",
+    rejectReason: "Invalid information",
     address: "Cebu City",
   },
   {
@@ -135,8 +138,30 @@ export default function SellerContent() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const router = useRouter()
-  const [showSellerModal, setShowSellerModal] = useState(false)
-  const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null)
+
+  // persist sellers to localStorage so reject reasons survive reload
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mash_sellers")
+      if (raw) {
+        setSellers(JSON.parse(raw))
+      } else {
+        // seed initial mock sellers
+        localStorage.setItem("mash_sellers", JSON.stringify(mockSellers))
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mash_sellers", JSON.stringify(sellers))
+    } catch (e) {
+      // ignore
+    }
+  }, [sellers])
+  
 
   const tabFilteredSellers = sellers.filter((seller) => {
   if (activeTab === "pending") return seller.status === "pending"
@@ -156,23 +181,26 @@ export default function SellerContent() {
   const paginatedSellers = filteredSellers.slice(startIndex, endIndex)
 
   const handleView = (seller: Seller) => {
-    // Ensure the modal receives a `role` so it renders as a Seller profile
-    // The UserDetailsModal expects `user.role` to determine which fields/actions to show.
-    setSelectedSeller({ ...(seller as any), role: "Seller" })
-    setShowSellerModal(true)
+    // Navigate to seller detail page instead of opening modal
+    router.push(`/mash-market/seller/${seller.id}`)
   }
 
   const handleAccept = (id: string) => {
     setSellers((prev) => prev.map((s) => (s.id === id ? { ...s, status: "approved" } : s)))
   }
 
-  const handleReject = (id: string) => {
-    setSellers((prev) => prev.map((s) => (s.id === id ? { ...s, status: "rejected" } : s)))
+  const handleReject = (id: string, reason?: string) => {
+    setSellers((prev) => prev.map((s) => (s.id === id ? { ...s, status: "rejected", rejectReason: reason } : s)))
+    toast.error(`Seller rejected${reason ? ` — ${reason}` : ""}`)
+    // switch to Rejected tab so user immediately sees the rejected seller and reason
+    setActiveTab("rejected")
   }
 
-  const handleDelete = (id: string) => {
+  const handleArchive = (id: string) => {
+    // Simulate archiving then navigate to archive page for sellers
     setSellers((prev) => prev.filter((s) => s.id !== id))
-    toast.success("Seller deleted successfully")
+    toast.success("Seller archived successfully — opening archive page")
+    router.push(`/mash-market/seller/archive?id=${id}`)
   }
 
   const handlePageChange = (page: number) => {
@@ -203,7 +231,7 @@ export default function SellerContent() {
         </Tabs>
 
         {/* Controls Section */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
@@ -213,7 +241,13 @@ export default function SellerContent() {
               className="pl-10"
             />
           </div>
-        
+
+          {/* Archive shortcut (icon-only) placed beside filters */}
+          <div>
+            <Button variant="ghost" size="sm" onClick={() => router.push("/mash-market/seller/archive")} aria-label="View seller archives">
+              <Archive className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Table Section */}
@@ -225,26 +259,11 @@ export default function SellerContent() {
     onView={handleView}
     onAccept={handleAccept}
     onReject={handleReject}
-    onDelete={handleDelete}
+    onArchive={handleArchive}
   />
 </Card>
 
-        {/* Seller details modal (reuses UserDetailsModal) */}
-        <UserDetailsModal
-          open={showSellerModal}
-          onOpenChange={(open) => {
-            setShowSellerModal(open)
-            if (!open) setSelectedSeller(null)
-          }}
-          user={selectedSeller as any}
-          onAccept={(id) => {
-            handleAccept(id)
-          }}
-          onReject={(id) => {
-            handleReject(id)
-          }}
-          showActions={selectedSeller?.status === "pending"}
-        />
+        {/* View now navigates to the user detail page. Modal removed. */}
 
 
         {/* Pagination Section */}

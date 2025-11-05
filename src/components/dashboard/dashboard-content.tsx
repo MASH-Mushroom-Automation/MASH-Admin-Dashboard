@@ -3,6 +3,7 @@
 import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import { AlertCircle, Users, Package, Warehouse, ArrowRight } from "lucide-react"
 import ChamberInventorySection from "./chamber-inventory"
 import ECommerceSection from "./ecommerce-section"
@@ -26,6 +27,7 @@ export default function DashboardContent() {
             secondaryValue="45"
             secondaryLabel="Inactive"
             icon={<Warehouse className="w-5 h-5" />}
+            viewMorePath="/mash-grow/devices"
           />
           <StatCard
             title="Orders"
@@ -34,6 +36,7 @@ export default function DashboardContent() {
             secondaryValue="200"
             secondaryLabel="Pending"
             icon={<Users className="w-5 h-5" />}
+            viewMorePath="/mash-market/order"
           />
           <StatCard
             title="Products"
@@ -42,6 +45,7 @@ export default function DashboardContent() {
             secondaryValue="300"
             secondaryLabel="Approved"
             icon={<Package className="w-5 h-5" />}
+            viewMorePath="/mash-market/product"
           />
           <StatCard
             title=" Seller Applications"
@@ -50,6 +54,7 @@ export default function DashboardContent() {
             secondaryValue="10"
             secondaryLabel="Approved"
             icon={<AlertCircle className="w-5 h-5" />}
+            viewMorePath="/mash-market/seller"
           />
         </div>
       </div>
@@ -71,6 +76,7 @@ interface StatCardProps {
   secondaryValue: string
   secondaryLabel: string
   icon: React.ReactNode
+  viewMorePath?: string
 }
 
 function StatCard({
@@ -80,7 +86,9 @@ function StatCard({
   secondaryValue,
   secondaryLabel,
   icon,
+  viewMorePath,
 }: StatCardProps) {
+  const router = useRouter()
   
   return (
     <Card className="relative overflow-hidden border-1 border-primary/30 rounded-xl">
@@ -103,10 +111,11 @@ function StatCard({
         </div>
 
         {/* View more button */}
-       <div className="border-t pt-3">
+        <div className="border-t pt-3">
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => viewMorePath ? router.push(viewMorePath) : undefined}
             className="h-7 w-full justify-between px-2 text-xs font-medium text-foreground hover:bg-primary/5"
           >
             View more

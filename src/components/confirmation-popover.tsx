@@ -1,18 +1,40 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 
 interface ConfirmationPopoverProps {
-  action: "accept" | "reject" | "delete" | "logout"
+  action: "accept" | "reject" | "Archive" | "logout"
   entity?: string
-  onConfirm: () => void
+  // onConfirm may receive an optional reason for actions like 'reject'
+  onConfirm: (reason?: string) => void
   onCancel: () => void
 }
 
 export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: ConfirmationPopoverProps) {
   const [isOpen, setIsOpen] = useState(true)
+  const [selectedReason, setSelectedReason] = useState<string>("")
+  const [customReason, setCustomReason] = useState<string>("")
+
+  const presetReasons = [
+    "Incomplete business or personal information",
+    "Invalid identification or verification documents",
+    "Unverified contact information",
+    "Submitted products are not valid or allowed on the platform",
+    "Violation of seller application policies",
+    "Suspicious or duplicate application",
+    "Failure to meet platform requirements",
+    "Other",
+  ]
+
+  // preselect first reason for UX
+  useEffect(() => {
+    if (action === "reject" && !selectedReason) {
+      setSelectedReason(presetReasons[0])
+    }
+  }, [action])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -30,18 +52,16 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
   let message = "Are you sure you want to perform this action?"
   let confirmText = "Confirm"
 
-  // Allow custom message via action string if it's not built-in
   if (action === "reject") {
     title = "Reject Seller"
-    message = "Are you sure you want to reject this seller?"
+    message = "Are you sure you want to reject this seller? Provide a reason for the rejection."
     confirmText = "Reject"
-  } else if (action === "delete") {
+  } else if (action === "Archive") {
     const target = entity ? entity.toLowerCase() : "this item"
-    title = `Delete ${entity || "Item"}`
-    message = `Are you sure you want to delete this ${target}? This action cannot be undone.`
-    confirmText = "Delete"
+    title = `Archive ${entity || "Item"}`
+    message = `Are you sure you want to Archive this ${target}? This action cannot be undone.`
+    confirmText = "Archive"
   } else if (action === "logout") {
-    // Special case for logout so callers can show a clear logout confirmation
     title = "Logout?"
     message = "Are you sure you want to logout?"
     confirmText = "Logout"
@@ -51,9 +71,8 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
     confirmText = "Accept"
   }
 
-  return (
+  const markup = (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-40"
         onClick={() => {
@@ -62,16 +81,40 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
         }}
       />
 
-      {/* Popover */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
         <div className="bg-card border border-border rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
           <div className="flex items-start gap-4">
             <div className="shrink-0">
-                <AlertCircle className="h-6 w-6 text-destructive" />
-              </div>
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
-              <p className="text-sm text-muted-foreground mb-6">{message}</p>
+              <p className="text-sm text-muted-foreground mb-4">{message}</p>
+
+              {action === "reject" && (
+                <div className="space-y-3 mb-4">
+                  <label className="block text-sm font-medium">Reason for rejection</label>
+                  <select className="w-full border rounded-md px-2 py-1" onChange={(e) => setSelectedReason(e.target.value)} value={selectedReason}>
+                    <option value="">Select a reason</option>
+                    {presetReasons.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedReason === "Other" && (
+                    <textarea
+                      className="w-full border rounded-md px-2 py-1"
+                      rows={3}
+                      placeholder="Provide reason"
+                      value={customReason}
+                      onChange={(e) => setCustomReason(e.target.value)}
+                    />
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
@@ -96,9 +139,14 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
                   <Button
                     variant="destructive"
                     onClick={() => {
+                      let reason: string | undefined = undefined
+                      if (action === "reject") {
+                        reason = selectedReason === "Other" ? customReason || undefined : selectedReason || undefined
+                      }
                       setIsOpen(false)
-                      onConfirm()
+                      onConfirm(reason)
                     }}
+                    disabled={action === "reject" && !selectedReason && !customReason}
                   >
                     {confirmText}
                   </Button>
@@ -110,4 +158,8 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
       </div>
     </>
   )
+
+  if (typeof document === "undefined") return null
+
+  return createPortal(markup, document.body)
 }

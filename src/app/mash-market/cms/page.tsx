@@ -98,9 +98,9 @@ export default function CMSDashboard() {
     setEditingContent(null)
   }
 
-  const handleDeleteContent = (id: string | number) => {
+  const handleArchiveContent = (id: string | number) => {
     setContents((prev) => prev.filter((c) => String(c.id) !== String(id)))
-    toast.success("Content deleted successfully")
+    toast.success("Content archived successfully")
   }
 
   const handlePublishToggle = (id: string | number) => {
@@ -205,7 +205,7 @@ export default function CMSDashboard() {
                   setEditingContent(content)
                   setShowForm(true)
                 }}
-                onDelete={handleDeleteContent}
+                onArchive={handleArchiveContent}
                 onPublishToggle={handlePublishToggle}
                 onPreview={setPreviewContent}
               />

@@ -1,17 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import StatusBadge from "@/components/status-badge"
 import { Search } from "lucide-react"
 import { ActionsMenu } from "@/components/user-actions-menu"
-import DeleteConfirmation from "@/components/mash-grow/delete-confirmation"
+import ArchiveConfirmation from "@/components/mash-grow/delete-confirmation"
 import RegisterModal from "@/components/mash-grow/register-modal"
 import { Card } from "@/components/ui/card"
+import ViewUserModal from "@/components/mash-grow/view-user-modal"
 
 interface User {
   id: string
@@ -19,45 +21,49 @@ interface User {
   name: string
   address: string
   contactNumber: string
+  deviceId?: string
   status: "Active" | "Inactive"
   registrationDate: string
 }
 
 export default function RegisterChamber() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      chamberNumber: "CH001",
-      name: "John Andrew",
-      address: "123 Main St",
-      contactNumber: "555-0001",
-      status: "Active",
-      registrationDate: "2024-01-15",
-    },
-    {
-      id: "2",
-      chamberNumber: "CH002",
-      name: "Maria Fe",
-      address: "456 Oak Ave",
-      contactNumber: "555-0002",
-      status: "Active",
-      registrationDate: "2024-01-20",
-    },
-    {
-      id: "3",
-      chamberNumber: "CH003",
-      name: "Heart Sansibal",
-      address: "789 Pine Rd",
-      contactNumber: "555-0003",
-      status: "Inactive",
-      registrationDate: "2024-02-01",
-    },
-  ])
+  const router = useRouter()
+  const [users, setUsers] = useState<User[]>([])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All")
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
+  const [ArchiveUserId, setArchiveUserId] = useState<string | null>(null)
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
+  // mock devices
+  const [devices, setDevices] = useState<{ id: string; deviceId: string; status: "Connected" | "Disconnected"; assigned?: boolean }[]>([])
+
+  // hydrate from localStorage on mount
+  useEffect(() => {
+    try {
+      const rawUsers = localStorage.getItem("mash_users")
+      const rawDevices = localStorage.getItem("mash_devices")
+      setUsers(rawUsers ? JSON.parse(rawUsers) : [])
+      setDevices(rawDevices ? JSON.parse(rawDevices) : [
+        { id: "d1", deviceId: "MASH-A1-CAL25-AC2523", status: "Connected", assigned: false },
+        { id: "d2", deviceId: "MASH-B2-CAL25-AC2524", status: "Disconnected", assigned: false },
+      ])
+    } catch (e) {
+      setUsers([])
+    }
+  }, [])
+
+  // persist changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("mash_devices", JSON.stringify(devices))
+    } catch (e) {}
+  }, [devices])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mash_users", JSON.stringify(users))
+    } catch (e) {}
+  }, [users])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -70,10 +76,21 @@ export default function RegisterChamber() {
     return matchesSearch && matchesStatus
   })
 
-  const handleDelete = (userId: string) => {
+  const handleArchive = (userId: string) => {
     setUsers(users.filter((user) => user.id !== userId))
-    setDeleteUserId(null)
-    toast.success("User deleted successfully")
+    setArchiveUserId(null)
+    toast.success("User Archived successfully")
+  }
+
+  const handlePingDevice = async (deviceId: string) => {
+    // simulate ping
+    const updating = devices.find((d) => d.deviceId === deviceId)
+    if (!updating) return
+    toast(`Pinging ${deviceId}...`)
+    await new Promise((r) => setTimeout(r, 800))
+    const isConnected = Math.random() > 0.4
+    setDevices((prev) => prev.map((d) => (d.id === updating.id ? { ...d, status: isConnected ? "Connected" : "Disconnected" } : d)))
+    toast.success(isConnected ? "Device is connected" : "Device is disconnected")
   }
 
   const handleRegisterSave = (data: { chamberName: string; address: string; contactNumber: string }) => {
@@ -89,21 +106,60 @@ export default function RegisterChamber() {
     setUsers([...users, newUser])
   }
 
+  // handle onSave from RegisterModal which may include selectedDeviceId
+  const handleRegisterSaveExtended = (data: any) => {
+    // data may include chamberName, address, contactNumber, selectedDeviceId, deviceId
+    const newUser: User = {
+      id: String(users.length + 1),
+      chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
+      name: data.chamberName || data.name || "",
+      address: data.address || "",
+      contactNumber: data.contactNumber || "",
+      deviceId: data.deviceId || (data.selectedDeviceId ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId : undefined),
+      status: "Active",
+      registrationDate: new Date().toISOString().split("T")[0],
+    }
+    setUsers((prev) => [...prev, newUser])
+    // mark device assigned if provided
+    if (data.selectedDeviceId) {
+      setDevices((prev) => prev.map((d) => (d.id === data.selectedDeviceId ? { ...d, assigned: true } : d)))
+    }
+  }
+
+  // view modal state
+  const [viewOpen, setViewOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const openView = (u: User) => {
+    setSelectedUser(u)
+    setViewOpen(true)
+  }
+
   return (
     <main className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <header>
-          <h1 className="sm:text-3xl text-2xl font-bold">Chamber Overview</h1>
-          <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">Manage mushroom chambers.</p>
-        </header>
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setRegisterModalOpen(true)}
-          >
-            Register User
-          </Button>
+        {/* Top controls: Create Device, Register User and device quick-info (header removed per request) */}
+        <div className="flex items-center justify-end mb-4 gap-4">
+          <div className="flex items-center gap-3">
+            <Button onClick={() => router.push('/mash-grow/devices')} className="gap-2">Create Device</Button>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => setRegisterModalOpen(true)}
+            >
+              Register User
+            </Button>
+          </div>
+
+          {/* Device quick info: show first available device id and ping */}
+          <div className="p-3 bg-card border border-border rounded-md">
+            <div className="text-xs text-muted-foreground">Chamber Device ID</div>
+            <div className="font-mono text-sm">{devices[0]?.deviceId ?? '—'}</div>
+            <div className="mt-2 flex items-center gap-2">
+              <div className={`text-sm ${devices[0]?.status === 'Connected' ? 'text-green-600' : 'text-red-600'}`}>{devices[0]?.status ?? 'Unknown'}</div>
+              <Button size="sm" variant="ghost" onClick={() => devices[0] && handlePingDevice(devices[0].deviceId)}>
+                Check Ping
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Search and Filter */}
@@ -156,12 +212,9 @@ export default function RegisterChamber() {
                       <StatusBadge status={user.status} />
                     </TableCell>
                     <TableCell>{user.registrationDate}</TableCell>
-                    <TableCell className="text-center">
-                      <ActionsMenu
-                        id={user.id}
-                        viewUrl={`/users/view/${user.id}`}
-                        onDelete={() => setDeleteUserId(user.id)}
-                      />
+                    <TableCell className="text-center flex items-center justify-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => openView(user)}>View</Button>
+                      <ActionsMenu id={user.id} onArchive={() => setArchiveUserId(user.id)} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -178,11 +231,18 @@ export default function RegisterChamber() {
         </Card>
       </div>
 
-      <RegisterModal open={registerModalOpen} onOpenChange={setRegisterModalOpen} onSave={handleRegisterSave} />
+      <RegisterModal
+        open={registerModalOpen}
+        onOpenChange={setRegisterModalOpen}
+        onSave={(data) => handleRegisterSaveExtended(data)}
+        availableDevices={devices.filter((d) => !d.assigned)}
+      />
 
-      {/* Delete Confirmation Dialog */}
-      {deleteUserId && (
-        <DeleteConfirmation onConfirm={() => handleDelete(deleteUserId)} onCancel={() => setDeleteUserId(null)} />
+      <ViewUserModal open={viewOpen} onOpenChange={setViewOpen} user={selectedUser ?? undefined} />
+
+      {/* Archive Confirmation Dialog */}
+      {ArchiveUserId && (
+        <ArchiveConfirmation onConfirm={() => handleArchive(ArchiveUserId)} onCancel={() => setArchiveUserId(null)} />
       )}
     </main>
   )

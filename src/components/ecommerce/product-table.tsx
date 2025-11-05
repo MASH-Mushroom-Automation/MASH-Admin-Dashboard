@@ -8,22 +8,23 @@ import { ConfirmationPopover } from "@/components/confirmation-popover"
 
 interface ProductTableProps {
   products: Product[]
-  onViewDetails: (product: Product) => void
   onApprove: (product: Product) => void
   onReject: (product: Product) => void
   onArchive?: (product: Product) => void
   showApproveReject?: boolean
+  viewBase?: string
 }
 
 export function ProductTable({
   products,
-  onViewDetails,
   onApprove,
   onReject,
   onArchive,
   showApproveReject = true,
+  viewBase = "/mash-market/product",
 }: ProductTableProps) {
-  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null)
+  const [ArchiveProduct, setArchiveProduct] = useState<Product | null>(null)
+  const hasAnyReason = products.some((p) => (p as any).rejectReason)
   const formatPrice = (price: number) => `$${price.toFixed(2)}`
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -49,6 +50,7 @@ export function ProductTable({
                 <TableHead>Status</TableHead>
               </>
             )}
+            {hasAnyReason && <TableHead>Reason</TableHead>}
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -87,36 +89,37 @@ export function ProductTable({
                 </>
               )}
 
-              {/* Actions: use three-dot menu for view/delete in pending context */}
+              {hasAnyReason && <TableCell className="truncate">{(product as any).rejectReason ?? "—"}</TableCell>}
+
+              {/* Actions: use three-dot menu for view/Archive in pending context */}
               <TableCell>
                 <div className="flex items-center">
                   <ActionsMenu
-                    id={product.id}
-                    viewUrl={`/mash-market/product/${product.id}`}
-                    onView={() => onViewDetails(product)}
-                    onDelete={() => setDeleteProduct(product)}
-                    showView={true}
-                    showEdit={false}
-                    deleteLabel={onArchive ? "Delete" : "Delete"}
-                  />
+                      id={product.id}
+                      viewUrl={`${viewBase}/${product.id}`}
+                      onArchive={() => setArchiveProduct(product)}
+                      showView={true}
+                      showEdit={false}
+                      ArchiveLabel={onArchive ? "Archive" : "Archive"}
+                    />
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      {/* Confirmation popover for delete */}
-      {deleteProduct && (
+      {/* Confirmation popover for Archive */}
+      {ArchiveProduct && (
         <ConfirmationPopover
-          action="delete"
+          action="Archive"
           entity="Product"
           onConfirm={() => {
-            if (deleteProduct) {
-              onArchive?.(deleteProduct)
+            if (ArchiveProduct) {
+              onArchive?.(ArchiveProduct)
             }
-            setDeleteProduct(null)
+            setArchiveProduct(null)
           }}
-          onCancel={() => setDeleteProduct(null)}
+          onCancel={() => setArchiveProduct(null)}
         />
       )}
 
