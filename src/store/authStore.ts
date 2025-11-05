@@ -1,3 +1,4 @@
+// src/store/authStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -10,119 +11,134 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   error: string | null;
-  setUser: (user: User | null, accessToken?: string, refreshToken?: string) => void;
-  logout: () => void;
-  login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
-}
 
-interface LoginResponse {
-  success: boolean;
-  statusCode: number;
-  data: {
-    success: boolean;
-    message: string;
-    accessToken: string;
-    refreshToken: string;
-    user: User;
-  };
-  timestamp: string;
-  path: string;
-  correlationId: string;
+  // Actions
+  setUser: (user: User | null) => void;
+  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       error: null,
-      setUser: (user: User | null, accessToken?: string, refreshToken?: string) =>
+
+      setUser: (user: User | null) =>
         set({
           user,
-          accessToken: accessToken || null,
-          refreshToken: refreshToken || null,
           isAuthenticated: !!user,
           error: null,
         }),
+
       logout: () => {
-        // Clear cookies
-        document.cookie = "authToken=; path=/; max-age=0";
-        document.cookie = "refreshToken=; path=/; max-age=0";
+        // Call logout endpoint to clear HttpOnly cookies
+        fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
         set({
           user: null,
-          accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
           error: null,
         });
       },
-      login: async (email: string, password: string, rememberMe: boolean) => {
+
+      login: async (email: string, password: string) => {
         try {
-          // Use local serverless route to proxy the login to the backend.
-          // This avoids CORS issues in production and allows setting HttpOnly cookies from the same origin.
-          console.log("Calling local proxy /api/auth/login");
+          console.log("Calling /api/auth/login proxy...");
           const response = await fetch(`/api/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Accept": "application/json",
             },
-            body: JSON.stringify({ email, password, remember: rememberMe }),
+            body: JSON.stringify({ email, password }),
           });
 
-          console.log("Response status:", response.status);
-
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: "Login failed" }));
-            throw new Error(errorData.message || "Invalid credentials");
+            const err = await response
+              .json()
+              .catch(() => ({ message: "Login failed" }));
+            throw new Error(err.message || "Invalid credentials");
           }
 
-          const result: LoginResponse = await response.json();
-          console.log("Login response:", result);
+          const result = await response.json();
 
-          if (!result.success || !result.data) {
-            throw new Error(result.data?.message || "Login failed");
+          if (!result.success || !result.user) {
+            throw new Error("Login failed: invalid response");
           }
 
-          const { accessToken, refreshToken, user } = result.data;
-
-          // Set cookies for tokens
-          const maxAge = rememberMe ? 604800 : 86400; // 7 days if remember me, 1 day otherwise
-          document.cookie = `authToken=${accessToken}; path=/; max-age=${maxAge}; SameSite=Strict`;
-          document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${maxAge * 30}; SameSite=Strict`; // Refresh token lasts longer
-
+          // ONLY STORE USER — NO TOKENS!
           set({
-            user,
-            accessToken,
-            refreshToken,
+            user: result.user,
             isAuthenticated: true,
             error: null,
           });
 
-          console.log("Login successful, user:", user);
-        } catch (err) {
+          console.log("Login successful. HttpOnly cookies set by proxy.");
+
+          // DEBUG: Cookie is HttpOnly → JS cannot read it → expect "none"
+          try {
+            const cookie = document.cookie;
+            const hasAuth = cookie.includes("authToken=");
+            console.log(
+              "[authStore] authToken cookie visible to JS:",
+              hasAuth ? "YES (not HttpOnly!)" : "none (correct – HttpOnly)"
+            );
+          } catch (e) {
+            console.warn("Cookie check failed", e);
+          }
+        } catch (err: any) {
           console.error("Login error:", err);
-          const errorMessage =
-            err instanceof Error ? err.message : "An error occurred during login";
-          set({ 
-            error: errorMessage,
+          set({
+            error: err.message || "Login failed",
             user: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false
+            isAuthenticated: false,
           });
+          throw err;
+        }
+      },
+
+      forgotPassword: async (email: string) => {
+        try {
+          set({ error: null });
+          const response = await fetch(`/api/auth/forgot-password`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          if (!response.ok) {
+            const err = await response
+              .json()
+              .catch(() => ({ message: "Request failed" }));
+            throw new Error(err.message || "Request failed");
+          }
+
+          const result = await response.json().catch(() => ({ success: true }));
+
+          if (!result.success) {
+            throw new Error(result.message || "Failed to send reset link");
+          }
+
+          // success - don't change auth state, just clear error
+          set({ error: null });
+        } catch (err: any) {
+          console.error("forgotPassword error:", err);
+          set({ error: err?.message || "Failed to request password reset" });
           throw err;
         }
       },
     }),
     {
-      name: "auth-storage", // Persist auth state in localStorage
+      name: "auth-storage",
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }), // Only persist user, not tokens
     }
   )
 );

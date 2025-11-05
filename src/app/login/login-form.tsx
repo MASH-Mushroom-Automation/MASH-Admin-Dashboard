@@ -28,7 +28,7 @@ export function LoginForm() {
   }, [router]);
 
   const validateEmail = (email: string) => {
-    if (!email.includes("gmail.com")) {
+    if (!email.includes(".com")) {
       setEmailError("Email should be valid");
       return false;
     }
@@ -44,11 +44,11 @@ export function LoginForm() {
     }
 
     console.log("Login form submitted");
-    console.log("Input values:", { email, password, rememberMe });
+    console.log("Input values:", { email, password });
 
     try {
       setIsLoading(true);
-      await login(email, password, rememberMe);
+      await login(email, password);
       console.log("Login successful");
 
       setEmail("");
@@ -131,6 +131,7 @@ export function LoginForm() {
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+            suppressHydrationWarning
           >
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
@@ -174,6 +175,7 @@ export function LoginForm() {
           type="submit"
           className="w-full bg-green-700 py-6 text-white hover:bg-green-800 flex items-center justify-center"
           disabled={isLoading || !!emailError}
+          suppressHydrationWarning
         >
           {isLoading ? (
             <>

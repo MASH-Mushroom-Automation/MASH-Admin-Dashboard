@@ -1,17 +1,18 @@
-"use client"
+"use client";
 
-import type { OrderLog } from "./content/orders-content"
-import { Badge } from "@/components/ui/badge"
+import type { OrderLog } from "./content/orders-content";
+import { Badge } from "@/components/ui/badge";
 
 interface OrderLogsTableProps {
-  logs: OrderLog[]
-  onRowClick: (order: OrderLog) => void
+  logs: OrderLog[];
+  onRowClick: (order: OrderLog) => void;
 }
 
 const statusConfig = {
   "pending-payment": {
     label: "Pending Payment",
-    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    color:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
   },
   shipment: {
     label: "Shipment",
@@ -27,7 +28,8 @@ const statusConfig = {
   },
   "refund-return": {
     label: "Refund / Return",
-    color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    color:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   },
   canceled: {
     label: "Canceled",
@@ -35,21 +37,24 @@ const statusConfig = {
   },
   dispute: {
     label: "Dispute",
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    color:
+      "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   },
   "payment-verification": {
     label: "Payment Verification",
     color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
   },
-}
+};
 
 export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
   if (logs.length === 0) {
     return (
       <div className="p-8 text-center">
-        <p className="text-muted-foreground">No orders found matching your criteria.</p>
+        <p className="text-muted-foreground">
+          No orders found matching your criteria.
+        </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -57,13 +62,27 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
       <table className="w-full">
         <thead>
           <tr className="border-b border-border">
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Seller Name</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Order ID</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Buyer Name</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Order Date</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Amount</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Last Updated</th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Seller Name
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Order ID
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Buyer Name
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Order Date
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Amount
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Status
+            </th>
+            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+              Last Updated
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -73,19 +92,37 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
               onClick={() => onRowClick(log)}
               className="cursor-pointer border-b border-border transition-colors hover:bg-muted/50"
             >
-              <td className="px-6 py-4 text-sm text-foreground">{log.sellerName}</td>
-              <td className="px-6 py-4 text-sm font-medium text-foreground">{log.orderId}</td>
-              <td className="px-6 py-4 text-sm text-foreground">{log.buyerName}</td>
-              <td className="px-6 py-4 text-sm text-foreground">{log.orderDate}</td>
-              <td className="px-6 py-4 text-sm font-medium text-foreground">${log.amount.toFixed(2)}</td>
-              <td className="px-6 py-4 text-sm">
-                <Badge className={statusConfig[log.status].color}>{statusConfig[log.status].label}</Badge>
+              <td className="px-6 py-4 text-sm text-foreground">
+                {log.sellerName}
               </td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">{log.lastUpdated}</td>
+              <td className="px-6 py-4 text-sm font-medium text-foreground">
+                {log.orderId}
+              </td>
+              <td className="px-6 py-4 text-sm text-foreground">
+                {log.buyerName}
+              </td>
+              <td className="px-6 py-4 text-sm text-foreground">
+                {log.orderDate}
+              </td>
+              <td className="px-6 py-4 text-sm font-medium text-foreground">
+                ${log.amount.toFixed(2)}
+              </td>
+              <td className="px-6 py-4 text-sm">
+                <Badge
+                  className={
+                    statusConfig[log.status as keyof typeof statusConfig].color
+                  }
+                >
+                  {statusConfig[log.status as keyof typeof statusConfig].label}
+                </Badge>
+              </td>
+              <td className="px-6 py-4 text-sm text-muted-foreground">
+                {log.lastUpdated}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  )
+  );
 }
