@@ -21,12 +21,26 @@ export default function ChamberInventorySection() {
     return <div>Error loading data</div>;
   }
 
-  // Use fetched data for pie chart
-  const pieData = [
-    { name: "Grower", value: usersStats?.grower || 0, color: "#58B33A" },
-    { name: "Seller", value: usersStats?.seller || 0, color: "#2E5E4E" },
-    { name: "Buyer", value: usersStats?.buyer || 0, color: "#C6DABF" },
-  ];
+  // Use fetched data for pie chart — show only ADMIN, BUYER, GROWER
+  const allowedRoles = ["ADMIN", "BUYER", "GROWER"];
+
+  const roleLabelMap: Record<string, string> = {
+    ADMIN: "Seller",
+    BUYER: "Buyer",
+    GROWER: "Grower",
+  };
+
+  const colors: Record<string, string> = {
+    ADMIN: "#58B33A",
+    BUYER: "#2E5E4E",
+    GROWER: "#C6DABF",
+  };
+
+  const pieData = allowedRoles.map((key) => ({
+    name: roleLabelMap[key] ?? key,
+    value: usersStats?.[key] ?? 0,
+    color: colors[key] ?? "#888888",
+  }));
 
   // Use fetched data for table — show only the 5 most recent entries
   const registryAll = chambers?.chambers || [];
@@ -36,6 +50,8 @@ export default function ChamberInventorySection() {
   if (typeof window !== "undefined") {
     // eslint-disable-next-line no-console
     console.log("[ChamberInventory] registry (showing up to 5):", registry);
+    // eslint-disable-next-line no-console
+    console.log("[ChamberInventory] usersStats:", usersStats);
   }
 
   return (

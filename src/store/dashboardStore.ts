@@ -30,11 +30,8 @@ interface ChamberRegistry {
   limit: number;
 }
 
-interface UsersStats {
-  grower: number;
-  seller: number;
-  buyer: number;
-}
+// UsersStats is dynamic: the API returns keys like USER, BUYER, ADMIN, GROWER, SUPER_ADMIN
+type UsersStats = Record<string, number>;
 
 interface CardsSummary {
   // Inferred from stat cards in dashboard-content.tsx
@@ -189,7 +186,11 @@ export const useDashboardStore = create<DashboardState>()(
       });
       try {
         const res = await api.get(`v1/super-admin/dashboard/users-stats`);
-        const data: UsersStats = res.data;
+
+        // API returns: { success, statusCode, data: { USER: 1, BUYER: 5, ... } }
+        const payload = res.data as any;
+        const data: UsersStats = payload?.data || {};
+
         set({
           usersStats: data,
           loading: { ...get().loading, usersStats: false },
