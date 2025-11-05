@@ -1,123 +1,60 @@
-import { NextResponse, type NextRequest } from "next/server";
+// src/app/api/auth/login/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, remember } = body as {
-      email: string;
-      password: string;
-      remember?: boolean;
-    };
+    const { email, password, remember } = body;
 
-    // Check for hardcoded credentials first
-    if (email === "mash.mushroom.automation@gmail.com" && password === "PP@Namias99") {
-      // Create a mock successful response for admin user
-      const mockUser = {
-        id: "admin-001",
-        email: "mash.mushroom.automation@gmail.com",
-        firstName: "Admin",
-        lastName: "User"
-      };
-
-      const mockAccessToken = "mock-access-token-" + Date.now();
-      const mockRefreshToken = "mock-refresh-token-" + Date.now();
-
-      const accessMax = remember ? 60 * 60 * 24 * 7 : 60 * 60 * 24;
-      const refreshMax = accessMax * 30;
-
-      const isProd = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-
-      const response = NextResponse.json(
-        { 
-          success: true, 
-          data: { 
-            success: true,
-            message: "Login successful",
-            accessToken: mockAccessToken,
-            refreshToken: mockRefreshToken,
-            user: mockUser 
-          } 
-        },
-        { status: 200 }
+    if (!email || !password) {
+      return NextResponse.json(
+        { success: false, message: "Email and password are required" },
+        { status: 400 }
       );
-
-      response.cookies.set('authToken', mockAccessToken, {
-        path: '/',
-        maxAge: accessMax,
-        httpOnly: true,
-        sameSite: 'strict',
-        secure: isProd
-      });
-
-      response.cookies.set('refreshToken', mockRefreshToken, {
-        path: '/',
-        maxAge: refreshMax,
-        httpOnly: true,
-        sameSite: 'strict',
-        secure: isProd
-      });
-
-      return response;
     }
 
-    // If not hardcoded credentials, try backend API
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://mash-backend-api.up.railway.app";
-
-    const upstream = await fetch(`${apiUrl}/api/v1/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ email, password }),
+    // Forward to backend
+    const backendRes = await axios.post(`${BACKEND_URL}/api/v1/auth/login`, {
+      email,
+      password,
+      remember,
     });
 
-    const data = await upstream.json().catch(() => null);
+    const { accessToken, refreshToken, user } = backendRes.data.data;
 
-    if (!upstream.ok) {
-      return NextResponse.json(
-        { success: false, message: data?.message || 'Login failed' },
-        { status: upstream.status }
-      );
-    }
+    // Set HttpOnly cookies
+    const response = NextResponse.json({
+      success: true,
+      user,
+    });
 
-    const accessToken = data?.data?.accessToken;
-    const refreshToken = data?.data?.refreshToken;
-    const user = data?.data?.user ?? null;
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOpts = (name: string, value: string, days: number) => ({
+      name,
+      value,
+      httpOnly: true,
+      path: "/",
+      maxAge: days * 24 * 60 * 60,
+      sameSite: "lax" as const,
+      secure: isProd,
+    });
 
-    // Determine max-age based on remember flag
-    const accessMax = remember ? 60 * 60 * 24 * 7 : 60 * 60 * 24; // seconds
-    const refreshMax = accessMax * 30;
-
-    const isProd = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-
-    const response = NextResponse.json(
-      { success: true, data: { user } },
-      { status: 200 }
-    );
-
-    if (accessToken) {
-      response.cookies.set('authToken', accessToken, {
-        path: '/',
-        maxAge: accessMax,
-        httpOnly: true,
-        sameSite: 'strict',
-        secure: isProd
-      });
-    }
-
-    if (refreshToken) {
-      response.cookies.set('refreshToken', refreshToken, {
-        path: '/',
-        maxAge: refreshMax,
-        httpOnly: true,
-        sameSite: 'strict',
-        secure: isProd
-      });
-    }
+    response.cookies.set(cookieOpts("authToken", accessToken, 1)); // 1 day
+    response.cookies.set(cookieOpts("refreshToken", refreshToken, 30)); // 30 days
 
     return response;
-  } catch (err) {
-    return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 });
+  } catch (error: any) {
+    console.error(
+      "[login proxy] error:",
+      error.response?.data || error.message
+    );
+    const message = error.response?.data?.message || "Login failed";
+    return NextResponse.json(
+      { success: false, message },
+      { status: error.response?.status || 500 }
+    );
   }
 }

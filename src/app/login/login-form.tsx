@@ -28,7 +28,7 @@ export function LoginForm() {
   }, [router]);
 
   const validateEmail = (email: string) => {
-    if (!email.includes("gmail.com")) {
+    if (!email.includes(".com")) {
       setEmailError("Email should be valid");
       return false;
     }
@@ -44,11 +44,11 @@ export function LoginForm() {
     }
 
     console.log("Login form submitted");
-    console.log("Input values:", { email, password, rememberMe });
+    console.log("Input values:", { email, password });
 
     try {
       setIsLoading(true);
-      await login(email, password, rememberMe);
+      await login(email, password);
       console.log("Login successful");
 
       setEmail("");
