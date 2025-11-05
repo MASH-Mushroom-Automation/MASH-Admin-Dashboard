@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -97,8 +98,9 @@ export default function CMSDashboard() {
     setEditingContent(null)
   }
 
-  const handleDeleteContent = (id: string | number) => {
+  const handleArchiveContent = (id: string | number) => {
     setContents((prev) => prev.filter((c) => String(c.id) !== String(id)))
+    toast.success("Content archived successfully")
   }
 
   const handlePublishToggle = (id: string | number) => {
@@ -203,7 +205,7 @@ export default function CMSDashboard() {
                   setEditingContent(content)
                   setShowForm(true)
                 }}
-                onDelete={handleDeleteContent}
+                onArchive={handleArchiveContent}
                 onPublishToggle={handlePublishToggle}
                 onPreview={setPreviewContent}
               />

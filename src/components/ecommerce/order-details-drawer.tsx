@@ -1,8 +1,8 @@
 "use client";
 
-import type { OrderLog } from "@/app/mash-market/order/page";
-import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import type { OrderLog } from "@/app/mash-market/order/page"
+import { X } from "lucide-react"
+import StatusBadge from "@/components/status-badge"
 
 interface OrderDetailsDrawerProps {
   order: OrderLog;
@@ -157,10 +157,8 @@ export function OrderDetailsDrawer({
               Current Status
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <Badge className={statusItem.color}>{statusItem.label}</Badge>
-              <span className="text-sm text-muted-foreground">
-                {order.lastUpdated}
-              </span>
+              <StatusBadge status={order.status} />
+              <span className="text-sm text-muted-foreground">{order.lastUpdated}</span>
             </div>
           </div>
 

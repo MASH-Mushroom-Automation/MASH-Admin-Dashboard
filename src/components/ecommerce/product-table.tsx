@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import type { Product } from "@/app/mash-market/product/page"
+<<<<<<< HEAD
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import {
@@ -11,59 +13,67 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical, Eye, Check, X, Archive } from "lucide-react"
+=======
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ActionsMenu } from "@/components/user-actions-menu"
+import { ConfirmationPopover } from "@/components/confirmation-popover"
+>>>>>>> FE-mashmarket
 
 interface ProductTableProps {
   products: Product[]
-  onViewDetails: (product: Product) => void
   onApprove: (product: Product) => void
   onReject: (product: Product) => void
   onArchive?: (product: Product) => void
   showApproveReject?: boolean
+  viewBase?: string
 }
 
 export function ProductTable({
   products,
-  onViewDetails,
   onApprove,
   onReject,
   onArchive,
   showApproveReject = true,
+  viewBase = "/mash-market/product",
 }: ProductTableProps) {
+  const [ArchiveProduct, setArchiveProduct] = useState<Product | null>(null)
+  const hasAnyReason = products.some((p) => (p as any).rejectReason)
   const formatPrice = (price: number) => `$${price.toFixed(2)}`
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     })
-  }
 
   return (
-    <div className="overflow-x-auto">
-          <table className="w-full">
-        <thead>
-          <tr className="border-b border-border bg-muted/50">
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Product</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Seller</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Price</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Category</th>
+    <div className="w-full overflow-x-auto rounded-md border">
+      <Table className="min-w-full text-sm sm:text-base">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Product</TableHead>
+            <TableHead>Seller</TableHead>
+            <TableHead>Price</TableHead>
+            <TableHead>Category</TableHead>
             {showApproveReject && (
               <>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Date Submitted</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+                <TableHead>Date Submitted</TableHead>
+                <TableHead>Status</TableHead>
               </>
             )}
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+            {hasAnyReason && <TableHead>Reason</TableHead>}
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody>
           {products.map((product) => (
-            <tr key={product.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-              <td className="px-6 py-4">
+            <TableRow key={product.id} className="hover:bg-muted/50">
+              <TableCell>
                 <div className="flex items-center gap-3">
+<<<<<<< HEAD
                   <div className="relative w-10 h-10">
                     <Image
                       src={product.image || "/placeholder.svg"}
@@ -75,71 +85,78 @@ export function ProductTable({
                   <div>
                     <p className="font-medium text-foreground text-sm">{product.name}</p>
                   </div>
+=======
+                  <img
+                    src={product.image || "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-10 h-10 rounded object-cover"
+                  />
+                  <p className="font-medium truncate">{product.name}</p>
+>>>>>>> FE-mashmarket
                 </div>
-              </td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">{product.seller}</td>
-              <td className="px-6 py-4 text-sm font-medium text-foreground">{formatPrice(product.price)}</td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">{product.category}</td>
+              </TableCell>
+              <TableCell>{product.seller}</TableCell>
+              <TableCell>{formatPrice(product.price)}</TableCell>
+              <TableCell className="truncate">{product.category}</TableCell>
+
               {showApproveReject && (
                 <>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {product.submittedAt ? formatDate(product.submittedAt) : "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Pending
-                    </span>
-                  </td>
+                  <TableCell>{product.submittedAt ? formatDate(product.submittedAt) : "N/A"}</TableCell>
+                  <TableCell className="capitalize">
+                    {product.status === "pending" && (
+                      <span className="text-yellow-600 font-medium">Pending</span>
+                    )}
+                    {product.status === "approved" && (
+                      <span className="text-green-600 font-medium">Approved</span>
+                    )}
+                    {product.status === "rejected" && (
+                      <span className="text-red-600 font-medium">Rejected</span>
+                    )}
+                  </TableCell>
                 </>
               )}
-              <td className="px-6 py-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">Open menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onViewDetails(product)} className="cursor-pointer">
-                      <Eye className="mr-2 h-4 w-4" />
-                      <span>View Details</span>
-                    </DropdownMenuItem>
-                    {showApproveReject && product.status === "pending" && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onApprove(product)} className="cursor-pointer text-green-600">
-                          <Check className="mr-2 h-4 w-4" />
-                          <span>Approve</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onReject(product)} className="cursor-pointer text-red-600">
-                          <X className="mr-2 h-4 w-4" />
-                          <span>Reject</span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {!showApproveReject && onArchive && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onArchive(product)} className="cursor-pointer text-orange-600">
-                          <Archive className="mr-2 h-4 w-4" />
-                          <span>Archive</span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </td>
-            </tr>
+
+              {hasAnyReason && <TableCell className="truncate">{(product as any).rejectReason ?? "—"}</TableCell>}
+
+              {/* Actions: use three-dot menu for view/Archive in pending context */}
+              <TableCell>
+                <div className="flex items-center">
+                  <ActionsMenu
+                      id={product.id}
+                      viewUrl={`${viewBase}/${product.id}`}
+                      onArchive={() => setArchiveProduct(product)}
+                      showView={true}
+                      showEdit={false}
+                      ArchiveLabel={onArchive ? "Archive" : "Archive"}
+                    />
+                </div>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
+      {/* Confirmation popover for Archive */}
+      {ArchiveProduct && (
+        <ConfirmationPopover
+          action="Archive"
+          entity="Product"
+          onConfirm={() => {
+            if (ArchiveProduct) {
+              onArchive?.(ArchiveProduct)
+            }
+            setArchiveProduct(null)
+          }}
+          onCancel={() => setArchiveProduct(null)}
+        />
+      )}
 
       {products.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No products found</p>
+        <div className="text-center text-muted-foreground py-6">
+          No products found
         </div>
       )}
+
+  
     </div>
   )
 }

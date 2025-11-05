@@ -1,5 +1,6 @@
 // "use client"
 
+<<<<<<< HEAD
 // import type React from "react"
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 // import { Button } from "@/components/ui/button"
@@ -133,6 +134,15 @@ import {
 import ChamberInventorySection from "../dashboard/sections/chamber-inventory";
 import ECommerceSection from "../dashboard/sections/ecommerce-section";
 import { useDashboardStore } from "../../store/dashboardStore";
+=======
+import type React from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { AlertCircle, Users, Package, Warehouse, ArrowRight } from "lucide-react"
+import ChamberInventorySection from "./chamber-inventory"
+import ECommerceSection from "./ecommerce-section"
+>>>>>>> FE-mashmarket
 
 export default function DashboardContent() {
   const { overview, loading } = useDashboardStore();
@@ -167,6 +177,7 @@ export default function DashboardContent() {
             secondaryValue={stats.chambers.inactive.toString()}
             secondaryLabel="Inactive"
             icon={<Warehouse className="w-5 h-5" />}
+            viewMorePath="/mash-grow/devices"
           />
           <StatCard
             title="Orders"
@@ -175,6 +186,7 @@ export default function DashboardContent() {
             secondaryValue={stats.orders.pending.toString()}
             secondaryLabel="Pending"
             icon={<Users className="w-5 h-5" />}
+            viewMorePath="/mash-market/order"
           />
           <StatCard
             title="Products"
@@ -183,6 +195,7 @@ export default function DashboardContent() {
             secondaryValue={stats.products.approved.toString()}
             secondaryLabel="Approved"
             icon={<Package className="w-5 h-5" />}
+            viewMorePath="/mash-market/product"
           />
           <StatCard
             title="Seller Applications"
@@ -191,6 +204,7 @@ export default function DashboardContent() {
             secondaryValue={stats.sellerApplications.approved.toString()}
             secondaryLabel="Approved"
             icon={<AlertCircle className="w-5 h-5" />}
+            viewMorePath="/mash-market/seller"
           />
         </div>
       </div>
@@ -210,12 +224,22 @@ export default function DashboardContent() {
 }
 
 interface StatCardProps {
+<<<<<<< HEAD
   title: string;
   primaryValue: string;
   primaryLabel: string;
   secondaryValue: string;
   secondaryLabel: string;
   icon: React.ReactNode;
+=======
+  title: string
+  primaryValue: string
+  primaryLabel: string
+  secondaryValue: string
+  secondaryLabel: string
+  icon: React.ReactNode
+  viewMorePath?: string
+>>>>>>> FE-mashmarket
 }
 
 function StatCard({
@@ -225,7 +249,13 @@ function StatCard({
   secondaryValue,
   secondaryLabel,
   icon,
+  viewMorePath,
 }: StatCardProps) {
+<<<<<<< HEAD
+=======
+  const router = useRouter()
+  
+>>>>>>> FE-mashmarket
   return (
     <Card className="relative overflow-hidden border-1 border-primary/30 rounded-xl">
       <CardHeader className="pb-2">
@@ -257,6 +287,7 @@ function StatCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => viewMorePath ? router.push(viewMorePath) : undefined}
             className="h-7 w-full justify-between px-2 text-xs font-medium text-foreground hover:bg-primary/5"
           >
             View more

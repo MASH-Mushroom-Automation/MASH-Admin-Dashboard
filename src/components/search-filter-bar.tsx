@@ -44,9 +44,9 @@ export function SearchFilterBar({
   const hasFilter2 = filter2Options.length > 0
 
   return (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
       {/* Search input */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 w-full">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={searchQuery}
@@ -56,37 +56,40 @@ export function SearchFilterBar({
         />
       </div>
 
-      {/* Filter 1 */}
-      {hasFilter1 && (
-        <Select value={filter1Value} onValueChange={onFilter1Change!}>
-          <SelectTrigger className="h-10 w-36 rounded-md border border-input bg-background text-sm font-medium leading-none">
-            <SelectValue placeholder={filter1Label} />
-          </SelectTrigger>
-          <SelectContent>
-            {filter1Options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+      {/* Filters wrapper: stack on small screens, inline on sm+ */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+        {/* Filter 1 */}
+        {hasFilter1 && (
+          <Select value={filter1Value} onValueChange={onFilter1Change!}>
+            <SelectTrigger className="h-10 w-full sm:w-auto rounded-md border border-input bg-background text-sm font-medium">
+              <SelectValue placeholder={filter1Label} />
+            </SelectTrigger>
+            <SelectContent>
+              {filter1Options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
-      {/* Filter 2 */}
-      {hasFilter2 && (
-        <Select value={filter2Value} onValueChange={onFilter2Change!}>
-          <SelectTrigger className="h-10 w-36 rounded-md border border-input bg-background text-sm font-medium leading-none">
-            <SelectValue placeholder={filter2Label} />
-          </SelectTrigger>
-          <SelectContent>
-            {filter2Options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+        {/* Filter 2 */}
+        {hasFilter2 && (
+          <Select value={filter2Value} onValueChange={onFilter2Change!}>
+            <SelectTrigger className="h-10 w-full sm:w-36 rounded-md border border-input bg-background text-sm font-medium leading-none">
+              <SelectValue placeholder={filter2Label} />
+            </SelectTrigger>
+            <SelectContent>
+              {filter2Options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
     </div>
   )
 }

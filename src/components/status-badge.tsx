@@ -1,21 +1,3 @@
-// interface StatusBadgeProps {
-//   status: "Active" | "Inactive"
-// }
-
-// export default function StatusBadge({ status }: StatusBadgeProps) {
-//   const isActive = status === "Active"
-
-//   return (
-//     <span
-//       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-//         isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-//       }`}
-//     >
-//       {status}
-//     </span>
-//   )
-// }
-
 "use client"
 
 interface StatusBadgeProps {
@@ -50,13 +32,13 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     },
     active: {
       label: "Active",
-      bgColor: "bg-green-100 dark:bg-green-900/30",
+      bgColor: "",
       textColor: "text-green-800 dark:text-green-200",
       dotColor: "bg-green-500",
     },
     inactive: {
       label: "Inactive",
-      bgColor: "bg-red-100 dark:bg-red-900/30",
+      bgColor: "",
       textColor: "text-red-800 dark:text-red-200",
       dotColor: "bg-red-500",
     },

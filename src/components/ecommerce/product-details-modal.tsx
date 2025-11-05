@@ -2,8 +2,13 @@
 
 import type { Product } from "@/app/mash-market/product/page"
 import { Button } from "@/components/ui/button"
+<<<<<<< HEAD
 import { X } from "lucide-react"
 import Image from "next/image"
+=======
+import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { useEffect, useState } from "react"
+>>>>>>> FE-mashmarket
 
 interface ProductDetailsModalProps {
   product: Product
@@ -21,7 +26,32 @@ export function ProductDetailsModal({
   showActions = false,
 }: ProductDetailsModalProps) {
   const formatPrice = (price: number) => `$${price.toFixed(2)}`
+  const formatPricePHP = (price: number) =>
+    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(price)
+
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString()
+  const [selectedImage, setSelectedImage] = useState(0)
+  const images = product.images && product.images.length > 0 ? product.images : product.image ? [product.image] : []
+
+  // Keyboard navigation for multiple images
+  useEffect(() => {
+    if (!images || images.length <= 1) return
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setSelectedImage((s) => (s - 1 + images.length) % images.length)
+      }
+      if (e.key === "ArrowRight") {
+        setSelectedImage((s) => (s + 1) % images.length)
+      }
+      if (e.key === "Escape") {
+        onClose()
+      }
+    }
+
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [images.length, onClose])
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -36,6 +66,7 @@ export function ProductDetailsModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+<<<<<<< HEAD
           {/* Product Image */}
           <div className="flex justify-center">
             <div className="relative w-64 h-64">
@@ -46,6 +77,55 @@ export function ProductDetailsModal({
                 className="rounded-lg object-cover"
               />
             </div>
+=======
+          {/* Product Images */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative flex items-center justify-center w-full">
+              <img
+                src={images[selectedImage] || "/placeholder.svg"}
+                alt={`${product.name} image ${selectedImage + 1}`}
+                className="max-w-full max-h-144 rounded-lg object-contain"
+              />
+
+              {/* Prev / Next controls */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setSelectedImage((s) => (s - 1 + images.length) % images.length)}
+                    aria-label="Previous image"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white hover:bg-black/40"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedImage((s) => (s + 1) % images.length)}
+                    aria-label="Next image"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white hover:bg-black/40"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+
+                  <div className="absolute right-3 top-3 bg-black/40 text-white text-xs px-2 py-1 rounded">
+                    {selectedImage + 1}/{images.length}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {images.length > 1 && (
+              <div className="flex items-center gap-2">
+                {images.map((img, idx) => (
+                  <button
+                    key={img + idx}
+                    onClick={() => setSelectedImage(idx)}
+                    className={`w-12 h-12 rounded overflow-hidden border ${idx === selectedImage ? "ring-2 ring-primary" : "border-border"}`}>
+                    <img src={img} alt={`${product.name} thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+>>>>>>> FE-mashmarket
           </div>
 
           {/* Product Info */}
@@ -55,31 +135,53 @@ export function ProductDetailsModal({
               <p className="text-lg font-medium text-foreground mt-1">{product.name}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-semibold text-muted-foreground">Seller</label>
-                <p className="text-foreground mt-1">{product.seller}</p>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-muted-foreground">Category</label>
-                <p className="text-foreground mt-1">{product.category}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-semibold text-muted-foreground">Price</label>
-                <p className="text-lg font-bold text-foreground mt-1">{formatPrice(product.price)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-muted-foreground">Submitted</label>
-                <p className="text-foreground mt-1">{formatDate(product.submittedAt)}</p>
-              </div>
+            <div>
+              <label className="text-sm font-semibold text-muted-foreground">Category</label>
+              <p className="text-foreground mt-1">{product.category}</p>
             </div>
 
             <div>
               <label className="text-sm font-semibold text-muted-foreground">Description</label>
               <p className="text-foreground mt-2 leading-relaxed">{product.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-semibold text-muted-foreground">Price</label>
+                <p className="text-lg font-bold text-foreground mt-1">{formatPricePHP(product.price)}</p>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-muted-foreground">Unit / Quantity</label>
+                <p className="text-foreground mt-1">{product.unit ?? "—"}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-muted-foreground">Date Submitted</label>
+              <p className="text-foreground mt-1">{formatDate(product.submittedAt)}</p>
+            </div>
+
+            {/* Seller Info */}
+            <div className="pt-4 border-t border-border">
+              <h3 className="text-lg font-semibold">Seller Information</h3>
+              <div className="mt-2 grid grid-cols-1 gap-2">
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Seller Name</label>
+                  <p className="text-foreground mt-1">{product.sellerInfo?.sellerName ?? product.seller}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Business Name</label>
+                  <p className="text-foreground mt-1">{product.sellerInfo?.businessName ?? "—"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Contact Number</label>
+                  <p className="text-foreground mt-1">{product.sellerInfo?.contactNumber ?? "—"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Business Address</label>
+                  <p className="text-foreground mt-1">{product.sellerInfo?.businessAddress ?? "—"}</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -93,7 +195,7 @@ export function ProductDetailsModal({
                 Reject
               </Button>
               <Button onClick={onApprove} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
-                Approve
+                Accept
               </Button>
             </div>
           )}

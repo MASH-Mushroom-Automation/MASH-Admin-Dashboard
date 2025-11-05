@@ -1,7 +1,14 @@
 "use client";
 
+<<<<<<< HEAD
 import type { OrderLog } from "@/app/mash-market/order/page";
 import { Badge } from "@/components/ui/badge";
+=======
+import type { OrderLog } from "@/app/mash-market/order/page"
+import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+>>>>>>> FE-mashmarket
 
 interface OrderLogsTableProps {
   logs: OrderLog[];
@@ -58,6 +65,7 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
   }
 
   return (
+<<<<<<< HEAD
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
@@ -86,12 +94,28 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
           </tr>
         </thead>
         <tbody>
+=======
+<div>
+  <Table className="w-full table-fixed">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Seller Name</TableHead>
+            <TableHead>Order ID</TableHead>
+            <TableHead>Buyer Name</TableHead>
+            <TableHead>Order Date</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Last Updated</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+>>>>>>> FE-mashmarket
           {logs.map((log) => (
-            <tr
+            <TableRow
               key={log.id}
               onClick={() => onRowClick(log)}
-              className="cursor-pointer border-b border-border transition-colors hover:bg-muted/50"
             >
+<<<<<<< HEAD
               <td className="px-6 py-4 text-sm text-foreground">
                 {log.sellerName}
               </td>
@@ -120,9 +144,21 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
                 {log.lastUpdated}
               </td>
             </tr>
+=======
+              <TableCell>{log.sellerName}</TableCell>
+              <TableCell className="font-medium">{log.orderId}</TableCell>
+              <TableCell>{log.buyerName}</TableCell>
+              <TableCell>{log.orderDate}</TableCell>
+              <TableCell className="font-medium">${log.amount.toFixed(2)}</TableCell>
+              <TableCell>
+                <Badge className={statusConfig[log.status].color}>{statusConfig[log.status].label}</Badge>
+              </TableCell>
+              <TableCell>{log.lastUpdated}</TableCell>
+            </TableRow>
+>>>>>>> FE-mashmarket
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

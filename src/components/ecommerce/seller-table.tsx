@@ -1,9 +1,14 @@
 "use client"
+"use client"
 
 import { useState } from "react"
+import { useEffect } from "react"
 import type { TabType } from "@/app/mash-market/seller/page"
 import { SellerActionMenu } from "./seller-action-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
+import RejectReasonModal from "@/components/ecommerce/reject-reason-modal"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 
 interface Seller {
   id: string
@@ -11,84 +16,48 @@ interface Seller {
   storeName: string
   email: string
   status: "pending" | "approved" | "rejected"
+  rejectReason?: string
   address?: string
+  username?: string
+  phone?: string
+  businessName?: string
+  businessType?: string
 }
 
-const mockSellers: Seller[] = [
-  {
-    id: "1",
-    name: "Jin Failana",
-    storeName: "Smith Electronics",
-    email: "john@smithelectronics.com",
-    status: "pending",
-    address: "Caloocan City",
-  },
-  {
-    id: "2",
-    name: "Karen Smith",
-    storeName: "Karen’s Boutique",
-    email: "karen@boutique.com",
-    status: "approved",
-    address: "Quezon City",
-  },
-  {
-    id: "3",
-    name: "Anne Curtis",
-    storeName: "Anne’s Beauty Hub",
-    email: "anne@beautyhub.com",
-    status: "rejected",
-    address: "Makati City",
-  },
-]
-
 export function SellerTable({
+  sellers: mockSellers,
   activeTab,
-  searchQuery,
   showStatus = true,
   mode = "default",
+  onView,
+  onAccept,
+  onReject,
+  onArchive,
 }: {
+  sellers: Seller[]
   activeTab: TabType
   searchQuery: string
   showStatus?: boolean
   mode?: "default" | "all" | "pending"
+  onView?: (seller: Seller) => void
+  onAccept?: (id: string) => void
+  onReject?: (id: string, reason?: string) => void
+  onArchive?: (id: string) => void
 }) {
-  const [sellers, setSellers] = useState<Seller[]>(mockSellers)
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string
-    action: "reject" | "delete"
+    action: "reject" | "Archive"
   } | null>(null)
 
-  const filteredSellers = sellers.filter((seller) => {
-    const matchesSearch =
-      seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.storeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSellers = mockSellers
 
-    if (!matchesSearch) return false
-
-    switch (activeTab) {
-      case "approval":
-        return seller.status === "pending"
-      case "approved":
-        return seller.status === "approved"
-      case "rejected":
-        return seller.status === "rejected"
-      default:
-        return true
-    }
-  })
-
-  const handleConfirmAction = () => {
+  const handleConfirmAction = (reason?: string) => {
     if (!confirmAction) return
 
     if (confirmAction.action === "reject") {
-      setSellers((prev) =>
-        prev.map((s) =>
-          s.id === confirmAction.sellerId ? { ...s, status: "rejected" } : s
-        )
-      )
-    } else if (confirmAction.action === "delete") {
-      setSellers((prev) => prev.filter((s) => s.id !== confirmAction.sellerId))
+      if (onReject) onReject(confirmAction.sellerId, reason)
+    } else if (confirmAction.action === "Archive") {
+      if (onArchive) onArchive(confirmAction.sellerId)
     }
 
     setConfirmAction(null)
@@ -110,31 +79,38 @@ export function SellerTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Seller Name</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Store Name</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Address</th>
-              {showStatus && (
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
-              )}
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Seller Name</TableHead>
+              <TableHead>Store Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Address</TableHead>
+              {showStatus && <TableHead>Status</TableHead>}
+        {activeTab === "rejected" && <TableHead>Reason</TableHead>}
+        <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
             {filteredSellers.map((seller) => (
-              <tr
-                key={seller.id}
-                className="border-b hover:bg-muted/30 transition-colors rounded-lg"
-              >
-                <td className="px-6 py-4 text-sm text-foreground">{seller.name}</td>
-                <td className="px-6 py-4 text-sm text-foreground">{seller.storeName}</td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">{seller.email}</td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">{seller.address || "—"}</td>
+              <TableRow key={seller.id}>
+                <TableCell>
+                  {typeof onView === "function" ? (
+                    <Button variant="link" onClick={() => onView(seller)} className="p-0">
+                      {seller.name}
+                    </Button>
+                  ) : (
+                    seller.name
+                  )}
+                </TableCell>
+
+                <TableCell>{seller.storeName}</TableCell>
+                <TableCell>{seller.email}</TableCell>
+                <TableCell>{seller.address || "—"}</TableCell>
+
                 {showStatus && (
-                  <td className="px-6 py-4 text-sm">
+                  <TableCell className="px-6 py-4 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
                         seller.status
@@ -142,32 +118,32 @@ export function SellerTable({
                     >
                       {seller.status === "pending" ? "For Approval" : seller.status}
                     </span>
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-6 py-4 text-sm">
+
+                {activeTab === "rejected" && (
+                  <TableCell className="px-6 py-4 text-sm">{seller.rejectReason ?? "—"}</TableCell>
+                )}
+
+                <TableCell>
                   <SellerActionMenu
                     seller={seller}
                     activeTab={activeTab}
                     mode={mode}
-                    onReject={() =>
-                      setConfirmAction({ sellerId: seller.id, action: "reject" })
-                    }
-                    onDelete={() =>
-                      setConfirmAction({ sellerId: seller.id, action: "delete" })
-                    }
-                    onAccept={() =>
-                      setSellers((prev) =>
-                        prev.map((s) =>
-                          s.id === seller.id ? { ...s, status: "approved" } : s
-                        )
-                      )
-                    }
+                    onReject={() => setConfirmAction({ sellerId: seller.id, action: "reject" })}
+                    onArchive={() => setConfirmAction({ sellerId: seller.id, action: "Archive" })}
+                    onAccept={() => {
+                      if (onAccept) onAccept(seller.id)
+                    }}
+                    onView={() => {
+                      if (onView) onView(seller)
+                    }}
                   />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {filteredSellers.length === 0 && (
@@ -176,13 +152,21 @@ export function SellerTable({
         </div>
       )}
 
-      {confirmAction && (
+      {confirmAction && confirmAction.action === "reject" ? (
+        <RejectReasonModal
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setConfirmAction(null)
+          }}
+          onConfirm={(reason) => handleConfirmAction(reason)}
+        />
+      ) : confirmAction ? (
         <ConfirmationPopover
           action={confirmAction.action}
-          onConfirm={handleConfirmAction}
+          onConfirm={(reason) => handleConfirmAction(reason)}
           onCancel={() => setConfirmAction(null)}
         />
-      )}
+      ) : null}
     </>
   )
 }
