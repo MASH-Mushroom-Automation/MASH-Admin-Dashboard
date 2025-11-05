@@ -1,14 +1,9 @@
 "use client";
 
-<<<<<<< HEAD
-import type { OrderLog } from "@/app/mash-market/order/page";
-import { Badge } from "@/components/ui/badge";
-=======
 import type { OrderLog } from "@/app/mash-market/order/page"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
->>>>>>> FE-mashmarket
 
 interface OrderLogsTableProps {
   logs: OrderLog[];
@@ -65,36 +60,6 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Seller Name
-            </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Order ID
-            </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Buyer Name
-            </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Order Date
-            </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Amount
-            </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Status
-            </th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-              Last Updated
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-=======
 <div>
   <Table className="w-full table-fixed">
         <TableHeader>
@@ -109,42 +74,11 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
->>>>>>> FE-mashmarket
           {logs.map((log) => (
             <TableRow
               key={log.id}
               onClick={() => onRowClick(log)}
             >
-<<<<<<< HEAD
-              <td className="px-6 py-4 text-sm text-foreground">
-                {log.sellerName}
-              </td>
-              <td className="px-6 py-4 text-sm font-medium text-foreground">
-                {log.orderId}
-              </td>
-              <td className="px-6 py-4 text-sm text-foreground">
-                {log.buyerName}
-              </td>
-              <td className="px-6 py-4 text-sm text-foreground">
-                {log.orderDate}
-              </td>
-              <td className="px-6 py-4 text-sm font-medium text-foreground">
-                ${log.amount.toFixed(2)}
-              </td>
-              <td className="px-6 py-4 text-sm">
-                <Badge
-                  className={
-                    statusConfig[log.status as keyof typeof statusConfig].color
-                  }
-                >
-                  {statusConfig[log.status as keyof typeof statusConfig].label}
-                </Badge>
-              </td>
-              <td className="px-6 py-4 text-sm text-muted-foreground">
-                {log.lastUpdated}
-              </td>
-            </tr>
-=======
               <TableCell>{log.sellerName}</TableCell>
               <TableCell className="font-medium">{log.orderId}</TableCell>
               <TableCell>{log.buyerName}</TableCell>
@@ -155,7 +89,6 @@ export function OrderLogsTable({ logs, onRowClick }: OrderLogsTableProps) {
               </TableCell>
               <TableCell>{log.lastUpdated}</TableCell>
             </TableRow>
->>>>>>> FE-mashmarket
           ))}
         </TableBody>
       </Table>
