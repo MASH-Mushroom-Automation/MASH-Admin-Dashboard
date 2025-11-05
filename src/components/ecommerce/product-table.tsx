@@ -2,22 +2,9 @@
 
 import { useState } from "react"
 import type { Product } from "@/app/mash-market/product/page"
-<<<<<<< HEAD
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { MoreVertical, Eye, Check, X, Archive } from "lucide-react"
-=======
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ActionsMenu } from "@/components/user-actions-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
->>>>>>> FE-mashmarket
 
 interface ProductTableProps {
   products: Product[]
@@ -73,26 +60,12 @@ export function ProductTable({
             <TableRow key={product.id} className="hover:bg-muted/50">
               <TableCell>
                 <div className="flex items-center gap-3">
-<<<<<<< HEAD
-                  <div className="relative w-10 h-10">
-                    <Image
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      fill
-                      className="rounded object-cover"
-                    />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{product.name}</p>
-                  </div>
-=======
                   <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
                     className="w-10 h-10 rounded object-cover"
                   />
                   <p className="font-medium truncate">{product.name}</p>
->>>>>>> FE-mashmarket
                 </div>
               </TableCell>
               <TableCell>{product.seller}</TableCell>

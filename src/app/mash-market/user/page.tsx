@@ -8,15 +8,6 @@ import { ConfirmationPopover } from "@/components/confirmation-popover"
 import { ActionsMenu } from "@/components/user-actions-menu"
 import { SearchFilterBar } from "@/components/search-filter-bar"
 import {
-<<<<<<< HEAD
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
-=======
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -29,7 +20,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Archive } from "lucide-react"
 import { useRouter } from "next/navigation"
->>>>>>> FE-mashmarket
 
 
 interface User {
@@ -202,13 +192,6 @@ export default function UsersManagement() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
-<<<<<<< HEAD
-  // Uncomment if needed for filter changes
-  // const handleFilterChange = (callback: () => void) => {
-  //   setCurrentPage(1)
-  //   callback()
-  // }
-=======
   const handleArchive = () => {
     // In a real app we'd call the archive API here. For now, navigate to the archive page.
     const id = deletingId
@@ -218,7 +201,6 @@ export default function UsersManagement() {
     // navigate to the archive page and include the archived id as a query param
     if (id) router.push(`/mash-market/user/archive?id=${id}`)
   }
->>>>>>> FE-mashmarket
 
   return (
     <div className="min-h-screen bg-background p-6">
