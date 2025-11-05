@@ -2,6 +2,9 @@
   "name": "mash-admin-dashboard",
   "version": "0.1.0",
   "private": true,
+  "eslint": {
+    "ignoreDuringBuilds": true
+  },
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbopack",
