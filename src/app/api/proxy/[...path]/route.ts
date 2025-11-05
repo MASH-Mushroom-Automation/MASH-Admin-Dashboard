@@ -12,7 +12,7 @@ async function handler(
   const params = await context.params; // ← AWAIT
   const path = params.path.join("/");
   const search = req.nextUrl.search;
-  const url = `${BACKEND_URL}/api/${path}${search}`;
+  const url = `${BACKEND_URL}/${path}${search}`;
 
   console.log(`[PROXY] ${req.method} → ${url}`);
 
