@@ -115,7 +115,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             onToggle={() => setIsMashMarketOpen((prev) => !prev)}
           >
             <SubNavItem label="Users" href="/mash-market/user" pathname={pathname} />
-            <SubNavItem label="Sellers" href="/mash-market/seller" pathname={pathname} />
+            <SubNavItem label="Pending Sellers" href="/mash-market/seller" pathname={pathname} />
             <SubNavItem label="Orders" href="/mash-market/order" pathname={pathname} />
             <SubNavItem label="Products" href="/mash-market/product" pathname={pathname} />
             <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} />

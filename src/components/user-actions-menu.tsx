@@ -15,6 +15,7 @@ interface ActionsMenuProps {
   id: string
   viewUrl?: string     
   editUrl?: string   
+  onView?: () => void
   onDelete: () => void
   showView?: boolean
   showEdit?: boolean
@@ -26,6 +27,7 @@ export function ActionsMenu({
   viewUrl,
   editUrl,
   onDelete,
+  onView,
   showView = true,
   showEdit = true,
   deleteLabel = "Delete",
@@ -38,14 +40,19 @@ export function ActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {showView && viewUrl && (
+        {showView && (onView ? (
+          <DropdownMenuItem onClick={onView} className="flex items-center gap-2 cursor-pointer">
+            <Eye className="h-4 w-4" />
+            View
+          </DropdownMenuItem>
+        ) : viewUrl ? (
           <DropdownMenuItem asChild>
             <Link href={viewUrl} className="flex items-center gap-2 cursor-pointer">
               <Eye className="h-4 w-4" />
               View
             </Link>
           </DropdownMenuItem>
-        )}
+        ) : null)}
         {showEdit && editUrl && (
           <DropdownMenuItem asChild>
             <Link href={editUrl} className="flex items-center gap-2 cursor-pointer">
@@ -56,7 +63,7 @@ export function ActionsMenu({
         )}
         <DropdownMenuItem
           onClick={onDelete}
-          className="text-destructive cursor-pointer flex items-center gap-2"
+          className="text-destructive hover:text-destructive cursor-pointer flex items-center gap-2"
         >
           <Trash2 className="h-4 w-4 text-destructive" />
           {deleteLabel}

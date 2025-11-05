@@ -18,7 +18,17 @@ export interface Product {
   seller: string
   price: number
   category: string
-  image: string
+  image?: string
+  images?: string[]
+  subcategory?: string
+  unit?: string
+  stockQuantity?: number
+  sellerInfo?: {
+    sellerName?: string
+    businessName?: string
+    contactNumber?: string
+    businessAddress?: string
+  }
   description: string
   status: ProductStatus
   submittedAt: string
@@ -31,8 +41,18 @@ const MOCK_PRODUCTS: Product[] = [
     seller: "Mushroom Farm",
     price: 129.99,
     category: "Fresh Mushroom",
+    subcategory: "Fresh",
+    unit: "per 250g",
+    stockQuantity: 120,
+    images: ["/wireless-headphones.png", "/reusable-water-bottle.png"],
     image: "/wireless-headphones.png",
-    description: "High-quality wireless headphones with noise cancellation and 30-hour battery life.",
+    sellerInfo: {
+      sellerName: "Mushroom Farm",
+      businessName: "Mushroom Farm Co.",
+      contactNumber: "+63 912 345 6789",
+      businessAddress: "123 Farm Lane, Rizal, Philippines",
+    },
+    description: "High-quality oyster mushrooms grown locally. Fresh, flavorful, and perfect for cooking or grilling.",
     status: "pending",
     submittedAt: "2025-10-28T10:30:00Z",
   },
@@ -42,8 +62,18 @@ const MOCK_PRODUCTS: Product[] = [
     seller: "The farm house",
     price: 34.99,
     category: "Fresh Mushroom",
+    subcategory: "Fresh",
+    unit: "per 250g",
+    stockQuantity: 250,
+    images: ["/organic-cotton-tshirt.png"],
     image: "/organic-cotton-tshirt.png",
-    description: "Sustainable, eco-friendly cotton t-shirt available in multiple colors.",
+    sellerInfo: {
+      sellerName: "The farm house",
+      businessName: "The Farm House Co.",
+      contactNumber: "+63 922 111 2222",
+      businessAddress: "45 Countryside Ave, Laguna, Philippines",
+    },
+    description: "Fresh harvested white mushrooms, great for soups and stir fry.",
     status: "pending",
     submittedAt: "2025-10-27T14:15:00Z",
   },
@@ -53,8 +83,18 @@ const MOCK_PRODUCTS: Product[] = [
     seller: "Kabutero Co.",
     price: 59.99,
     category: "Processed Mushroom",
+    subcategory: "Chips",
+    unit: "per pack",
+    stockQuantity: 80,
+    images: ["/bamboo-cutting-board.png"],
     image: "/bamboo-cutting-board.png",
-    description: "Set of 3 eco-friendly bamboo cutting boards with different sizes.",
+    sellerInfo: {
+      sellerName: "Kabutero Co.",
+      businessName: "Kabutero Snacks",
+      contactNumber: "+63 933 333 4444",
+      businessAddress: "Unit 5, Market St., Cebu, Philippines",
+    },
+    description: "Crispy mushroom chips made from locally sourced mushrooms.",
     status: "pending",
     submittedAt: "2025-10-25T16:45:00Z",
   },
@@ -64,8 +104,18 @@ const MOCK_PRODUCTS: Product[] = [
     seller: "Mushroom Snacks Inc.",
     price: 59.99,
     category: "Processed Mushroom",
+    subcategory: "Chicharon",
+    unit: "per pack",
+    stockQuantity: 50,
+    images: ["/bamboo-cutting-board.png"],
     image: "/bamboo-cutting-board.png",
-    description: "Set of 3 eco-friendly bamboo cutting boards with different sizes.",
+    sellerInfo: {
+      sellerName: "Mushroom Snacks Inc.",
+      businessName: "Mushroom Snacks Inc.",
+      contactNumber: "+63 944 555 6666",
+      businessAddress: "Blk 3 Lot 7, Davao City, Philippines",
+    },
+    description: "A crunchy, savory mushroom chicharon alternative.",
     status: "pending",
     submittedAt: "2025-10-22T16:45:00Z",
   },

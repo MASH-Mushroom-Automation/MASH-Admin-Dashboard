@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -72,6 +73,7 @@ export default function RegisterChamber() {
   const handleDelete = (userId: string) => {
     setUsers(users.filter((user) => user.id !== userId))
     setDeleteUserId(null)
+    toast.success("User deleted successfully")
   }
 
   const handleRegisterSave = (data: { chamberName: string; address: string; contactNumber: string }) => {

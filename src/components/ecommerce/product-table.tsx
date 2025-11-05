@@ -1,10 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import type { Product } from "@/app/mash-market/product/page"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ActionsMenu } from "@/components/user-actions-menu"
-import { Check, X, Archive } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ConfirmationPopover } from "@/components/confirmation-popover"
 
 interface ProductTableProps {
   products: Product[]
@@ -23,6 +23,7 @@ export function ProductTable({
   onArchive,
   showApproveReject = true,
 }: ProductTableProps) {
+  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null)
   const formatPrice = (price: number) => `$${price.toFixed(2)}`
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -86,48 +87,46 @@ export function ProductTable({
                 </>
               )}
 
-              {/* ✅ ActionsMenu integrated here */}
+              {/* Actions: use three-dot menu for view/delete in pending context */}
               <TableCell>
-                {showApproveReject && product.status === "pending" ? (
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onApprove(product)}
-                      className="text-green-600 border-green-600 hover:bg-green-50"
-                    >
-                      <Check className="h-4 w-4 mr-1" /> Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onReject(product)}
-                      className="text-red-600 border-red-600 hover:bg-red-50"
-                    >
-                      <X className="h-4 w-4 mr-1" /> Reject
-                    </Button>
-                  </div>
-                ) : (
+                <div className="flex items-center">
                   <ActionsMenu
                     id={product.id}
                     viewUrl={`/mash-market/product/${product.id}`}
-                    onDelete={() => onArchive?.(product)}
+                    onView={() => onViewDetails(product)}
+                    onDelete={() => setDeleteProduct(product)}
                     showView={true}
                     showEdit={false}
-                    deleteLabel={onArchive ? "Archive" : "Delete"}
+                    deleteLabel={onArchive ? "Delete" : "Delete"}
                   />
-                )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      {/* Confirmation popover for delete */}
+      {deleteProduct && (
+        <ConfirmationPopover
+          action="delete"
+          entity="Product"
+          onConfirm={() => {
+            if (deleteProduct) {
+              onArchive?.(deleteProduct)
+            }
+            setDeleteProduct(null)
+          }}
+          onCancel={() => setDeleteProduct(null)}
+        />
+      )}
 
       {products.length === 0 && (
         <div className="text-center text-muted-foreground py-6">
           No products found
         </div>
       )}
+
+  
     </div>
   )
 }

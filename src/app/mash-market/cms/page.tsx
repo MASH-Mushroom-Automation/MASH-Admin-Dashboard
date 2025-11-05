@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,6 +100,7 @@ export default function CMSDashboard() {
 
   const handleDeleteContent = (id: string | number) => {
     setContents((prev) => prev.filter((c) => String(c.id) !== String(id)))
+    toast.success("Content deleted successfully")
   }
 
   const handlePublishToggle = (id: string | number) => {

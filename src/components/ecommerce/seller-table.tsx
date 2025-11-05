@@ -1,4 +1,5 @@
 "use client"
+"use client"
 
 import { useState } from "react"
 import { useEffect } from "react"
@@ -6,6 +7,7 @@ import type { TabType } from "@/app/mash-market/seller/page"
 import { SellerActionMenu } from "./seller-action-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 
 interface Seller {
   id: string
@@ -14,6 +16,10 @@ interface Seller {
   email: string
   status: "pending" | "approved" | "rejected"
   address?: string
+  username?: string
+  phone?: string
+  businessName?: string
+  businessType?: string
 }
 
 export function SellerTable({
@@ -21,37 +27,35 @@ export function SellerTable({
   activeTab,
   showStatus = true,
   mode = "default",
+  onView,
+  onAccept,
+  onReject,
+  onDelete,
 }: {
   sellers: Seller[]
   activeTab: TabType
   searchQuery: string
   showStatus?: boolean
   mode?: "default" | "all" | "pending"
+  onView?: (seller: Seller) => void
+  onAccept?: (id: string) => void
+  onReject?: (id: string) => void
+  onDelete?: (id: string) => void
 }) {
- 
-  const [sellers, setSellers] = useState<Seller[]>(mockSellers)
-
-  useEffect(() => {
-    setSellers(mockSellers)
-  }, [mockSellers])
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string
     action: "reject" | "delete"
   } | null>(null)
 
- const filteredSellers = sellers
+  const filteredSellers = mockSellers
 
   const handleConfirmAction = () => {
     if (!confirmAction) return
 
     if (confirmAction.action === "reject") {
-      setSellers((prev) =>
-        prev.map((s) =>
-          s.id === confirmAction.sellerId ? { ...s, status: "rejected" } : s
-        )
-      )
+      if (onReject) onReject(confirmAction.sellerId)
     } else if (confirmAction.action === "delete") {
-      setSellers((prev) => prev.filter((s) => s.id !== confirmAction.sellerId))
+      if (onDelete) onDelete(confirmAction.sellerId)
     }
 
     setConfirmAction(null)
@@ -80,21 +84,28 @@ export function SellerTable({
               <TableHead>Store Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Address</TableHead>
-              {showStatus && (
-                <TableHead>Status</TableHead>
-              )}
+              {showStatus && <TableHead>Status</TableHead>}
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {filteredSellers.map((seller) => (
-              <TableRow
-                key={seller.id}
-              >
-                <TableCell>{seller.name}</TableCell>
+              <TableRow key={seller.id}>
+                <TableCell>
+                  {typeof onView === "function" ? (
+                    <Button variant="link" onClick={() => onView(seller)} className="p-0">
+                      {seller.name}
+                    </Button>
+                  ) : (
+                    seller.name
+                  )}
+                </TableCell>
+
                 <TableCell>{seller.storeName}</TableCell>
                 <TableCell>{seller.email}</TableCell>
                 <TableCell>{seller.address || "—"}</TableCell>
+
                 {showStatus && (
                   <TableCell className="px-6 py-4 text-sm">
                     <span
@@ -106,24 +117,20 @@ export function SellerTable({
                     </span>
                   </TableCell>
                 )}
+
                 <TableCell>
                   <SellerActionMenu
                     seller={seller}
                     activeTab={activeTab}
                     mode={mode}
-                    onReject={() =>
-                      setConfirmAction({ sellerId: seller.id, action: "reject" })
-                    }
-                    onDelete={() =>
-                      setConfirmAction({ sellerId: seller.id, action: "delete" })
-                    }
-                    onAccept={() =>
-                      setSellers((prev) =>
-                        prev.map((s) =>
-                          s.id === seller.id ? { ...s, status: "approved" } : s
-                        )
-                      )
-                    }
+                    onReject={() => setConfirmAction({ sellerId: seller.id, action: "reject" })}
+                    onDelete={() => setConfirmAction({ sellerId: seller.id, action: "delete" })}
+                    onAccept={() => {
+                      if (onAccept) onAccept(seller.id)
+                    }}
+                    onView={() => {
+                      if (onView) onView(seller)
+                    }}
                   />
                 </TableCell>
               </TableRow>

@@ -18,11 +18,12 @@ interface Seller {
 
 interface SellerActionMenuProps {
   seller: Seller
-  activeTab?: TabType
+  activeTab?: TabType | string
   mode?: "default" | "all" | "pending"
   onReject?: () => void
   onDelete: () => void
   onAccept?: () => void
+  onView?: () => void
 }
 
 export function SellerActionMenu({
@@ -32,6 +33,7 @@ export function SellerActionMenu({
   onReject,
   onDelete,
   onAccept,
+  onView,
 }: SellerActionMenuProps) {
   const router = useRouter()
 
@@ -47,7 +49,10 @@ export function SellerActionMenu({
       {
         label: "View",
         icon: Eye,
-        action: () => router.push(`/mash-market/account-details?id=${seller.id}`),
+        action: () => {
+          if (onView) return onView()
+          return router.push(`/mash-market/account-details?id=${seller.id}`)
+        },
       },
     ]
 
