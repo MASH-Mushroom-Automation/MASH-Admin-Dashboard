@@ -25,6 +25,14 @@ export interface Seller {
   documents?: SellerDocument[]
 }
 
+export interface SellerLogEntry {
+  type: "update" | "status" | "delete"
+  id: string
+  when: string
+  status?: SellerStatus
+  by?: string
+}
+
 const STORAGE_KEY = "mash_sellers_v1"
 const LOG_KEY = "mash_sellers_logs_v1"
 
@@ -87,18 +95,18 @@ function writeStorage(sellers: Seller[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sellers))
 }
 
-function readLogs(): any[] {
+function readLogs(): SellerLogEntry[] {
   if (typeof window === "undefined") return []
   try {
     const raw = localStorage.getItem(LOG_KEY)
     if (!raw) return []
-    return JSON.parse(raw)
+    return JSON.parse(raw) as SellerLogEntry[]
   } catch {
     return []
   }
 }
 
-function pushLog(entry: any) {
+function pushLog(entry: SellerLogEntry) {
   if (typeof window === "undefined") return
   const logs = readLogs()
   logs.unshift(entry)

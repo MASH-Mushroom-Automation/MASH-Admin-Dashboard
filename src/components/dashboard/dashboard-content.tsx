@@ -152,8 +152,10 @@ export default function DashboardContent() {
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-primary">Welcome Back!</h1>
-        <p className="text-muted-foreground mt-1 mb-5">
+        <h1 className="sm:text-3xl text-2xl font-bold text-primary">
+          Welcome Back!
+        </h1>
+        <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
           Discover the latest updates in your business today.
         </p>
 
@@ -195,8 +197,12 @@ export default function DashboardContent() {
       </div>
 
       <div className="space-y-6 pt-4">
-        <h1 className="text-xl font-bold text-foreground">Overview</h1>
-        <p>Monitor sales, user roles, and active chambers.</p>
+        <h1 className="sm:text-xl text-base font-bold text-foreground mb-0">
+          Overview
+        </h1>
+        <p className="sm:text-base text-sm">
+          Monitor sales, user roles, and active chambers.
+        </p>
         <ECommerceSection />
         <ChamberInventorySection />
       </div>

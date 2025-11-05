@@ -183,14 +183,12 @@ export default function ECommerceSection() {
       {/* Sales Summary */}
       <Card className="border-1 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-foreground">
-            Sales Summary
-          </CardTitle>
+          <CardTitle>Sales Summary</CardTitle>
           <CardDescription>Today&apos;s performance</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-2">
           <div className="text-center">
-            <p className="text-4xl font-bold text-primary tracking-tight">
+            <p className="sm:text-4xl text-2xl font-bold text-primary tracking-tight">
               ₱{totalSales.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1 font-medium">

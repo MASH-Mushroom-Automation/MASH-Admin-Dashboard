@@ -11,6 +11,7 @@ interface Seller {
   storeName: string
   email: string
   status: "pending" | "approved" | "rejected"
+  address?: string
 }
 
 const mockSellers: Seller[] = [
@@ -20,32 +21,43 @@ const mockSellers: Seller[] = [
     storeName: "Smith Electronics",
     email: "john@smithelectronics.com",
     status: "pending",
+    address: "Caloocan City",
   },
   {
     id: "2",
     name: "Karen Smith",
-    storeName: "Smith Electronics",
-    email: "john@smithelectronics.com",
+    storeName: "Karen’s Boutique",
+    email: "karen@boutique.com",
     status: "approved",
+    address: "Quezon City",
   },
   {
     id: "3",
     name: "Anne Curtis",
-    storeName: "Smith Electronics",
-    email: "john@smithelectronics.com",
+    storeName: "Anne’s Beauty Hub",
+    email: "anne@beautyhub.com",
     status: "rejected",
+    address: "Makati City",
   },
- 
 ]
 
-export function SellerTable({ activeTab, searchQuery }: { activeTab: TabType; searchQuery: string }) {
+export function SellerTable({
+  activeTab,
+  searchQuery,
+  showStatus = true,
+  mode = "default",
+}: {
+  activeTab: TabType
+  searchQuery: string
+  showStatus?: boolean
+  mode?: "default" | "all" | "pending"
+}) {
   const [sellers, setSellers] = useState<Seller[]>(mockSellers)
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string
     action: "reject" | "delete"
   } | null>(null)
 
-  // Filter sellers based on tab
   const filteredSellers = sellers.filter((seller) => {
     const matchesSearch =
       seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,7 +82,11 @@ export function SellerTable({ activeTab, searchQuery }: { activeTab: TabType; se
     if (!confirmAction) return
 
     if (confirmAction.action === "reject") {
-      setSellers((prev) => prev.map((s) => (s.id === confirmAction.sellerId ? { ...s, status: "rejected" } : s)))
+      setSellers((prev) =>
+        prev.map((s) =>
+          s.id === confirmAction.sellerId ? { ...s, status: "rejected" } : s
+        )
+      )
     } else if (confirmAction.action === "delete") {
       setSellers((prev) => prev.filter((s) => s.id !== confirmAction.sellerId))
     }
@@ -100,31 +116,51 @@ export function SellerTable({ activeTab, searchQuery }: { activeTab: TabType; se
               <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Seller Name</th>
               <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Store Name</th>
               <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Address</th>
+              {showStatus && (
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+              )}
               <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredSellers.map((seller) => (
-              <tr key={seller.id} className="border-b hover:bg-muted/30 transition-colors rounded-lg">
+              <tr
+                key={seller.id}
+                className="border-b hover:bg-muted/30 transition-colors rounded-lg"
+              >
                 <td className="px-6 py-4 text-sm text-foreground">{seller.name}</td>
                 <td className="px-6 py-4 text-sm text-foreground">{seller.storeName}</td>
                 <td className="px-6 py-4 text-sm text-muted-foreground">{seller.email}</td>
-                <td className="px-6 py-4 text-sm">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(seller.status)}`}
-                  >
-                    {seller.status === "pending" ? "For Approval" : seller.status}
-                  </span>
-                </td>
+                <td className="px-6 py-4 text-sm text-muted-foreground">{seller.address || "—"}</td>
+                {showStatus && (
+                  <td className="px-6 py-4 text-sm">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
+                        seller.status
+                      )}`}
+                    >
+                      {seller.status === "pending" ? "For Approval" : seller.status}
+                    </span>
+                  </td>
+                )}
                 <td className="px-6 py-4 text-sm">
                   <SellerActionMenu
                     seller={seller}
                     activeTab={activeTab}
-                    onReject={() => setConfirmAction({ sellerId: seller.id, action: "reject" })}
-                    onDelete={() => setConfirmAction({ sellerId: seller.id, action: "delete" })}
+                    mode={mode}
+                    onReject={() =>
+                      setConfirmAction({ sellerId: seller.id, action: "reject" })
+                    }
+                    onDelete={() =>
+                      setConfirmAction({ sellerId: seller.id, action: "delete" })
+                    }
                     onAccept={() =>
-                      setSellers((prev) => prev.map((s) => (s.id === seller.id ? { ...s, status: "approved" } : s)))
+                      setSellers((prev) =>
+                        prev.map((s) =>
+                          s.id === seller.id ? { ...s, status: "approved" } : s
+                        )
+                      )
                     }
                   />
                 </td>
@@ -140,7 +176,6 @@ export function SellerTable({ activeTab, searchQuery }: { activeTab: TabType; se
         </div>
       )}
 
-      {/* Confirmation Popover */}
       {confirmAction && (
         <ConfirmationPopover
           action={confirmAction.action}
