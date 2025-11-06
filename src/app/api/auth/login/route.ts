@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
       rememberMe,
     });
 
-    const { accessToken, refreshToken, user } = backendRes.data.data;
+    // Backend returns: { success, message, accessToken, refreshToken, user }
+    const { accessToken, refreshToken, user } = backendRes.data;
 
     // Set HttpOnly cookies
     const response = NextResponse.json({
