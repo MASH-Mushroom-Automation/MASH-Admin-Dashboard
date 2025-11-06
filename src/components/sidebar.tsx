@@ -1,63 +1,73 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ChevronDown, LayoutDashboard, Sprout, ShoppingCart, LogOut, Settings, X } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronDown,
+  LayoutDashboard,
+  Sprout,
+  ShoppingCart,
+  LogOut,
+  Settings,
+  X,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { ConfirmationPopover } from "@/components/confirmation-popover"
-import Image from "next/image"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+} from "@/components/ui/dropdown-menu";
+import { ConfirmationPopover } from "@/components/confirmation-popover";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface SidebarProps {
-  isOpen: boolean
-  onToggle: () => void
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
-  const router = useRouter()
-  const [isMashMarketOpen, setIsMashMarketOpen] = useState(false)
-  const [isMashGrowOpen, setIsMashGrowOpen] = useState(false)
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const pathname = usePathname()
+  const router = useRouter();
+  const [isMashMarketOpen, setIsMashMarketOpen] = useState(false);
+  const [isMashGrowOpen, setIsMashGrowOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     // lock body scroll when sidebar is open on small screens (mobile)
     const handle = () => {
-      if (typeof window === "undefined") return
+      if (typeof window === "undefined") return;
       if (isOpen && window.innerWidth < 768) {
-        document.body.style.overflow = "hidden"
+        document.body.style.overflow = "hidden";
       } else {
-        document.body.style.overflow = ""
+        document.body.style.overflow = "";
       }
-    }
+    };
 
-    handle()
-    window.addEventListener("resize", handle)
+    handle();
+    window.addEventListener("resize", handle);
     return () => {
-      window.removeEventListener("resize", handle)
-      document.body.style.overflow = ""
-    }
-  }, [isOpen])
+      window.removeEventListener("resize", handle);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   useEffect(() => {
-    if (pathname.startsWith("/mash-market")) setIsMashMarketOpen(true)
-    if (pathname.startsWith("/mash-grow")) setIsMashGrowOpen(true)
-  }, [pathname])
+    if (pathname.startsWith("/mash-market")) setIsMashMarketOpen(true);
+    if (pathname.startsWith("/mash-grow")) setIsMashGrowOpen(true);
+  }, [pathname]);
 
-  const mashMarketChildren = ["User", "Seller", "Order", "Product", "CMS"]
-  const mashGrowChildren = ["devices", "registered-users", "cms"]
+  const mashMarketChildren = ["User", "Seller", "Order", "Product", "CMS"];
+  const mashGrowChildren = ["devices", "registered-users", "cms"];
 
   const isMashMarketActive = mashMarketChildren.some((child) =>
     pathname.startsWith(`/mash-market/${child.toLowerCase()}`)
-  )
-  const isMashGrowActive = mashGrowChildren.some((child) => pathname.startsWith(`/mash-grow/${child}`))
+  );
+  const isMashGrowActive = mashGrowChildren.some((child) =>
+    pathname.startsWith(`/mash-grow/${child}`)
+  );
 
   return (
     <>
@@ -86,14 +96,15 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             alt="Logo"
             width={isOpen ? 65 : 32}
             height={isOpen ? 65 : 32}
-            className={`cursor-pointer transition-all duration-300 ${isOpen ? "" : "py-3"}`}
+            className={`cursor-pointer transition-all duration-300 ${
+              isOpen ? "" : "py-3"
+            }`}
             onClick={onToggle}
           />
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          
           {/* Dashboard */}
           <NavItem
             icon={<LayoutDashboard className="w-5 h-5" />}
@@ -112,11 +123,27 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             isExpanded={isMashMarketOpen}
             onToggle={() => setIsMashMarketOpen((prev) => !prev)}
           >
-            <SubNavItem label="Users" href="/mash-market/user" pathname={pathname} />
-            <SubNavItem label="Sellers" href="/mash-market/seller" pathname={pathname} />
-            <SubNavItem label="Orders" href="/mash-market/order" pathname={pathname} />
-            <SubNavItem label="Products" href="/mash-market/product" pathname={pathname} />
-            <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} />
+            <SubNavItem
+              label="Users"
+              href="/mash-market/user"
+              pathname={pathname}
+            />
+            <SubNavItem
+              label="Sellers"
+              href="/mash-market/seller"
+              pathname={pathname}
+            />
+            <SubNavItem
+              label="Orders"
+              href="/mash-market/order"
+              pathname={pathname}
+            />
+            <SubNavItem
+              label="Products"
+              href="/mash-market/product"
+              pathname={pathname}
+            />
+            {/* <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} /> */}
           </CollapsibleSection>
 
           {/* MashGrow Section */}
@@ -128,9 +155,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             isExpanded={isMashGrowOpen}
             onToggle={() => setIsMashGrowOpen((prev) => !prev)}
           >
-            <SubNavItem label="Devices" href="/mash-grow/devices" pathname={pathname} />
-            <SubNavItem label="Registered Users" href="/mash-grow/registered-users" pathname={pathname} />
-            <SubNavItem label="CMS" href="/mash-grow/cms" pathname={pathname} />
+            <SubNavItem
+              label="Devices"
+              href="/mash-grow/devices"
+              pathname={pathname}
+            />
+            <SubNavItem
+              label="Registered Users"
+              href="/mash-grow/registered-users"
+              pathname={pathname}
+            />
+            {/* <SubNavItem label="CMS" href="/mash-grow/cms" pathname={pathname} /> */}
           </CollapsibleSection>
         </nav>
 
@@ -166,8 +201,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
             {isOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">admin@gmail.com</p>
+                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  Admin User
+                </p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">
+                  admin@gmail.com
+                </p>
               </div>
             )}
           </div>
@@ -178,18 +217,23 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             action="logout"
             onCancel={() => setShowLogoutConfirm(false)}
             onConfirm={() => {
-              setShowLogoutConfirm(false)
+              setShowLogoutConfirm(false);
               // simple client-side redirect; adapt to your auth flow as needed
-              router.push("/login")
+              router.push("/login");
             }}
           />
         )}
       </aside>
 
       {/* Overlay for mobile */}
-      {isOpen && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onToggle} />}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onToggle}
+        />
+      )}
     </>
-  )
+  );
 }
 
 /* -------------------- Collapsible Section -------------------- */
@@ -202,20 +246,20 @@ function CollapsibleSection({
   onToggle,
   children,
 }: {
-  title: string
-  icon: React.ReactNode
-  isOpen: boolean
-  isActive: boolean
-  isExpanded: boolean
-  onToggle: () => void
-  children: React.ReactNode
+  title: string;
+  icon: React.ReactNode;
+  isOpen: boolean;
+  isActive: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <div>
       <button
         onClick={(e) => {
-          e.stopPropagation()
-          onToggle()
+          e.stopPropagation();
+          onToggle();
         }}
         className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition-colors
           ${
@@ -231,7 +275,9 @@ function CollapsibleSection({
         </span>
         {isOpen && (
           <ChevronDown
-            className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            className={`w-4 h-4 transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
           />
         )}
       </button>
@@ -242,7 +288,7 @@ function CollapsibleSection({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 /* -------------------- NavItem -------------------- */
@@ -253,13 +299,13 @@ function NavItem({
   isOpen,
   pathname,
 }: {
-  icon: React.ReactNode
-  label: string
-  href: string
-  isOpen: boolean
-  pathname: string
+  icon: React.ReactNode;
+  label: string;
+  href: string;
+  isOpen: boolean;
+  pathname: string;
 }) {
-  const isActive = pathname === href
+  const isActive = pathname === href;
 
   return (
     <Link
@@ -275,7 +321,7 @@ function NavItem({
       {icon}
       {isOpen && <span>{label}</span>}
     </Link>
-  )
+  );
 }
 
 /* -------------------- SubNavItem -------------------- */
@@ -284,11 +330,11 @@ function SubNavItem({
   href,
   pathname,
 }: {
-  label: string
-  href: string
-  pathname: string
+  label: string;
+  href: string;
+  pathname: string;
 }) {
-  const isActive = pathname === href
+  const isActive = pathname === href;
 
   return (
     <Link
@@ -302,5 +348,5 @@ function SubNavItem({
     >
       {label}
     </Link>
-  )
+  );
 }

@@ -26,15 +26,16 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useDashboardStore } from "../../store/dashboardStore";
 
 const weeklyData = [
   { label: "Mon", sales: 2400 },
   { label: "Tue", sales: 1398 },
   { label: "Wed", sales: 9800 },
   { label: "Thu", sales: 3908 },
-  { label: "Fri", sales: 4800 },
-  { label: "Sat", sales: 3800 },
-  { label: "Sun", sales: 4300 },
+  { label: "Fri", sales: 0 },
+  { label: "Sat", sales: 0 },
+  { label: "Sun", sales: 0 },
 ];
 
 // Helper to produce data for different periods. For now we simulate monthly/yearly data.
@@ -43,7 +44,10 @@ function getDataForPeriod(period: string) {
     case "daily":
       // return only today (last day of weeklyData)
       return [
-        { day: weeklyData[weeklyData.length - 1].label, sales: weeklyData[weeklyData.length - 1].sales },
+        {
+          day: weeklyData[weeklyData.length - 1].label,
+          sales: weeklyData[weeklyData.length - 1].sales,
+        },
       ];
     case "weekly":
       return weeklyData.map((d) => ({ day: d.label, sales: d.sales }));
@@ -84,17 +88,27 @@ export default function ECommerceSection() {
   const displayData = useMemo(() => getDataForPeriod(period), [period]);
 
   const totalSales = useMemo(
-    () => displayData.reduce((sum: number, item: any) => sum + (item.sales || 0), 0),
+    () =>
+      displayData.reduce(
+        (sum: number, item: any) => sum + (item.sales || 0),
+        0
+      ),
     [displayData]
   );
 
   const totalOrders = displayData.length;
   const todaySales = displayData[displayData.length - 1]?.sales ?? 0;
 
+  const { sales, loading } = useDashboardStore();
+
   // Summary numbers should not be affected by the chart filter — keep summary fixed (monthly)
   const summaryData = useMemo(() => getDataForPeriod("monthly"), []);
   const summaryTotalSales = useMemo(
-    () => summaryData.reduce((sum: number, item: any) => sum + (item.sales || 0), 0),
+    () =>
+      summaryData.reduce(
+        (sum: number, item: any) => sum + (item.sales || 0),
+        0
+      ),
     [summaryData]
   );
   const summaryTotalOrders = summaryData.length;
@@ -109,39 +123,40 @@ export default function ECommerceSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* ---------- Sales Summary (visible for all periods) ---------- */}
-      <Card className="border shadow-sm">
+      <Card className="border-1 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle>Sales Summary</CardTitle>
-          <CardDescription>Today's performance</CardDescription>
+          <CardDescription>Today&apos;s performance</CardDescription>
         </CardHeader>
-
         <CardContent className="space-y-5 pt-2">
           <div className="text-center">
             <p className="sm:text-4xl text-2xl font-bold text-primary tracking-tight">
-                ₱{summaryTotalSales.toLocaleString()}
-              </p>
+              ₱{totalSales.toLocaleString()}
+            </p>
             <p className="text-xs text-muted-foreground mt-1 font-medium">
-              Total Sales (current period)
+              Total Sales this month
             </p>
           </div>
-
           <div className="h-px bg-border/60" />
-
-          <div className="grid grid-cols-2 gap-4 w-full">
-              <div className="bg-muted/40 rounded-lg p-3 sm:p-4 text-center border border-border/30">
-                <p className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">{summaryTotalOrders}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Orders</p>
-              </div>
-              <div className="bg-muted/40 rounded-lg p-3 sm:p-4 text-center border border-border/30">
-                <p className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">₱{summaryTodaySales.toLocaleString()}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Today</p>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/30">
+              <p className="text-2xl font-bold text-foreground">
+                {sales?.length ?? 0}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Orders</p>
+            </div>
+            <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/30">
+              <p className="text-2xl font-bold text-foreground">
+                ₱{todaySales.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Today</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* ---------- Daily Sales Chart ---------- */}
-  <Card className="lg:col-span-2 border shadow-sm">
+      <Card className="lg:col-span-2 border shadow-sm">
         <CardHeader className="pb-3 flex items-start justify-between">
           <div>
             <CardTitle className="text-lg font-semibold text-foreground">
@@ -159,11 +174,20 @@ export default function ECommerceSection() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuRadioGroup value={period} onValueChange={(v) => setPeriod(v)}>
+                <DropdownMenuRadioGroup
+                  value={period}
+                  onValueChange={(v) => setPeriod(v)}
+                >
                   {/* <DropdownMenuRadioItem value="daily">Daily</DropdownMenuRadioItem> */}
-                  <DropdownMenuRadioItem value="weekly">Weekly</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="monthly">Monthly</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="yearly">Yearly</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="weekly">
+                    Weekly
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="monthly">
+                    Monthly
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="yearly">
+                    Yearly
+                  </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
