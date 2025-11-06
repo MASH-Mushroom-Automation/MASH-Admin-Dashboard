@@ -1,11 +1,6 @@
 "use client"
 
 import { useState } from "react"
-<<<<<<< HEAD
-import Navbar from "@/components/dashboard/navbar"
-import Sidebar from "@/components/sidebar"
-import CmsContent from "@/components/mash-grow/cms-content"
-=======
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,10 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Toaster } from "@/components/ui/sonner"
 import { Trash2, Edit2, Plus } from "lucide-react"
 import { toast } from "sonner"
->>>>>>> FE-mashmarket
 
 interface HelpArticle {
   id: string

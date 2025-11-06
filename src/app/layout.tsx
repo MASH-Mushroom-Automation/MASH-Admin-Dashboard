@@ -1,13 +1,14 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Poppins } from "next/font/google"
+// Temporarily commented out due to build issues - using system fonts
+// import { Poppins } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "sonner"
 
-const _poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-})
+// const _poppins = Poppins({
+//   subsets: ["latin"],
+//   weight: ["400", "500", "600", "700"],
+// })
 
 export const metadata: Metadata = {
   title: "MASH",
@@ -21,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased bg-background text-foreground ${_poppins.className}`}>
+      <body className="font-sans antialiased bg-background text-foreground">
         {children}
         {/* Sonner Toaster for global toast UI */}
         <Toaster position="top-right" richColors />

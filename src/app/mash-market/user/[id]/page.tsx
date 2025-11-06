@@ -1,4 +1,4 @@
-import React from "react"
+import React, { use } from "react"
 import Link from "next/link"
 import UserAvatar from "@/components/ecommerce/user-avatar"
 import StatusBadge from "@/components/status-badge"
@@ -172,8 +172,9 @@ const MOCK_USERS: User[] = [
   },
 ]
 
-export default function UserViewPage({ params }: { params: { id: string } }) {
-  const user = MOCK_USERS.find((u) => u.id === params.id) ?? null
+export default function UserViewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const user = MOCK_USERS.find((u) => u.id === id) ?? null
 
   if (!user) {
     return (

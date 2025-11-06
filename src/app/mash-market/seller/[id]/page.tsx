@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import RejectReasonModal from "@/components/ecommerce/reject-reason-modal"
@@ -101,9 +101,10 @@ const mockSellers: Seller[] = [
   },
 ]
 
-export default function SellerDetailPage({ params }: { params: { id: string } }) {
+export default function SellerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
-  const seller = mockSellers.find((s) => s.id === params.id) ?? null
+  const seller = mockSellers.find((s) => s.id === id) ?? null
   const [loading, setLoading] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
 

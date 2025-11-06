@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Product } from "@/app/mash-market/product/page"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import React, { useState, useEffect, useRef, use } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Product } from "@/app/mash-market/product/page";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 // view-only page: no accept/reject handlers here
 
 // NOTE: using local mock data for now; replace with API fetch in production
@@ -28,7 +28,8 @@ const MOCK_PRODUCTS: Product[] = [
       contactNumber: "+63 912 345 6789",
       businessAddress: "123 Farm Lane, Rizal, Philippines",
     },
-    description: "The White Oyster Mushroom grows in layered clusters with broad, fan-shaped caps and tender texture. It is prized in culinary use for its mild, savory taste and excellent ability to absorb seasonings, making it ideal for stir-fries, soups, and plant-based dishes. Beyond its culinary appeal, it is also valued for its fast growth, sustainability, and rich protein and antioxidant content.",
+    description:
+      "The White Oyster Mushroom grows in layered clusters with broad, fan-shaped caps and tender texture. It is prized in culinary use for its mild, savory taste and excellent ability to absorb seasonings, making it ideal for stir-fries, soups, and plant-based dishes. Beyond its culinary appeal, it is also valued for its fast growth, sustainability, and rich protein and antioxidant content.",
     status: "pending",
     submittedAt: "2025-10-28T10:30:00Z",
   },
@@ -49,26 +50,32 @@ const MOCK_PRODUCTS: Product[] = [
       contactNumber: "+63 922 111 2222",
       businessAddress: "45 Countryside Ave, Laguna, Philippines",
     },
-    description: "Fresh harvested white mushrooms, great for soups and stir fry.",
+    description:
+      "Fresh harvested white mushrooms, great for soups and stir fry.",
     status: "approved",
     submittedAt: "2025-10-27T14:15:00Z",
   },
-]
+];
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  const router = useRouter()
-  const product = MOCK_PRODUCTS.find((p) => p.id === params.id) ?? null
-  const [loading, setLoading] = useState(false)
-  const descRef = useRef<HTMLTextAreaElement | null>(null)
+export default function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const router = useRouter();
+  const product = MOCK_PRODUCTS.find((p) => p.id === id) ?? null;
+  const [loading, setLoading] = useState(false);
+  const descRef = useRef<HTMLTextAreaElement | null>(null);
 
   // auto-resize description textarea to fit content and avoid scrollbars
   useEffect(() => {
-    const el = descRef.current
-    if (!el) return
+    const el = descRef.current;
+    if (!el) return;
     // reset height to auto to correctly measure scrollHeight
-    el.style.height = "auto"
-    el.style.height = `${el.scrollHeight}px`
-  }, [product?.description])
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [product?.description]);
 
   if (!product) {
     return (
@@ -76,7 +83,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium">Product not found</h2>
-            <p className="text-sm text-muted-foreground mt-2">We couldn't find a product with that id.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              We couldn't find a product with that id.
+            </p>
             <div className="mt-4">
               <Link href="/mash-market/product">
                 <Button>Back to products</Button>
@@ -85,14 +94,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
   // View-only page: actions handled from pending-product detail page
 
   const formatPricePHP = (price: number) =>
-    new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(price)
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString()
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(price);
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -112,30 +125,69 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Card className="p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-semibold text-muted-foreground">Product Name</label>
-              <Input value={product.name ?? ""} disabled readOnly className="mt-1" />
+              <label className="text-sm font-semibold text-muted-foreground">
+                Product Name
+              </label>
+              <Input
+                value={product.name ?? ""}
+                disabled
+                readOnly
+                className="mt-1"
+              />
             </div>
             <div>
-              <label className="text-sm font-semibold text-muted-foreground">Category</label>
-              <Input value={product.category ?? ""} disabled readOnly className="mt-1" />
+              <label className="text-sm font-semibold text-muted-foreground">
+                Category
+              </label>
+              <Input
+                value={product.category ?? ""}
+                disabled
+                readOnly
+                className="mt-1"
+              />
             </div>
             <div>
-              <label className="text-sm font-semibold text-muted-foreground">Seller</label>
-              <Input value={product.seller ?? ""} disabled readOnly className="mt-1" />
+              <label className="text-sm font-semibold text-muted-foreground">
+                Seller
+              </label>
+              <Input
+                value={product.seller ?? ""}
+                disabled
+                readOnly
+                className="mt-1"
+              />
             </div>
             <div>
-              <label className="text-sm font-semibold text-muted-foreground">Price</label>
-              <Input value={formatPricePHP(product.price)} disabled readOnly className="mt-1" />
+              <label className="text-sm font-semibold text-muted-foreground">
+                Price
+              </label>
+              <Input
+                value={formatPricePHP(product.price)}
+                disabled
+                readOnly
+                className="mt-1"
+              />
             </div>
             <div>
-              <label className="text-sm font-semibold text-muted-foreground">Date Submitted</label>
-              <Input value={product.submittedAt ? formatDate(product.submittedAt) : ""} disabled readOnly className="mt-1" />
+              <label className="text-sm font-semibold text-muted-foreground">
+                Date Submitted
+              </label>
+              <Input
+                value={
+                  product.submittedAt ? formatDate(product.submittedAt) : ""
+                }
+                disabled
+                readOnly
+                className="mt-1"
+              />
             </div>
             {/* status is shown only on the pending-product detail page */}
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-muted-foreground">Description</label>
+            <label className="text-sm font-semibold text-muted-foreground">
+              Description
+            </label>
             <div className="mt-2">
               <textarea
                 disabled
@@ -152,5 +204,5 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </Card>
       </div>
     </div>
-  )
+  );
 }

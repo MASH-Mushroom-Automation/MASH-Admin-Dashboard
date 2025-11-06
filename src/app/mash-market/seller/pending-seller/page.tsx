@@ -1,3 +1,11 @@
+export default function PendingSellersPage() {
+  return (
+    <div className="p-6">
+      <h1>Pending Sellers - Coming Soon</h1>
+    </div>
+  )
+}
+
 // "use client"
 
 // import { useState } from "react"

@@ -2,13 +2,8 @@
 
 import type { Product } from "@/app/mash-market/product/page"
 import { Button } from "@/components/ui/button"
-<<<<<<< HEAD
-import { X } from "lucide-react"
-import Image from "next/image"
-=======
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
->>>>>>> FE-mashmarket
 
 interface ProductDetailsModalProps {
   product: Product
@@ -66,18 +61,6 @@ export function ProductDetailsModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-<<<<<<< HEAD
-          {/* Product Image */}
-          <div className="flex justify-center">
-            <div className="relative w-64 h-64">
-              <Image
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                fill
-                className="rounded-lg object-cover"
-              />
-            </div>
-=======
           {/* Product Images */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative flex items-center justify-center w-full">
@@ -125,7 +108,6 @@ export function ProductDetailsModal({
                 ))}
               </div>
             )}
->>>>>>> FE-mashmarket
           </div>
 
           {/* Product Info */}

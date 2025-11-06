@@ -167,7 +167,7 @@ export default function DiagnosticsPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">2.</span>
-              <span>Click <strong>"Add New"</strong></span>
+              <span>Click <strong>&quot;Add New&quot;</strong></span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">3.</span>
@@ -187,7 +187,7 @@ export default function DiagnosticsPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">6.</span>
-              <span>Click <strong>"Save"</strong></span>
+              <span>Click <strong>&quot;Save&quot;</strong></span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">7.</span>

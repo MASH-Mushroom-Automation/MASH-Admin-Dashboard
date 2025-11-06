@@ -4,6 +4,9 @@ import axios from "axios";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -16,7 +19,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward to backend
+    // Hardcoded admin credentials check (takes priority)
+    const ADMIN_EMAIL = "mash.mushroom.automation@gmail.com";
+    const ADMIN_PASSWORD = "PP@Namias99";
+
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Create mock admin user
+      const adminUser = {
+        id: "admin-001",
+        email: ADMIN_EMAIL,
+        name: "Admin User",
+        role: "admin",
+      };
+
+      // Create mock tokens
+      const mockAccessToken = `admin-access-${Date.now()}`;
+      const mockRefreshToken = `admin-refresh-${Date.now()}`;
+
+      // Set HttpOnly cookies
+      const response = NextResponse.json({
+        success: true,
+        user: adminUser,
+      });
+
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieOpts = (name: string, value: string, days: number) => ({
+        name,
+        value,
+        httpOnly: true,
+        path: "/",
+        maxAge: days * 24 * 60 * 60,
+        sameSite: "lax" as const,
+        secure: isProd,
+      });
+
+      response.cookies.set(cookieOpts("authToken", mockAccessToken, 1)); // 1 day
+      response.cookies.set(cookieOpts("refreshToken", mockRefreshToken, 30)); // 30 days
+
+      return response;
+    }
+
+    // If not hardcoded admin, try backend API
     const backendRes = await axios.post(`${BACKEND_URL}/api/v1/auth/login`, {
       email,
       password,

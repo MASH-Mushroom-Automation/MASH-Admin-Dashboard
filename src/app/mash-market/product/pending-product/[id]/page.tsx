@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, use } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Product } from "@/app/mash-market/product/page"
@@ -36,9 +36,10 @@ const MOCK_PRODUCTS: Product[] = [
   },
 ]
 
-export default function PendingProductDetail({ params }: { params: { id: string } }) {
+export default function PendingProductDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
-  const product = MOCK_PRODUCTS.find((p) => p.id === params.id) ?? null
+  const product = MOCK_PRODUCTS.find((p) => p.id === id) ?? null
   const [loading, setLoading] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
 
