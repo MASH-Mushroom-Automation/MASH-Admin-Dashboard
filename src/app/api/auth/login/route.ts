@@ -66,8 +66,20 @@ export async function POST(request: NextRequest) {
       rememberMe,
     });
 
-    // Backend returns: { success, message, accessToken, refreshToken, user }
-    const { accessToken, refreshToken, user } = backendRes.data;
+    // Backend returns nested structure: { success, data: { accessToken, refreshToken, user } }
+    const backendData = backendRes.data?.data || backendRes.data;
+    const { accessToken, refreshToken, user } = backendData;
+
+    if (!accessToken || !refreshToken || !user) {
+      console.error("[login proxy] Invalid backend response:", backendRes.data);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid response from authentication server",
+        },
+        { status: 500 }
+      );
+    }
 
     // Set HttpOnly cookies
     const response = NextResponse.json({

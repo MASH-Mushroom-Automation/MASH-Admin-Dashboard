@@ -22,6 +22,7 @@ import { ConfirmationPopover } from "@/components/confirmation-popover";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const router = useRouter();
+  const { logout } = useAuthStore();
   const [isMashMarketOpen, setIsMashMarketOpen] = useState(false);
   const [isMashGrowOpen, setIsMashGrowOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -216,9 +218,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <ConfirmationPopover
             action="logout"
             onCancel={() => setShowLogoutConfirm(false)}
-            onConfirm={() => {
+            onConfirm={async () => {
               setShowLogoutConfirm(false);
-              // simple client-side redirect; adapt to your auth flow as needed
+              // Call logout to clear cookies and auth state
+              console.log("Logging out...");
+              logout();
+              // Redirect to login page
               router.push("/login");
             }}
           />
