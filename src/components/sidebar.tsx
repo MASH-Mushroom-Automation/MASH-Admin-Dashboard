@@ -31,11 +31,23 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [isMashMarketOpen, setIsMashMarketOpen] = useState(false);
   const [isMashGrowOpen, setIsMashGrowOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const pathname = usePathname();
+
+  // Generate user initials from first and last name
+  const getUserInitials = () => {
+    if (!user || !user.firstName || !user.lastName) return "AU";
+    return `${user.firstName.charAt(0).toUpperCase()}${user.lastName.charAt(0).toUpperCase()}`;
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return "Admin User";
+    return `${user.firstName} ${user.lastName}`;
+  };
 
   useEffect(() => {
     // lock body scroll when sidebar is open on small screens (mobile)
@@ -178,7 +190,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               <DropdownMenuTrigger asChild>
                 <button className="rounded-full focus:outline-none">
                   <Avatar className="w-10 h-10">
-                    <AvatarFallback>AU</AvatarFallback>
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
@@ -204,10 +216,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {isOpen && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  Admin User
+                  {getUserDisplayName()}
                 </p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">
-                  admin@gmail.com
+                  {user?.email || "admin@gmail.com"}
                 </p>
               </div>
             )}
