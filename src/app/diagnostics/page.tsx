@@ -82,7 +82,11 @@ export default function DiagnosticsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <strong>Environment Variable:</strong>
-                  <p className={result.configured ? "text-green-600" : "text-red-600"}>
+                  <p
+                    className={
+                      result.configured ? "text-green-600" : "text-red-600"
+                    }
+                  >
                     {result.configured ? "✓ Configured" : "✗ Not Configured"}
                   </p>
                 </div>
@@ -99,7 +103,13 @@ export default function DiagnosticsPage() {
                 {result.backendReachable !== undefined && (
                   <div>
                     <strong>Backend Reachable:</strong>
-                    <p className={result.backendReachable ? "text-green-600" : "text-red-600"}>
+                    <p
+                      className={
+                        result.backendReachable
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
                       {result.backendReachable ? "✓ Yes" : "✗ No"}
                     </p>
                   </div>
@@ -114,11 +124,13 @@ export default function DiagnosticsPage() {
               </div>
 
               {result.message && (
-                <div className={`p-4 rounded ${
-                  result.backendReachable 
-                    ? "bg-green-50 text-green-800 border border-green-200" 
-                    : "bg-yellow-50 text-yellow-800 border border-yellow-200"
-                }`}>
+                <div
+                  className={`p-4 rounded ${
+                    result.backendReachable
+                      ? "bg-green-50 text-green-800 border border-green-200"
+                      : "bg-yellow-50 text-yellow-800 border border-yellow-200"
+                  }`}
+                >
                   <strong>Status:</strong> {result.message}
                 </div>
               )}
@@ -163,39 +175,72 @@ export default function DiagnosticsPage() {
           <ol className="space-y-3 text-sm text-blue-800">
             <li className="flex items-start gap-2">
               <span className="font-bold">1.</span>
-              <span>Go to <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" className="underline">Vercel Dashboard</a> → Your Project → <strong>Settings</strong> → <strong>Environment Variables</strong></span>
+              <span>
+                Go to{" "}
+                <a
+                  href="https://vercel.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Vercel Dashboard
+                </a>{" "}
+                → Your Project → <strong>Settings</strong> →{" "}
+                <strong>Environment Variables</strong>
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">2.</span>
-              <span>Click <strong>&quot;Add New&quot;</strong></span>
+              <span>
+                Click <strong>&quot;Add New&quot;</strong>
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">3.</span>
               <div>
-                <strong>Name:</strong> <code className="bg-blue-100 px-2 py-1 rounded">NEXT_PUBLIC_API_URL</code>
+                <strong>Name:</strong>{" "}
+                <code className="bg-blue-100 px-2 py-1 rounded">
+                  NEXT_PUBLIC_API_URL
+                </code>
               </div>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">4.</span>
               <div>
-                <strong>Value:</strong> <code className="bg-blue-100 px-2 py-1 rounded">https://mash-backend-api-production.up.railway.app</code>
+                <strong>Value:</strong>{" "}
+                <code className="bg-blue-100 px-2 py-1 rounded">
+                  https://mash-backend-api-production.up.railway.app
+                </code>
               </div>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">5.</span>
-              <span>Select: <strong>Production</strong> (and Preview if needed)</span>
+              <span>
+                Select: <strong>Production</strong> (and Preview if needed)
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">6.</span>
-              <span>Click <strong>&quot;Save&quot;</strong></span>
+              <span>
+                Click <strong>&quot;Save&quot;</strong>
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">7.</span>
-              <span><strong>Redeploy</strong> your application (Vercel will prompt you)</span>
+              <span>
+                <strong>Redeploy</strong> your application (Vercel will prompt
+                you)
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">8.</span>
-              <span>Visit <code className="bg-blue-100 px-2 py-1 rounded">https://mash-admin-dashboard-ashy.vercel.app/diagnostics</code> after deployment</span>
+              <span>
+                Visit{" "}
+                <code className="bg-blue-100 px-2 py-1 rounded">
+                  https://mash-admin-dashboard-ashy.vercel.app/diagnostics
+                </code>{" "}
+                after deployment
+              </span>
             </li>
           </ol>
         </Card>
@@ -206,16 +251,26 @@ export default function DiagnosticsPage() {
           </h2>
           <div className="space-y-2 text-sm text-green-800">
             <div>
-              <strong>Backend API:</strong> <code className="bg-green-100 px-2 py-1 rounded">https://mash-backend-api-production.up.railway.app</code>
+              <strong>Backend API:</strong>{" "}
+              <code className="bg-green-100 px-2 py-1 rounded">
+                https://mash-backend-api-production.up.railway.app
+              </code>
             </div>
             <div>
-              <strong>Login Endpoint:</strong> <code className="bg-green-100 px-2 py-1 rounded">POST /api/v1/auth/login</code>
+              <strong>Login Endpoint:</strong>{" "}
+              <code className="bg-green-100 px-2 py-1 rounded">
+                POST /api/v1/auth/login
+              </code>
             </div>
             <div>
-              <strong>Authentication:</strong> <span>HttpOnly Cookies (authToken + refreshToken)</span>
+              <strong>Authentication:</strong>{" "}
+              <span>HttpOnly Cookies (authToken + refreshToken)</span>
             </div>
             <div>
-              <strong>Test Credentials:</strong> <code className="bg-green-100 px-2 py-1 rounded">mash.mushroom.automation@gmail.com</code>
+              <strong>Test Credentials:</strong>{" "}
+              <code className="bg-green-100 px-2 py-1 rounded">
+                mash.mushroom.automation@gmail.com
+              </code>
             </div>
           </div>
         </Card>
@@ -223,25 +278,25 @@ export default function DiagnosticsPage() {
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">🚀 Quick Links</h2>
           <div className="space-y-2">
-            <a 
-              href="https://mash-admin-dashboard-ashy.vercel.app/login" 
-              target="_blank" 
+            <a
+              href="https://mash-admin-dashboard-ashy.vercel.app/login"
+              target="_blank"
               rel="noopener noreferrer"
               className="block text-blue-600 hover:underline"
             >
               → Login Page (Production)
             </a>
-            <a 
-              href="https://mash-backend-api-production.up.railway.app" 
-              target="_blank" 
+            <a
+              href="https://mash-backend-api-production.up.railway.app"
+              target="_blank"
               rel="noopener noreferrer"
               className="block text-blue-600 hover:underline"
             >
               → Backend API (Railway)
             </a>
-            <a 
-              href="/api/test-backend" 
-              target="_blank" 
+            <a
+              href="/api/test-backend"
+              target="_blank"
               rel="noopener noreferrer"
               className="block text-blue-600 hover:underline"
             >

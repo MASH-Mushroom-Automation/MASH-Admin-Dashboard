@@ -73,7 +73,12 @@ const MOCK_DASHBOARD_DATA = {
     chambers: [
       { id: "1", grower: "John's Farm", location: "Zone A", status: "Active" },
       { id: "2", grower: "Green Valley", location: "Zone B", status: "Active" },
-      { id: "3", grower: "Mountain Grow", location: "Zone C", status: "Inactive" },
+      {
+        id: "3",
+        grower: "Mountain Grow",
+        location: "Zone C",
+        status: "Inactive",
+      },
     ],
     total: 3,
     page: 1,
@@ -130,8 +135,8 @@ export const useDashboardStore = create<DashboardState>()(
     overview: null,
     sales: null,
     chambers: null,
-  usersStats: null,
-  users: null,
+    usersStats: null,
+    users: null,
     cards: null,
     loading: {},
     error: {},
@@ -144,7 +149,7 @@ export const useDashboardStore = create<DashboardState>()(
 
       try {
         console.log("📡 Fetching overview...");
-        
+
         // Check if using mock admin token
         if (isMockAdminToken()) {
           console.log("🎭 Using mock admin data for overview");
@@ -182,17 +187,23 @@ export const useDashboardStore = create<DashboardState>()(
         // Some backend responses are wrapped: { success, statusCode, data: { ... } }
         // Normalize to the inner data object if present.
         const payload = res.data as any;
-        const data: Overview = (payload && payload.data) ? payload.data : payload;
+        const data: Overview = payload && payload.data ? payload.data : payload;
 
         // Defensive normalization: ensure nested objects exist to avoid runtime errors
         const normalized: Overview = {
           chambers: data?.chambers ?? { active: 0, inactive: 0 },
           orders: data?.orders ?? { completed: 0, pending: 0 },
           products: data?.products ?? { pending: 0, approved: 0 },
-          sellerApplications: data?.sellerApplications ?? { pending: 0, approved: 0 },
+          sellerApplications: data?.sellerApplications ?? {
+            pending: 0,
+            approved: 0,
+          },
         };
 
-        set({ overview: normalized, loading: { ...get().loading, overview: false } });
+        set({
+          overview: normalized,
+          loading: { ...get().loading, overview: false },
+        });
       } catch (err) {
         console.error("Failed to fetch overview:", err);
         set({
@@ -230,7 +241,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (Array.isArray(payload)) {
           // legacy: array of { day, sales }
           mapped = payload as DailySale[];
-        } else if (payload?.data && typeof payload.data === 'object') {
+        } else if (payload?.data && typeof payload.data === "object") {
           const data = payload.data as { labels?: string[]; values?: number[] };
           if (data.labels && data.values) {
             const labels: string[] = data.labels || [];
@@ -281,9 +292,15 @@ export const useDashboardStore = create<DashboardState>()(
         // The API response is wrapped. Example shape:
         // { success, statusCode, data: { data: [ ...items ], meta: { total, page, limit } } }
         const payload = res.data as Record<string, unknown>;
-        const dataObj = payload?.data as { data?: unknown[]; meta?: Record<string, unknown> } | undefined;
+        const dataObj = payload?.data as
+          | { data?: unknown[]; meta?: Record<string, unknown> }
+          | undefined;
         const items = (dataObj?.data || []) as Record<string, unknown>[];
-        const meta = (dataObj?.meta || {}) as { total?: number; page?: number; limit?: number };
+        const meta = (dataObj?.meta || {}) as {
+          total?: number;
+          page?: number;
+          limit?: number;
+        };
 
         // Map API fields to internal Chamber type
         const mapped: Chamber[] = items.map((it) => ({
@@ -371,26 +388,36 @@ export const useDashboardStore = create<DashboardState>()(
           } else if (Array.isArray(payload.data?.data)) {
             items = payload.data.data;
           }
-        } else if (typeof payload === 'object') {
+        } else if (typeof payload === "object") {
           // try to detect common wrapper
           items = payload.items || payload.users || [];
         }
 
         const mapped: UserItem[] = (items || []).map((u) => ({
           id: String(u.id ?? u.userId ?? u._id ?? ""),
-          name: String(u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`).trim(),
+          name: String(
+            u.name ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`
+          ).trim(),
           username: u.username ?? u.userName ?? undefined,
           email: u.email ?? undefined,
           phone: u.phone ?? u.mobile ?? undefined,
           role: u.role ?? undefined,
           status: u.status ?? undefined,
-          avatar: u.avatar ?? (u.name ? u.name.split(' ').map((s: string) => s[0]).join('').slice(0,2) : undefined),
+          avatar:
+            u.avatar ??
+            (u.name
+              ? u.name
+                  .split(" ")
+                  .map((s: string) => s[0])
+                  .join("")
+                  .slice(0, 2)
+              : undefined),
           region: u.region ?? u.location ?? undefined,
         }));
 
         set({ users: mapped, loading: { ...get().loading, users: false } });
       } catch (err) {
-        console.error('Failed to fetch users:', err);
+        console.error("Failed to fetch users:", err);
         set({
           error: { ...get().error, users: (err as Error).message },
           loading: { ...get().loading, users: false },

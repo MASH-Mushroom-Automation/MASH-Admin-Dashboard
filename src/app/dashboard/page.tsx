@@ -7,9 +7,13 @@ import DashboardContent from "@/components/dashboard/dashboard-content";
 import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useDashboardLoading } from "@/hooks/useDashboardLoading";
+import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, logout } = useAuthStore();
+  const router = useRouter();
 
   const {
     fetchOverview,
@@ -18,6 +22,28 @@ export default function DashboardPage() {
     fetchUsersStats,
     fetchCards,
   } = useDashboardStore();
+
+  useEffect(() => {
+    // If no user in store, verify authentication and possibly restore from cookie
+    if (!user) {
+      fetch("/api/auth/verify", { method: "GET", credentials: "include" })
+        .then((res) => {
+          if (!res.ok) {
+            // Not authenticated - redirect to login
+            console.log(
+              "No user in store and cookie invalid - redirecting to login"
+            );
+            logout();
+            router.push("/login");
+          }
+        })
+        .catch(() => {
+          console.log("Auth verification failed - redirecting to login");
+          logout();
+          router.push("/login");
+        });
+    }
+  }, [user, logout, router]);
 
   useEffect(() => {
     fetchOverview();

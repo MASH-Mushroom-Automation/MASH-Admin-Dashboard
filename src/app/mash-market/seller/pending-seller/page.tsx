@@ -3,7 +3,7 @@ export default function PendingSellersPage() {
     <div className="p-6">
       <h1>Pending Sellers - Coming Soon</h1>
     </div>
-  )
+  );
 }
 
 // "use client"
@@ -16,8 +16,6 @@ export default function PendingSellersPage() {
 // import { useRouter } from "next/navigation"
 // import { Button } from "@/components/ui/button"
 // import PaginationWrapper from "@/components/pagination"
-
-
 
 // export type TabType = "all" | "approval" | "approved" | "rejected"
 
@@ -37,7 +35,6 @@ export default function PendingSellersPage() {
 //   { id: "4", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
 //   { id: "5", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
 //   { id: "6", name: "Anne Curtis", storeName: "Anne’s Beauty Hub", email: "anne@beautyhub.com", status: "approved", address: "Makati City" },
-
 
 // ]
 
@@ -64,7 +61,6 @@ export default function PendingSellersPage() {
 
 //   return matchesTab && matchesSearch
 // })
-
 
 //   const totalPages = Math.ceil(filteredSellers.length / itemsPerPage)
 //   const startIndex = (currentPage - 1) * itemsPerPage
@@ -111,15 +107,15 @@ export default function PendingSellersPage() {
 //               className="pl-10"
 //             />
 //           </div>
-        
+
 //         </div>
 
 //         {/* Table Section */}
 //         {/* <Card className="overflow-hidden">
-//           <SellerTable 
+//           <SellerTable
 //             sellers={paginatedSellers}
-//             activeTab={activeTab} 
-//             searchQuery={searchQuery} 
+//             activeTab={activeTab}
+//             searchQuery={searchQuery}
 //             showStatus={false}
 //             mode="all"
 //             />
@@ -138,4 +134,3 @@ export default function PendingSellersPage() {
 //     </div>
 //   )
 // }
-

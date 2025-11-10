@@ -18,15 +18,35 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const { login, isAuthenticated, user, error } = useAuthStore();
+  const { login, isAuthenticated, user, error, logout } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
+    // Check if user is stored but cookie might be missing
     const storedUser = useAuthStore.getState().user;
+
     if (storedUser) {
-      router.push("/dashboard");
+      // Verify the cookie exists by making a lightweight check
+      fetch("/api/auth/verify", { method: "GET", credentials: "include" })
+        .then((res) => {
+          if (res.ok) {
+            // Cookie is valid, redirect to dashboard
+            router.push("/dashboard");
+          } else {
+            // Cookie is missing/invalid, clear the stored user to prevent loop
+            console.log(
+              "Cookie missing but user in store - clearing auth state"
+            );
+            logout();
+          }
+        })
+        .catch(() => {
+          // Network error or invalid cookie - clear auth state
+          console.log("Auth verification failed - clearing auth state");
+          logout();
+        });
     }
-  }, [router]);
+  }, [router, logout]);
 
   const validateEmail = (email: string) => {
     if (!email.includes(".com")) {

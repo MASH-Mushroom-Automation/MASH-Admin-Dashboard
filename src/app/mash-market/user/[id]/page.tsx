@@ -1,40 +1,40 @@
-import React, { use } from "react"
-import Link from "next/link"
-import UserAvatar from "@/components/ecommerce/user-avatar"
-import StatusBadge from "@/components/status-badge"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import React, { use } from "react";
+import Link from "next/link";
+import UserAvatar from "@/components/ecommerce/user-avatar";
+import StatusBadge from "@/components/status-badge";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface User {
-  id: string
-  name: string
-  username: string
-  email: string
-  phone: string
-  role: "Seller" | "Customer"
-  status: "Active" | "Inactive"
-  avatar: string
-  preferredPaymentMethod?: string
-  addressBook?: string[]
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone: string;
+  role: "Seller" | "Customer";
+  status: "Active" | "Inactive";
+  avatar: string;
+  preferredPaymentMethod?: string;
+  addressBook?: string[];
   // Seller-specific fields (expanded)
-  businessName?: string
-  businessAddress?: string
-  businessType?: string
-  taxId?: string
-  businessDocuments?: string[]
+  businessName?: string;
+  businessAddress?: string;
+  businessType?: string;
+  taxId?: string;
+  businessDocuments?: string[];
   // Contact breakdown
-  city?: string
-  region?: string
-  completeAddress?: string
+  city?: string;
+  region?: string;
+  completeAddress?: string;
   // Product info
-  typesOfMushroom?: string[]
-  monthlyProductionCapacity?: string
-  certifications?: string[]
+  typesOfMushroom?: string[];
+  monthlyProductionCapacity?: string;
+  certifications?: string[];
   // Banking
-  bankName?: string
-  accountNumber?: string
-  accountHolderName?: string
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
 }
 
 const MOCK_USERS: User[] = [
@@ -170,11 +170,15 @@ const MOCK_USERS: User[] = [
     accountNumber: "777888999",
     accountHolderName: "Olivia Martin",
   },
-]
+];
 
-export default function UserViewPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const user = MOCK_USERS.find((u) => u.id === id) ?? null
+export default function UserViewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const user = MOCK_USERS.find((u) => u.id === id) ?? null;
 
   if (!user) {
     return (
@@ -182,7 +186,9 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium">User not found</h2>
-            <p className="text-sm text-muted-foreground mt-2">We couldn't find a user with that id.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              We couldn't find a user with that id.
+            </p>
             <div className="mt-4">
               <Link href="/mash-market/user">
                 <Button>Back to users</Button>
@@ -191,20 +197,24 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
-  const role = user.role
+  const role = user.role;
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="shrink-0"><UserAvatar initials={user.avatar} /></div>
+            <div className="shrink-0">
+              <UserAvatar initials={user.avatar} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold">{user.name}</h1>
-              <div className="text-sm text-muted-foreground">{role === "Seller" ? "Seller profile" : "Customer profile"}</div>
+              <div className="text-sm text-muted-foreground">
+                {role === "Seller" ? "Seller profile" : "Customer profile"}
+              </div>
             </div>
           </div>
           <div>
@@ -219,48 +229,122 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
             {role === "Customer" && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Full Name</label>
-                  <Input value={user.name ?? ""} disabled readOnly aria-readonly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Full Name
+                  </label>
+                  <Input
+                    value={user.name ?? ""}
+                    disabled
+                    readOnly
+                    aria-readonly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Username</label>
-                  <Input value={user.username ?? ""} disabled readOnly aria-readonly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Username
+                  </label>
+                  <Input
+                    value={user.username ?? ""}
+                    disabled
+                    readOnly
+                    aria-readonly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Email</label>
-                  <Input value={user.email ?? ""} disabled readOnly aria-readonly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Email
+                  </label>
+                  <Input
+                    value={user.email ?? ""}
+                    disabled
+                    readOnly
+                    aria-readonly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Phone</label>
-                  <Input value={user.phone ?? ""} disabled readOnly aria-readonly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Phone
+                  </label>
+                  <Input
+                    value={user.phone ?? ""}
+                    disabled
+                    readOnly
+                    aria-readonly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Role</label>
-                  <Input value={user.role ?? ""} disabled readOnly aria-readonly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Role
+                  </label>
+                  <Input
+                    value={user.role ?? ""}
+                    disabled
+                    readOnly
+                    aria-readonly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Preferred Payment Method</label>
-                  <Input value={user.preferredPaymentMethod ?? "-"} disabled readOnly aria-readonly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Preferred Payment Method
+                  </label>
+                  <Input
+                    value={user.preferredPaymentMethod ?? "-"}
+                    disabled
+                    readOnly
+                    aria-readonly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">City</label>
-                  <Input value={user.city ?? ""} disabled readOnly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    City
+                  </label>
+                  <Input
+                    value={user.city ?? ""}
+                    disabled
+                    readOnly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Region</label>
-                  <Input value={user.region ?? ""} disabled readOnly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Region
+                  </label>
+                  <Input
+                    value={user.region ?? ""}
+                    disabled
+                    readOnly
+                    className="mt-1"
+                  />
                 </div>
 
                 <div className="col-span-2 mt-4">
-                  <label className="block text-sm font-medium text-muted-foreground">Complete address</label>
-                  <Input value={user.completeAddress ?? (user.addressBook && user.addressBook.length > 0 ? user.addressBook[0] : "")} disabled readOnly className="mt-1" />
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Complete address
+                  </label>
+                  <Input
+                    value={
+                      user.completeAddress ??
+                      (user.addressBook && user.addressBook.length > 0
+                        ? user.addressBook[0]
+                        : "")
+                    }
+                    disabled
+                    readOnly
+                    className="mt-1"
+                  />
                 </div>
               </div>
             )}
@@ -269,19 +353,42 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
               <div className="space-y-6">
                 {/* Business Information */}
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Business Information</h3>
+                  <h3 className="text-lg font-medium mb-3">
+                    Business Information
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Business Name</label>
-                      <Input value={user.businessName ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Business Name
+                      </label>
+                      <Input
+                        value={user.businessName ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Business Type</label>
-                      <Input value={user.businessType ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Business Type
+                      </label>
+                      <Input
+                        value={user.businessType ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">TAX ID Number</label>
-                      <Input value={user.taxId ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        TAX ID Number
+                      </label>
+                      <Input
+                        value={user.taxId ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -291,47 +398,114 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
                   <h3 className="text-lg font-medium mb-3">Contact Details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Full name</label>
-                      <Input value={user.name ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Full name
+                      </label>
+                      <Input
+                        value={user.name ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Email address</label>
-                      <Input value={user.email ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Email address
+                      </label>
+                      <Input
+                        value={user.email ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Phone number</label>
-                      <Input value={user.phone ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Phone number
+                      </label>
+                      <Input
+                        value={user.phone ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">City</label>
-                      <Input value={user.city ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        City
+                      </label>
+                      <Input
+                        value={user.city ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Region</label>
-                      <Input value={user.region ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Region
+                      </label>
+                      <Input
+                        value={user.region ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-muted-foreground">Complete address</label>
-                      <Input value={user.completeAddress ?? user.businessAddress ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Complete address
+                      </label>
+                      <Input
+                        value={
+                          user.completeAddress ?? user.businessAddress ?? ""
+                        }
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                   </div>
                 </div>
 
                 {/* Product information */}
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Product information</h3>
+                  <h3 className="text-lg font-medium mb-3">
+                    Product information
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-muted-foreground">Types of mushroom</label>
-                      <Input value={(user.typesOfMushroom || []).join(", ")} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Types of mushroom
+                      </label>
+                      <Input
+                        value={(user.typesOfMushroom || []).join(", ")}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Monthly production capacity</label>
-                      <Input value={user.monthlyProductionCapacity ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Monthly production capacity
+                      </label>
+                      <Input
+                        value={user.monthlyProductionCapacity ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Certifications</label>
-                      <Input value={(user.certifications || []).join(", ")} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Certifications
+                      </label>
+                      <Input
+                        value={(user.certifications || []).join(", ")}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -341,23 +515,52 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
                   <h3 className="text-lg font-medium mb-3">Banking details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Bank name</label>
-                      <Input value={user.bankName ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Bank name
+                      </label>
+                      <Input
+                        value={user.bankName ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted-foreground">Account number</label>
-                      <Input value={user.accountNumber ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Account number
+                      </label>
+                      <Input
+                        value={user.accountNumber ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-muted-foreground">Account holder name</label>
-                      <Input value={user.accountHolderName ?? ""} disabled readOnly className="mt-1" />
+                      <label className="block text-sm font-medium text-muted-foreground">
+                        Account holder name
+                      </label>
+                      <Input
+                        value={user.accountHolderName ?? ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground">Status</label>
-                  <div className="mt-2">{user.status ? <StatusBadge status={user.status as any} /> : <span className="text-sm">-</span>}</div>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Status
+                  </label>
+                  <div className="mt-2">
+                    {user.status ? (
+                      <StatusBadge status={user.status as any} />
+                    ) : (
+                      <span className="text-sm">-</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -365,5 +568,5 @@ export default function UserViewPage({ params }: { params: Promise<{ id: string 
         </Card>
       </div>
     </div>
-  )
+  );
 }

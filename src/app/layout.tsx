@@ -1,9 +1,9 @@
-import type React from "react"
-import type { Metadata } from "next"
+import type React from "react";
+import type { Metadata } from "next";
 // Temporarily commented out due to build issues - using system fonts
 // import { Poppins } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "sonner"
+import "./globals.css";
+import { Toaster } from "sonner";
 
 // const _poppins = Poppins({
 //   subsets: ["latin"],
@@ -13,12 +13,12 @@ import { Toaster } from "sonner"
 export const metadata: Metadata = {
   title: "MASH",
   description: "MASH Admin Pages",
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
@@ -28,5 +28,5 @@ export default function RootLayout({
         <Toaster position="top-right" richColors />
       </body>
     </html>
-  )
+  );
 }

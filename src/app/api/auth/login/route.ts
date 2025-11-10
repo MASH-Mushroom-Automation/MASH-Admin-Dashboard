@@ -4,8 +4,8 @@ import axios from "axios";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,7 +91,10 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
-    const axiosError = error as { response?: { data?: { message?: string }; status?: number }; message?: string };
+    const axiosError = error as {
+      response?: { data?: { message?: string }; status?: number };
+      message?: string;
+    };
     console.error(
       "[login proxy] error:",
       axiosError.response?.data || axiosError.message
