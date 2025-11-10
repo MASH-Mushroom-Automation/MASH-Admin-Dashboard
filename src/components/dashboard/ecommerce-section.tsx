@@ -168,7 +168,7 @@ export default function ECommerceSection() {
           </div>
           <div className="flex items-center gap-2 mt-1">
             <DropdownMenu onOpenChange={(open) => setFilterOpen(open)}>
-              <DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="ghost" aria-label="Filter">
                   <Filter className="w-4 h-4" />
                 </Button>

@@ -41,6 +41,59 @@ interface CardsSummary {
   sellerApplications: { pending: number; approved: number };
 }
 
+// Helper function to check if using mock admin tokens
+function isMockAdminToken(): boolean {
+  if (typeof window === "undefined") return false;
+  const cookies = document.cookie;
+  const hasMockToken = cookies.includes("authToken=admin-access-");
+  if (hasMockToken) {
+    console.log("🎭 Detected mock admin token");
+  }
+  return hasMockToken;
+}
+
+// Mock data for hardcoded admin
+const MOCK_DASHBOARD_DATA = {
+  overview: {
+    chambers: { active: 12, inactive: 3 },
+    orders: { completed: 145, pending: 23 },
+    products: { pending: 8, approved: 56 },
+    sellerApplications: { pending: 5, approved: 34 },
+  },
+  sales: [
+    { day: "Mon", sales: 4500 },
+    { day: "Tue", sales: 5200 },
+    { day: "Wed", sales: 4800 },
+    { day: "Thu", sales: 6100 },
+    { day: "Fri", sales: 7300 },
+    { day: "Sat", sales: 8200 },
+    { day: "Sun", sales: 6800 },
+  ],
+  chambers: {
+    chambers: [
+      { id: "1", grower: "John's Farm", location: "Zone A", status: "Active" },
+      { id: "2", grower: "Green Valley", location: "Zone B", status: "Active" },
+      { id: "3", grower: "Mountain Grow", location: "Zone C", status: "Inactive" },
+    ],
+    total: 3,
+    page: 1,
+    limit: 10,
+  },
+  usersStats: {
+    USER: 120,
+    BUYER: 85,
+    GROWER: 45,
+    ADMIN: 8,
+    SUPER_ADMIN: 2,
+  },
+  cards: {
+    chambers: { active: 12, inactive: 3 },
+    orders: { completed: 145, pending: 23 },
+    products: { pending: 8, approved: 56 },
+    sellerApplications: { pending: 5, approved: 34 },
+  },
+};
+
 interface DashboardState {
   overview: Overview | null;
   sales: DailySale[] | null;
@@ -91,6 +144,17 @@ export const useDashboardStore = create<DashboardState>()(
 
       try {
         console.log("📡 Fetching overview...");
+        
+        // Check if using mock admin token
+        if (isMockAdminToken()) {
+          console.log("🎭 Using mock admin data for overview");
+          set({
+            overview: MOCK_DASHBOARD_DATA.overview,
+            loading: { ...get().loading, overview: false },
+          });
+          return;
+        }
+
         // Log whether authToken cookie is present client-side
         try {
           const cookie = typeof document !== "undefined" ? document.cookie : "";
@@ -144,6 +208,16 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, sales: null },
       });
       try {
+        // Check if using mock admin token
+        if (isMockAdminToken()) {
+          console.log("🎭 Using mock admin data for sales");
+          set({
+            sales: MOCK_DASHBOARD_DATA.sales,
+            loading: { ...get().loading, sales: false },
+          });
+          return;
+        }
+
         const res = await api.get(`v1/super-admin/dashboard/sales`, {
           params: { days },
         });
@@ -190,6 +264,16 @@ export const useDashboardStore = create<DashboardState>()(
         `[store] GET v1/super-admin/dashboard/chambers → page=${page}, limit=${limit}`
       );
       try {
+        // Check if using mock admin token
+        if (isMockAdminToken()) {
+          console.log("🎭 Using mock admin data for chambers");
+          set({
+            chambers: MOCK_DASHBOARD_DATA.chambers,
+            loading: { ...get().loading, chambers: false },
+          });
+          return;
+        }
+
         const res = await api.get(`v1/super-admin/dashboard/chambers`, {
           params: { page, limit },
         });
@@ -234,6 +318,16 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, usersStats: null },
       });
       try {
+        // Check if using mock admin token
+        if (isMockAdminToken()) {
+          console.log("🎭 Using mock admin data for usersStats");
+          set({
+            usersStats: MOCK_DASHBOARD_DATA.usersStats,
+            loading: { ...get().loading, usersStats: false },
+          });
+          return;
+        }
+
         const res = await api.get(`v1/super-admin/dashboard/users-stats`);
 
         // API returns: { success, statusCode, data: { USER: 1, BUYER: 5, ... } }
@@ -310,6 +404,16 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, cards: null },
       });
       try {
+        // Check if using mock admin token
+        if (isMockAdminToken()) {
+          console.log("🎭 Using mock admin data for cards");
+          set({
+            cards: MOCK_DASHBOARD_DATA.cards,
+            loading: { ...get().loading, cards: false },
+          });
+          return;
+        }
+
         const res = await api.get(`v1/super-admin/dashboard/cards`);
         const data: CardsSummary = res.data;
         set({ cards: data, loading: { ...get().loading, cards: false } });
