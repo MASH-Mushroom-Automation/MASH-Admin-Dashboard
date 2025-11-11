@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+// "use client" component - no default React import needed
 import {
   Dialog,
   DialogContent,
@@ -112,7 +112,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, showActions
                 <label className="block text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
                   {/* StatusBadge used when possible; fallback to plain text */}
-                  {user?.status ? <StatusBadge status={user.status as any} /> : <span className="text-sm">-</span>}
+                  {user?.status ? <StatusBadge status={user.status} /> : <span className="text-sm">-</span>}
                 </div>
               </div>
             </div>
@@ -159,7 +159,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, showActions
     <div>
       <label className="block text-sm font-medium text-muted-foreground">Status</label>
       <div className="mt-2">
-        {user?.status ? <StatusBadge status={user.status as any} /> : <span className="text-sm">-</span>}
+        {user?.status ? <StatusBadge status={user.status} /> : <span className="text-sm">-</span>}
       </div>
     </div>
 

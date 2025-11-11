@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Product } from "@/app/mash-market/product/page";
@@ -54,7 +54,7 @@ export default function PendingProductDetail({
           <Card className="p-6">
             <h2 className="text-lg font-medium">Product not found</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              We couldn't find a product with that id.
+              We could not find a product with that id.
             </p>
             <div className="mt-4">
               <Link href="/mash-market/product/pending-product">
@@ -79,11 +79,10 @@ export default function PendingProductDetail({
     setLoading(true);
     try {
       const raw = localStorage.getItem("mash_products");
-      let list = raw ? JSON.parse(raw) : MOCK_PRODUCTS;
-      list = list.map((p: any) =>
-        p.id === product.id
-          ? { ...p, status: "rejected", rejectReason: reason }
-          : p
+      type StoredProduct = Product & { rejectReason?: string };
+      const parsed = raw ? (JSON.parse(raw) as StoredProduct[]) : MOCK_PRODUCTS as StoredProduct[];
+      const list = parsed.map((p) =>
+        p.id === product.id ? { ...p, status: "rejected", rejectReason: reason } : p
       );
       localStorage.setItem("mash_products", JSON.stringify(list));
       await new Promise((r) => setTimeout(r, 300));
@@ -169,7 +168,7 @@ export default function PendingProductDetail({
               </label>
               <div className="mt-2">
                 {product.status ? (
-                  <StatusBadge status={product.status as any} />
+                  <StatusBadge status={product.status} />
                 ) : (
                   "-"
                 )}

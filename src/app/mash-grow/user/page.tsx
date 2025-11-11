@@ -47,7 +47,7 @@ export default function RegisterChamber() {
         { id: "d1", deviceId: "MASH-A1-CAL25-AC2523", status: "Connected", assigned: false },
         { id: "d2", deviceId: "MASH-B2-CAL25-AC2524", status: "Disconnected", assigned: false },
       ])
-    } catch (e) {
+    } catch {
       setUsers([])
     }
   }, [])
@@ -56,13 +56,13 @@ export default function RegisterChamber() {
   useEffect(() => {
     try {
       localStorage.setItem("mash_devices", JSON.stringify(devices))
-    } catch (e) {}
+    } catch {}
   }, [devices])
 
   useEffect(() => {
     try {
       localStorage.setItem("mash_users", JSON.stringify(users))
-    } catch (e) {}
+    } catch {}
   }, [users])
 
   const filteredUsers = users.filter((user) => {
@@ -93,21 +93,18 @@ export default function RegisterChamber() {
     toast.success(isConnected ? "Device is connected" : "Device is disconnected")
   }
 
-  const handleRegisterSave = (data: { chamberName: string; address: string; contactNumber: string }) => {
-    const newUser: User = {
-      id: String(users.length + 1),
-      chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
-      name: data.chamberName,
-      address: data.address,
-      contactNumber: data.contactNumber,
-      status: "Active",
-      registrationDate: new Date().toISOString().split("T")[0],
-    }
-    setUsers([...users, newUser])
+  // handle onSave from RegisterModal which may include selectedDeviceId
+  type RegistrationPayload = {
+    id?: string
+    chamberName?: string
+    name?: string
+    address?: string
+    contactNumber?: string
+    deviceId?: string
+    selectedDeviceId?: string
   }
 
-  // handle onSave from RegisterModal which may include selectedDeviceId
-  const handleRegisterSaveExtended = (data: any) => {
+  const handleRegisterSaveExtended = (data: RegistrationPayload) => {
     // data may include chamberName, address, contactNumber, selectedDeviceId, deviceId
     const newUser: User = {
       id: String(users.length + 1),

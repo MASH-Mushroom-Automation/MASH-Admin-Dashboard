@@ -1,41 +1,36 @@
 "use client"
 
-import { useState } from "react"
 import { PanelLeftOpen, PanelLeftClose, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/components/ui/sidebar"
 
 interface NavbarProps {
-  onToggleSidebar: () => void
+  onToggleSidebar?: () => void
 }
 
-export default function Navbar({ onToggleSidebar }: NavbarProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-
-  const handleToggle = () => {
-    setIsSidebarOpen(!isSidebarOpen)
-    onToggleSidebar()
-  }
+export default function Navbar({}: NavbarProps) {
+  const { toggleSidebar, state } = useSidebar()
 
   return (
-    <nav className="h-16 bg-background border-b border-border flex items-center px-6 gap-4 p-8">
+    <div className="h-[53px] bg-background border-b border-border flex items-center">
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleToggle}
-        className="text-foreground hover:bg-accent"
+        onClick={() => toggleSidebar()}
+        className="text-foreground hover:bg-accent p-3"
         title="Toggle sidebar"
       >
         <span className="md:hidden">
           <Menu className="w-5 h-5" />
         </span>
-        <span className="hidden md:inline-flex">
-          {isSidebarOpen ? (
+        <span className="hidden md:inline-flex ml-9">
+          {state === "expanded" ? (
             <PanelLeftClose className="w-5 h-5" />
           ) : (
             <PanelLeftOpen className="w-5 h-5" />
           )}
         </span>
       </Button>
-    </nav>
+    </div>
   )
 }
