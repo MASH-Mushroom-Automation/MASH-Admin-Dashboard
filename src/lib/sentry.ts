@@ -1,17 +1,18 @@
 /**
  * Sentry Configuration for MASH Admin Dashboard
  * 
- * Setup Instructions:
- * 1. Install: npm install @sentry/nextjs
- * 2. Run: npx @sentry/wizard@latest -i nextjs
- * 3. Add SENTRY_DSN to .env.local
- * 4. Uncomment the initialization code below
+ * ✅ Sentry is now fully configured!
  * 
- * For now, this is a placeholder that logs to console.
- * Once Sentry is set up, uncomment the real implementation.
+ * Configuration files created by wizard:
+ * - sentry.server.config.ts (server-side)
+ * - sentry.edge.config.ts (edge runtime)
+ * - src/instrumentation.ts (server instrumentation)
+ * - src/instrumentation-client.ts (client instrumentation)
+ * 
+ * Test page: /sentry-example-page
  */
 
-// import * as Sentry from '@sentry/nextjs'
+import * as Sentry from '@sentry/nextjs'
 
 interface SentryOptions {
   message: string
@@ -26,38 +27,10 @@ class SentryClient {
   init() {
     if (this.isInitialized) return
 
-    // TODO: Uncomment when Sentry is installed
-    /*
-    Sentry.init({
-      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-      environment: process.env.NODE_ENV,
-      enabled: !this.isDevelopment,
-      
-      // Performance monitoring
-      tracesSampleRate: 0.1, // 10% of transactions
-      
-      // Session replay
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
-      
-      // Ignore common errors
-      ignoreErrors: [
-        'ResizeObserver loop limit exceeded',
-        'Non-Error promise rejection captured',
-      ],
-      
-      beforeSend(event) {
-        // Don't send in development
-        if (process.env.NODE_ENV === 'development') {
-          return null
-        }
-        return event
-      },
-    })
-    */
-
+    // Sentry is now automatically initialized via instrumentation files
+    // No manual init needed here
     if (this.isDevelopment) {
-      console.log('[Sentry] Running in development mode - errors logged to console only')
+      console.log('[Sentry] Running in development mode - full Sentry integration active')
     }
 
     this.isInitialized = true
@@ -65,50 +38,42 @@ class SentryClient {
 
   captureMessage(options: SentryOptions) {
     if (this.isDevelopment) {
-      console.log('[Sentry Mock] Message:', options)
-      return
+      console.log('[Sentry] Message:', options)
     }
 
-    // TODO: Uncomment when Sentry is installed
-    // Sentry.captureMessage(options.message, {
-    //   level: options.level || 'info',
-    //   extra: options.extra,
-    // })
+    Sentry.captureMessage(options.message, {
+      level: options.level || 'info',
+      extra: options.extra,
+    })
   }
 
   captureException(error: Error, extra?: Record<string, unknown>) {
     if (this.isDevelopment) {
-      console.error('[Sentry Mock] Exception:', error, extra)
-      return
+      console.error('[Sentry] Exception:', error, extra)
     }
 
-    // TODO: Uncomment when Sentry is installed
-    // Sentry.captureException(error, { extra })
+    Sentry.captureException(error, { extra })
   }
 
   setUser(user: { id: string; email?: string; [key: string]: unknown } | null) {
     if (this.isDevelopment) {
-      console.log('[Sentry Mock] Set user:', user)
-      return
+      console.log('[Sentry] Set user:', user)
     }
 
-    // TODO: Uncomment when Sentry is installed
-    // Sentry.setUser(user)
+    Sentry.setUser(user)
   }
 
   addBreadcrumb(message: string, category?: string, data?: Record<string, unknown>) {
     if (this.isDevelopment) {
-      console.log('[Sentry Mock] Breadcrumb:', { message, category, data })
-      return
+      console.log('[Sentry] Breadcrumb:', { message, category, data })
     }
 
-    // TODO: Uncomment when Sentry is installed
-    // Sentry.addBreadcrumb({
-    //   message,
-    //   category,
-    //   data,
-    //   level: 'info',
-    // })
+    Sentry.addBreadcrumb({
+      message,
+      category,
+      data,
+      level: 'info',
+    })
   }
 }
 
