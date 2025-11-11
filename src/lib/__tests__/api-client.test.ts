@@ -59,7 +59,8 @@ describe('apiClient', () => {
         ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.users.getAll()).rejects.toThrow('Network error')
-        expect(logger.error).toHaveBeenCalledWith('Failed to fetch users', mockError)
+        // logger.apiError is called, which internally calls logger.error
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users', mockError, {})
       })
     })
 
@@ -79,7 +80,7 @@ describe('apiClient', () => {
         ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.users.getById('999')).rejects.toThrow('User not found')
-        expect(logger.error).toHaveBeenCalledWith('Failed to fetch user 999', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users/999', mockError)
       })
     })
 
@@ -96,10 +97,10 @@ describe('apiClient', () => {
 
       it('should log errors on update failure', async () => {
         const mockError = new Error('Update failed')
-        ;(api.patch as jest.Mock).mockRejectedValue(mockError)
+        ;(api.put as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.users.update('123', { status: 'Inactive' })).rejects.toThrow('Update failed')
-        expect(logger.error).toHaveBeenCalledWith('Failed to update user 123', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users/123', mockError)
       })
     })
 
@@ -117,7 +118,7 @@ describe('apiClient', () => {
         ;(api.delete as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.users.delete('123')).rejects.toThrow('Delete failed')
-        expect(logger.error).toHaveBeenCalledWith('Failed to delete user 123', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users/123', mockError)
       })
     })
   })
@@ -149,7 +150,7 @@ describe('apiClient', () => {
         ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.products.getAll()).rejects.toThrow('Network error')
-        expect(logger.error).toHaveBeenCalledWith('Failed to fetch products', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/products', mockError, {})
       })
     })
 
@@ -206,9 +207,8 @@ describe('apiClient', () => {
 
         const result = await apiClient.sellers.getAll({ status: 'Pending' })
 
-        expect(api.get).toHaveBeenCalledWith('v1/super-admin/sellers', {
-          params: { status: 'Pending' },
-        })
+        // API client builds query string internally, so URL includes params
+        expect(api.get).toHaveBeenCalledWith('v1/super-admin/sellers?status=Pending')
         expect(result).toEqual(mockResponse)
       })
 
@@ -217,7 +217,7 @@ describe('apiClient', () => {
         ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.sellers.getAll()).rejects.toThrow('Network error')
-        expect(logger.error).toHaveBeenCalledWith('Failed to fetch sellers', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/sellers', mockError, {})
       })
     })
 
@@ -249,7 +249,7 @@ describe('apiClient', () => {
         ;(api.post as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.sellers.approve('123')).rejects.toThrow('Approve failed')
-        expect(logger.error).toHaveBeenCalledWith('Failed to approve seller 123', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/sellers/123/approve', mockError)
       })
     })
 
@@ -271,7 +271,7 @@ describe('apiClient', () => {
         ;(api.post as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.sellers.reject('123', 'Reason')).rejects.toThrow('Reject failed')
-        expect(logger.error).toHaveBeenCalledWith('Failed to reject seller 123', mockError)
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/sellers/123/reject', mockError)
       })
     })
   })
@@ -282,7 +282,7 @@ describe('apiClient', () => {
       ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
       await expect(apiClient.users.getAll()).rejects.toThrow('Request timeout')
-      expect(logger.error).toHaveBeenCalled()
+      expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users', mockError, {})
     })
 
     it('should handle 401 unauthorized errors', async () => {
@@ -290,7 +290,7 @@ describe('apiClient', () => {
       ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
       await expect(apiClient.users.getAll()).rejects.toEqual(mockError)
-      expect(logger.error).toHaveBeenCalled()
+      expect(logger.apiError).toHaveBeenCalled()
     })
 
     it('should handle 404 not found errors', async () => {
@@ -298,7 +298,7 @@ describe('apiClient', () => {
       ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
       await expect(apiClient.users.getById('999')).rejects.toEqual(mockError)
-      expect(logger.error).toHaveBeenCalled()
+      expect(logger.apiError).toHaveBeenCalled()
     })
   })
 })

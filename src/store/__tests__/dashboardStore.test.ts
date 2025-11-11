@@ -154,12 +154,12 @@ describe('dashboardStore', () => {
     })
 
     it('should pass pagination parameters to API', async () => {
-      ;(api.get as jest.Mock).mockResolvedValue({ data: { chambers: [], total: 0, page: 2, limit: 20 } })
+      ;(api.get as jest.Mock).mockResolvedValue({ data: { items: [], total: 0, page: 2, limit: 20 } })
 
       const store = useDashboardStore.getState()
       await store.fetchChambers(2, 20)
 
-      expect(api.get).toHaveBeenCalledWith('v1/super-admin/dashboard/chamber-inventory', {
+      expect(api.get).toHaveBeenCalledWith('v1/super-admin/dashboard/chambers', {
         params: { page: 2, limit: 20 },
       })
     })
