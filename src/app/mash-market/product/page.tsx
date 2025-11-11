@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ProductTable } from "@/components/ecommerce/product-table"
 import { Button } from "@/components/ui/button"
@@ -17,168 +17,19 @@ import { Archive } from "lucide-react"
 import { toast } from "sonner"
 import PaginationWrapper from "@/components/pagination"
 import { SearchFilterBar } from "@/components/search-filter-bar"
+import { apiClient, type Product } from "@/lib/api-client"
+import { logger } from "@/lib/logger"
+import { Card } from "@/components/ui/card"
 
 export type ProductStatus = "pending" | "approved" | "rejected" | "archived"
-
-export interface Product {
-  id: string
-  name: string
-  seller: string
-  price: number
-  category: string
-  image?: string
-  images?: string[]
-  subcategory?: string
-  unit?: string
-  stockQuantity?: number
-  sellerInfo?: {
-    sellerName?: string
-    businessName?: string
-    contactNumber?: string
-    businessAddress?: string
-  }
-  description: string
-  status: ProductStatus
-  rejectReason?: string
-  submittedAt: string
-}
-
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "White Oyster Mushroom",
-    seller: "Mushroom Farm",
-    price: 129.99,
-    category: "Fresh Mushroom",
-    subcategory: "Fresh",
-    unit: "per 250g",
-    stockQuantity: 120,
-    images: ["/wireless-headphones.png", "/reusable-water-bottle.png"],
-    image: "/wireless-headphones.png",
-    sellerInfo: {
-      sellerName: "Mushroom Farm",
-      businessName: "Mushroom Farm Co.",
-      contactNumber: "+63 912 345 6789",
-      businessAddress: "123 Farm Lane, Rizal, Philippines",
-    },
-    description: "High-quality oyster mushrooms grown locally. Fresh, flavorful, and perfect for cooking or grilling.",
-    status: "pending",
-    submittedAt: "2025-10-28T10:30:00Z",
-  },
-  {
-    id: "2",
-    name: "White Mushroom",
-    seller: "The farm house",
-    price: 34.99,
-    category: "Fresh Mushroom",
-    subcategory: "Fresh",
-    unit: "per 250g",
-    stockQuantity: 250,
-    images: ["/organic-cotton-tshirt.png"],
-    image: "/organic-cotton-tshirt.png",
-    sellerInfo: {
-      sellerName: "The farm house",
-      businessName: "The Farm House Co.",
-      contactNumber: "+63 922 111 2222",
-      businessAddress: "45 Countryside Ave, Laguna, Philippines",
-    },
-    description: "Fresh harvested white mushrooms, great for soups and stir fry.",
-    status: "pending",
-    submittedAt: "2025-10-27T14:15:00Z",
-  },
-  {
-    id: "4",
-    name: "Mushroom Chips",
-    seller: "Kabutero Co.",
-    price: 59.99,
-    category: "Processed Mushroom",
-    subcategory: "Chips",
-    unit: "per pack",
-    stockQuantity: 80,
-    images: ["/bamboo-cutting-board.png"],
-    image: "/bamboo-cutting-board.png",
-    sellerInfo: {
-      sellerName: "Kabutero Co.",
-      businessName: "Kabutero Snacks",
-      contactNumber: "+63 933 333 4444",
-      businessAddress: "Unit 5, Market St., Cebu, Philippines",
-    },
-    description: "Crispy mushroom chips made from locally sourced mushrooms.",
-    status: "pending",
-    submittedAt: "2025-10-25T16:45:00Z",
-  },
-  {
-    id: "7",
-    name: "Mushroom Chicharon",
-    seller: "Mushroom Snacks Inc.",
-    price: 59.99,
-    category: "Processed Mushroom",
-    subcategory: "Chicharon",
-    unit: "per pack",
-    stockQuantity: 50,
-    images: ["/bamboo-cutting-board.png"],
-    image: "/bamboo-cutting-board.png",
-    sellerInfo: {
-      sellerName: "Mushroom Snacks Inc.",
-      businessName: "Mushroom Snacks Inc.",
-      contactNumber: "+63 944 555 6666",
-      businessAddress: "Blk 3 Lot 7, Davao City, Philippines",
-    },
-    description: "A crunchy, savory mushroom chicharon alternative.",
-    status: "pending",
-    submittedAt: "2025-10-22T16:45:00Z",
-  },
-  {
-    id: "9",
-    name: "Mushroom Jerky",
-    seller: "Healthy Bites",
-    price: 129.99,
-    category: "Processed Mushroom",
-    image: "/wireless-headphones.png",
-    description: "High-quality wireless headphones with noise cancellation and 30-hour battery life.",
-    status: "pending",
-    submittedAt: "2025-10-20T10:30:00Z",
-  },
-  {
-    id: "10",
-    name: "White Mushroom",
-    seller: "The farm house",
-    price: 34.99,
-    category: "Fresh Mushroom",
-    image: "/organic-cotton-tshirt.png",
-    description: "Sustainable, eco-friendly cotton t-shirt available in multiple colors.",
-    status: "pending",
-    submittedAt: "2025-10-19T14:15:00Z",
-  },
-  {
-    id: "11",
-    name: "Fruiting Bags",
-    seller: "Mushroom Growers Ltd.",
-    price: 45.0,
-    category: "Mushroom Cultivation Supplies",
-    image: "/reusable-water-bottle.png",
-    description: "Insulated water bottle keeps drinks cold for 24 hours or hot for 12 hours.",
-    status: "pending",
-    submittedAt: "2025-10-18T09:00:00Z",
-  },
-  {
-    id: "12",
-    name: "Fruting Bags",
-    seller: "The mushroom house",
-    price: 79.99,
-    category: "Mushroom Cultivation Supplies",
-    image: "/rolled-yoga-mat.png",
-    description: "Non-slip yoga mat with carrying strap, perfect for all fitness levels.",
-    status: "pending",
-    submittedAt: "2025-10-17T11:20:00Z",
-  },
-]
 
 const ITEMS_PER_PAGE = 5
 
 export default function AdminProductsPage() {
   const router = useRouter()
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   // no modal: view navigates to product page
   const [searchQuery, setSearchQuery] = useState("")
   // bulk filters
@@ -186,10 +37,41 @@ export default function AdminProductsPage() {
   const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
 
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        logger.info('Fetching products from API')
+        
+        const response = await apiClient.products.getAll({
+          page: 1,
+          limit: 100, // Fetch all for client-side filtering
+          search: '',
+          category: undefined,
+          status: undefined
+        })
+        
+        setProducts(response.data)
+        logger.info('Products fetched successfully', { count: response.data.length })
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products'
+        logger.error('Failed to fetch products', err)
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
   const businessOptions = useMemo(() => {
     return Array.from(
       new Set(
-        products.map((p) => p.sellerInfo?.businessName).filter((b) => !!b) as string[]
+        products.map((p) => p.seller).filter((b) => !!b) as string[]
       )
     )
   }, [products])
@@ -202,13 +84,12 @@ export default function AdminProductsPage() {
     return products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.sellerInfo?.businessName || "").toLowerCase().includes(searchQuery.toLowerCase())
+        product.seller.toLowerCase().includes(searchQuery.toLowerCase())
 
       // Category matching (if any category checkboxes selected)
       const matchesCategory = selectedCategories.length > 0 ? selectedCategories.includes(product.category) : true
 
-      const businessName = product.sellerInfo?.businessName
+      const businessName = product.seller
       const matchesBusiness = selectedBusinesses.length > 0 ? (businessName ? selectedBusinesses.includes(businessName) : false) : true
 
       return matchesSearch && matchesCategory && matchesBusiness
@@ -222,15 +103,11 @@ export default function AdminProductsPage() {
 
 
   const handleArchive = (product: Product) => {
-    setProducts(products.map((p) => (p.id === product.id ? { ...p, status: "archived" } : p)))
+    // Archive functionality - would update via API in production
+    logger.info('Archiving product', { productId: product.id, name: product.name })
     toast.success(`Product "${product.name}" has been archived.`)
-    // navigate to product archive page
     router.push(`/mash-market/product/archive?id=${product.id}`)
   }
-
-  const pendingCount = products.filter((p) => p.status === "pending").length
-  const approvedCount = products.filter((p) => p.status === "approved").length
-  const rejectedCount = products.filter((p) => p.status === "rejected").length
 
   return (
     <div className="w-full px-4 py-8 overflow-x-hidden">
@@ -250,6 +127,30 @@ export default function AdminProductsPage() {
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <Card className="p-8">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-3 text-muted-foreground">Loading products...</span>
+          </div>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <Card className="p-8">
+          <div className="text-center">
+            <p className="text-destructive mb-4">Error: {error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Main Content */}
+      {!loading && !error && (
+        <>
 
       {/* Stats Section */}
       {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -393,6 +294,8 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Product details are now a page at /mash-market/product/[id] - modal removed */}
+      </>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
 import UserAvatar from "@/components/ecommerce/user-avatar"
@@ -20,124 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Archive } from "lucide-react"
 import { useRouter } from "next/navigation"
-
-
-interface User {
-  id: string
-  name: string
-  username: string
-  email: string
-  phone: string
-  role: "Seller" | "Customer"
-  status: "Active" | "Inactive"
-  avatar: string
-  region?: string
-   // customer-specific
-  preferredPaymentMethod?: string
-  addressBook?: string[]
-  // seller-specific
-  businessName?: string
-  businessAddress?: string
-  businessType?: string
-  taxId?: string
-  businessDocuments?: string[]
-} 
-
-const MOCK_USERS: User[] = [
-  { id: "1",
-     name: "Sarah Johnson", 
-     username: "sarahjohn", 
-     email: "sarah@example.com", 
-    phone: "+639171234567", 
-     role: "Seller", 
-     status: "Active", 
-  region: "Caloocan",
-     avatar: "SJ", 
-     businessName: "Sarah's Store", 
-     businessAddress: "123 Main St, Anytown, USA", 
-     businessType: "Retail", 
-     taxId: "123-45-6789", 
-     businessDocuments: ["license.pdf", "tax_certificate.pdf"]
-    },
-  { id: "2", 
-     name: "Emma Davis", 
-     username: "emmadavis", 
-     email: "emma@example.com", 
-    phone: "+639173456789", 
-     role: "Customer", 
-     status: "Inactive", 
-    region: "Manila",
-     avatar: "ED", 
-     preferredPaymentMethod: "Credit Card", 
-     addressBook: ["Home: 456 Elm St, Anytown, USA"]
-    },
-  { id: "3", 
-     name: "Sophie Brown", 
-     username: "sophieb", 
-     email: "sophie@example.com", 
-    phone: "+639177890123", 
-     role: "Customer", 
-     status: "Active", 
-    region: "Quezon City",
-     avatar: "SB", 
-     preferredPaymentMethod: "PayPal", 
-     addressBook: ["Work: 789 Oak St, Anytown, USA"]
-    },
-  { id: "4", 
-     name: "Liam Carter", 
-     username: "liamc", 
-     email: "liam@example.com", 
-    phone: "+639171112222", 
-     role: "Seller", 
-     status: "Active", 
-    region: "Makati",
-     avatar: "LC", 
-     businessName: "Liam's Shop", 
-     businessAddress: "456 Maple St, Anytown, USA", 
-     businessType: "Retail", 
-     taxId: "987-65-4321", 
-     businessDocuments: ["business_license.pdf"]
-    },
-  { id: "5", 
-     name: "Ava Thompson", 
-     username: "avath", 
-     email: "ava@example.com", 
-    phone: "+639173334444", 
-     role: "Customer", 
-     status: "Inactive", 
-    region: "Pasig",
-     avatar: "AT", 
-     preferredPaymentMethod: "Credit Card", 
-     addressBook: ["Home: 123 Pine St, Anytown, USA"]
-    },
-  { id: "6", 
-     name: "Noah Walker", 
-     username: "noahw", 
-     email: "noah@example.com", 
-    phone: "+639175556666", 
-     role: "Customer", 
-     status: "Active", 
-    region: "Caloocan",
-     avatar: "NW", 
-     preferredPaymentMethod: "Credit Card", 
-     addressBook: ["Home: 123 Birch St, Anytown, USA"]
-    },
-  { id: "7", 
-     name: "Olivia Martin", 
-     username: "oliviam", 
-     email: "olivia@example.com", 
-    phone: "+639177788888", 
-     role: "Seller", 
-     status: "Active", 
-    region: "Manila",
-     avatar: "OM", 
-     businessName: "Olivia's Boutique", 
-     businessAddress: "789 Cedar St, Anytown, USA", 
-     businessType: "Retail", 
-     taxId: "456-78-9012", 
-     businessDocuments: ["business_license.pdf"]
-    },
-]
+import { apiClient, type User } from "@/lib/api-client"
+import { logger } from "@/lib/logger"
 
 const ITEMS_PER_PAGE = 5
 
@@ -153,14 +37,48 @@ export default function UsersManagement() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   
+  // API State
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  // Fetch users from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        logger.info('Fetching users from API')
+        
+        const response = await apiClient.users.getAll({
+          page: 1,
+          limit: 100, // Fetch all for client-side filtering
+          search: '',
+          role: undefined,
+          status: undefined
+        })
+        
+        setUsers(response.data)
+        logger.info('Users fetched successfully', { count: response.data.length })
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch users'
+        logger.error('Failed to fetch users', err)
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, [])
 
   // Filtered users
   const filteredUsers = useMemo(() => {
 
     const statusFilterEnabled = true
 
-    return MOCK_USERS.filter((user) => {
+    return users.filter((user) => {
       const matchesSearch =
         [user.name, user.email, user.username].some((field) =>
           field.toLowerCase().includes(searchQuery.toLowerCase())
@@ -182,11 +100,11 @@ export default function UsersManagement() {
         }
       }
 
-      const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes((user as any).region) : true
+      const matchesRegion = selectedRegions.length > 0 ? selectedRegions.includes(user.region || '') : true
 
       return matchesSearch && matchesRole && matchesStatus && matchesRegion
     })
-  }, [searchQuery, statusFilter, selectedStatuses, selectedRolesMulti, selectedRegions])
+  }, [users, searchQuery, statusFilter, selectedStatuses, selectedRolesMulti, selectedRegions])
 
   // Pagination logic
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -211,6 +129,29 @@ export default function UsersManagement() {
           <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">Accounts Overview</p>
         </header>
 
+        {/* Loading State */}
+        {loading && (
+          <Card className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Loading users...</span>
+            </div>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card className="p-8">
+            <div className="text-center">
+              <p className="text-destructive mb-4">Error: {error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Main Content - Only show when not loading and no error */}
+        {!loading && !error && (
+          <>
         {/* Search and Filters */}
         <div className="flex items-center">
           <div className="flex-1">
@@ -404,12 +345,12 @@ export default function UsersManagement() {
               <TableBody>
                 {paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="px-6 py-4"><UserAvatar initials={user.avatar} /></TableCell>
+                    <TableCell className="px-6 py-4"><UserAvatar initials={user.avatar || 'U'} /></TableCell>
                     <TableCell>{user.name}</TableCell>
                     <TableCell className="whitespace-nowrap text-sm truncate">{user.username}</TableCell>
                     <TableCell className="whitespace-nowrap truncate">{user.email}</TableCell>
                     <TableCell className="whitespace-nowrap truncate">{user.phone}</TableCell>
-                    <TableCell className="whitespace-nowrap">{(user as any).region}</TableCell>
+                    <TableCell className="whitespace-nowrap">{user.region || 'N/A'}</TableCell>
                     <TableCell>{user.role}</TableCell>
                     <TableCell>
                       <ActionsMenu
@@ -449,6 +390,8 @@ export default function UsersManagement() {
               setDeletingId(null)
             }}
           />
+        )}
+        </>
         )}
 
       </div>
