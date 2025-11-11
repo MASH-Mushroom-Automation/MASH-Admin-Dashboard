@@ -7,9 +7,7 @@ import { ProductTable } from "@/components/ecommerce/product-table"
 import ProductRejectReasonModal from "@/components/ecommerce/product-reject-reason-modal"
 import { ConfirmationModal } from "@/components/ecommerce/confirmation-modal"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ChevronLeft } from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import { toast } from "sonner"
 import PaginationWrapper from "@/components/pagination"
 
@@ -106,7 +104,6 @@ const MOCK_PRODUCTS: Product[] = [
   },
 ]
 
-const CATEGORIES = ["All Categories", "Fresh Mushroom", "Processed Mushroom", "Mushroom Cultivation Supplies"]
 const ITEMS_PER_PAGE = 5
 
 export default function PendingProductsPage() {
@@ -121,16 +118,16 @@ export default function PendingProductsPage() {
       } else {
         localStorage.setItem("mash_products", JSON.stringify(MOCK_PRODUCTS))
       }
-    } catch (e) {}
+    } catch {}
   }, [])
 
   useEffect(() => {
     try {
       localStorage.setItem("mash_products", JSON.stringify(products))
-    } catch (e) {}
+    } catch {}
   }, [products])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All Categories")
+  const [searchQuery] = useState("")
+  const [selectedCategory] = useState("All Categories")
   // view navigates to product page; modal removed
   const [confirmAction, setConfirmAction] = useState<{
     product: Product
@@ -150,7 +147,6 @@ export default function PendingProductsPage() {
     })
   }, [products, searchQuery, selectedCategory])
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE)

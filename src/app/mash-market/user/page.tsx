@@ -175,7 +175,7 @@ export default function UsersManagement() {
     // load the users list for the users management table
     try {
       fetchUsers();
-    } catch (e) {
+    } catch {
       // ignore - fetchUsers handles errors in store
     }
   }, [fetchUsers]);
@@ -212,7 +212,7 @@ export default function UsersManagement() {
 
       const matchesRegion =
         selectedRegions.length > 0
-          ? selectedRegions.includes((user as any).region)
+          ? selectedRegions.includes(String(user.region ?? ""))
           : true;
 
       return matchesSearch && matchesRole && matchesStatus && matchesRegion;
@@ -223,6 +223,7 @@ export default function UsersManagement() {
     selectedStatuses,
     selectedRolesMulti,
     selectedRegions,
+    storeUsers,
   ]);
 
   // Pagination logic
@@ -244,7 +245,7 @@ export default function UsersManagement() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-4">
+      <div className="mx-auto w-full space-y-4">
         {/* Header */}
         <header>
           <h1 className="sm:text-3xl text-2xl font-bold">Users Management</h1>
@@ -525,7 +526,7 @@ export default function UsersManagement() {
                       {user.phone}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {(user as any).region}
+                      {user.region}
                     </TableCell>
                     <TableCell>{user.role}</TableCell>
                     <TableCell>

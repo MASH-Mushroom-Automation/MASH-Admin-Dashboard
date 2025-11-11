@@ -5,6 +5,7 @@ import type { Product } from "@/app/mash-market/product/page"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ActionsMenu } from "@/components/user-actions-menu"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
+import Image from "next/image"
 
 interface ProductTableProps {
   products: Product[]
@@ -17,14 +18,12 @@ interface ProductTableProps {
 
 export function ProductTable({
   products,
-  onApprove,
-  onReject,
   onArchive,
   showApproveReject = true,
   viewBase = "/mash-market/product",
 }: ProductTableProps) {
-  const [ArchiveProduct, setArchiveProduct] = useState<Product | null>(null)
-  const hasAnyReason = products.some((p) => (p as any).rejectReason)
+  const [archiveProduct, setArchiveProduct] = useState<Product | null>(null)
+  const hasAnyReason = products.some((p) => p.rejectReason !== undefined && p.rejectReason !== null)
   const formatPrice = (price: number) => `$${price.toFixed(2)}`
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -60,9 +59,11 @@ export function ProductTable({
             <TableRow key={product.id} className="hover:bg-muted/50">
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <img
+                  <Image
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded object-cover"
                   />
                   <p className="font-medium truncate">{product.name}</p>
@@ -89,7 +90,7 @@ export function ProductTable({
                 </>
               )}
 
-              {hasAnyReason && <TableCell className="truncate">{(product as any).rejectReason ?? "—"}</TableCell>}
+              {hasAnyReason && <TableCell className="truncate">{product.rejectReason ?? "—"}</TableCell>}
 
               {/* Actions: use three-dot menu for view/Archive in pending context */}
               <TableCell>
@@ -109,13 +110,13 @@ export function ProductTable({
         </TableBody>
       </Table>
       {/* Confirmation popover for Archive */}
-      {ArchiveProduct && (
+      {archiveProduct && (
         <ConfirmationPopover
           action="Archive"
           entity="Product"
           onConfirm={() => {
-            if (ArchiveProduct) {
-              onArchive?.(ArchiveProduct)
+            if (archiveProduct) {
+              onArchive?.(archiveProduct)
             }
             setArchiveProduct(null)
           }}

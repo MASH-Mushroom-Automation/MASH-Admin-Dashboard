@@ -1,4 +1,4 @@
-import React, { use } from "react";
+import { use } from "react";
 import Link from "next/link";
 import UserAvatar from "@/components/ecommerce/user-avatar";
 import StatusBadge from "@/components/status-badge";
@@ -43,7 +43,7 @@ const MOCK_USERS: User[] = [
     name: "Sarah Johnson",
     username: "sarahjohn",
     email: "sarah@example.com",
-    phone: "+1 (555) 123-4567",
+    phone: "+63 917 123 4567 123-4567",
     role: "Seller",
     status: "Active",
     avatar: "SJ",
@@ -67,7 +67,7 @@ const MOCK_USERS: User[] = [
     name: "Emma Davis",
     username: "emmadavis",
     email: "emma@example.com",
-    phone: "+1 (555) 345-6789",
+    phone: "+63 917 123 4567 345-6789",
     role: "Customer",
     status: "Inactive",
     avatar: "ED",
@@ -82,7 +82,7 @@ const MOCK_USERS: User[] = [
     name: "Sophie Brown",
     username: "sophieb",
     email: "sophie@example.com",
-    phone: "+1 (555) 789-0123",
+    phone: "+63 917 123 4567 789-0123",
     role: "Customer",
     status: "Active",
     avatar: "SB",
@@ -97,7 +97,7 @@ const MOCK_USERS: User[] = [
     name: "Liam Carter",
     username: "liamc",
     email: "liam@example.com",
-    phone: "+1 (555) 111-2222",
+    phone: "+63 917 123 4567 111-2222",
     role: "Seller",
     status: "Active",
     avatar: "LC",
@@ -121,7 +121,7 @@ const MOCK_USERS: User[] = [
     name: "Ava Thompson",
     username: "avath",
     email: "ava@example.com",
-    phone: "+1 (555) 333-4444",
+    phone: "+63 917 123 4567 333-4444",
     role: "Customer",
     status: "Inactive",
     avatar: "AT",
@@ -136,7 +136,7 @@ const MOCK_USERS: User[] = [
     name: "Noah Walker",
     username: "noahw",
     email: "noah@example.com",
-    phone: "+1 (555) 555-6666",
+    phone: "+63 917 123 4567 555-6666",
     role: "Customer",
     status: "Active",
     avatar: "NW",
@@ -151,7 +151,7 @@ const MOCK_USERS: User[] = [
     name: "Olivia Martin",
     username: "oliviam",
     email: "olivia@example.com",
-    phone: "+1 (555) 777-8888",
+    phone: "+63 917 123 4567 777-8888",
     role: "Seller",
     status: "Active",
     avatar: "OM",
@@ -187,7 +187,7 @@ export default function UserViewPage({
           <Card className="p-6">
             <h2 className="text-lg font-medium">User not found</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              We couldn't find a user with that id.
+              We could not find a user with that id.
             </p>
             <div className="mt-4">
               <Link href="/mash-market/user">
@@ -556,7 +556,7 @@ export default function UserViewPage({
                   </label>
                   <div className="mt-2">
                     {user.status ? (
-                      <StatusBadge status={user.status as any} />
+                      <StatusBadge status={user.status} />
                     ) : (
                       <span className="text-sm">-</span>
                     )}

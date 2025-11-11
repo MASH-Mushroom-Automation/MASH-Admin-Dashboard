@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import type { Product } from "@/app/mash-market/product/page";
 import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 interface ProductDetailsModalProps {
   product: Product;
@@ -20,7 +21,6 @@ export function ProductDetailsModal({
   onReject,
   showActions = false,
 }: ProductDetailsModalProps) {
-  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
   const formatPricePHP = (price: number) =>
     new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -30,12 +30,11 @@ export function ProductDetailsModal({
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString();
   const [selectedImage, setSelectedImage] = useState(0);
-  const images =
-    product.images && product.images.length > 0
-      ? product.images
-      : product.image
-      ? [product.image]
-      : [];
+  const images = useMemo(() => {
+    if (product.images && product.images.length > 0) return product.images
+    if (product.image) return [product.image]
+    return []
+  }, [product.images, product.image])
 
   // Keyboard navigation for multiple images
   useEffect(() => {
@@ -55,7 +54,7 @@ export function ProductDetailsModal({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [images.length, onClose]);
+  }, [images, onClose]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -75,10 +74,12 @@ export function ProductDetailsModal({
         <div className="p-6 space-y-6">
           {/* Product Images */}
           <div className="flex flex-col items-center gap-4">
-            <div className="relative flex items-center justify-center w-full">
-              <img
+              <div className="relative flex items-center justify-center w-full">
+              <Image
                 src={images[selectedImage] || "/placeholder.svg"}
                 alt={`${product.name} image ${selectedImage + 1}`}
+                width={640}
+                height={360}
                 className="max-w-full max-h-144 rounded-lg object-contain"
               />
 
@@ -126,9 +127,11 @@ export function ProductDetailsModal({
                         : "border-border"
                     }`}
                   >
-                    <img
+                    <Image
                       src={img}
                       alt={`${product.name} thumb ${idx + 1}`}
+                      width={48}
+                      height={48}
                       className="w-full h-full object-cover"
                     />
                   </button>

@@ -73,16 +73,20 @@ export default function CreateDeviceModal({ open, onOpenChange, onSave, initialD
     try {
       const raw = localStorage.getItem("mash_devices")
       if (raw) {
-        const parsed = JSON.parse(raw)
+        const parsed = JSON.parse(raw) as unknown
         if (Array.isArray(parsed)) {
           // find deviceIds that match our prefix-model-locationYear pattern and extract trailing number
           const regex = new RegExp(`^${prefix}-${modelCode}-${locationYear}-(\\d+)$`)
           const nums = parsed
-            .map((d: any) => {
-              const m = String(d.deviceId || "").match(regex)
-              return m ? parseInt(m[1], 10) : null
+            .map((d: unknown) => {
+              if (d && typeof d === "object" && "deviceId" in d) {
+                const dev = d as { deviceId?: unknown }
+                const m = String(dev.deviceId ?? "").match(regex)
+                return m ? parseInt(m[1], 10) : null
+              }
+              return null
             })
-            .filter((n: number | null) => n !== null) as number[]
+            .filter((n): n is number => typeof n === "number")
           if (nums.length > 0) {
             nextDecimal = Math.max(...nums) + 1
           } else {
@@ -91,7 +95,7 @@ export default function CreateDeviceModal({ open, onOpenChange, onSave, initialD
           }
         }
       }
-    } catch (e) {
+    } catch {
       nextDecimal = Date.now() % 10000
     }
 

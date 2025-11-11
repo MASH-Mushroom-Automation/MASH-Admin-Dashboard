@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ChangeEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -36,7 +35,7 @@ interface RegisterData {
   chamberName: string
   contactNumber: string
   address: string
-  model: string
+  model?: string
   locationYear: string
   uniqueDecimal: string
   deviceId: string
@@ -48,11 +47,18 @@ interface RegisterModalProps {
   onSave?: (data: RegisterData & { selectedDeviceId?: string }) => void
   availableDevices?: { id: string; deviceId: string; status?: string }[]
   // optional initial data for edit
-  initialData?: Partial<RegisterData & { id?: string }>
+  initialData?: Partial<RegisterData & { id?: string; selectedDeviceId?: string }>
 }
 export default function RegisterModal({ open, onOpenChange, onSave, availableDevices, initialData }: RegisterModalProps) {
   const [editingId, setEditingId] = useState<string | undefined>(undefined)
-  const [formData, setFormData] = useState({
+  type FormState = {
+    chamberName: string
+    contactNumber: string
+    address: string
+    model: string
+  }
+
+  const [formData, setFormData] = useState<FormState>({
     chamberName: "",
     contactNumber: "",
     address: "",
@@ -79,11 +85,12 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
     return Object.keys(newErrors).length === 0
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+    const key = name as keyof FormState
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [key]: value,
     }))
     if (errors[name]) {
       setErrors((prev) => ({
@@ -93,21 +100,37 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
     }
   }
 
+  // Define a concrete payload type for saving
+  type RegistrationPayload = {
+    id?: string
+    chamberName: string
+    contactNumber: string
+    address: string
+    model?: string
+    locationYear: string
+    uniqueDecimal: string
+    deviceId: string
+    selectedDeviceId?: string
+  }
+
   const handleSave = () => {
     if (validateForm()) {
       // if a device was selected from availableDevices, use that deviceId and include selectedDeviceId
       const selectedDevice = selectedDeviceId ? availableDevices?.find((a) => a.id === selectedDeviceId) : undefined
       const payloadDeviceId = selectedDevice ? selectedDevice.deviceId : deviceId
 
-      const registrationData: any = {
+
+      const registrationData: RegistrationPayload = {
         id: editingId,
-        ...formData,
+        chamberName: formData.chamberName,
+        contactNumber: formData.contactNumber,
+        address: formData.address,
+        model: formData.model || undefined,
         locationYear,
         uniqueDecimal,
         deviceId: payloadDeviceId,
+        ...(selectedDeviceId ? { selectedDeviceId } : {}),
       }
-
-      if (selectedDeviceId) registrationData.selectedDeviceId = selectedDeviceId
 
       console.log("Chamber and Device registered:", registrationData)
       onSave?.(registrationData)
@@ -118,15 +141,15 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
   // populate when opening for edit
   useEffect(() => {
     if (open && initialData) {
-      setEditingId((initialData as any).id)
+      setEditingId(initialData.id)
       setFormData((prev) => ({
         ...prev,
-        chamberName: (initialData as any).chamberName ?? "",
-        contactNumber: (initialData as any).contactNumber ?? "",
-        address: (initialData as any).address ?? "",
-        model: (initialData as any).model ?? "",
+        chamberName: initialData.chamberName ?? "",
+        contactNumber: initialData.contactNumber ?? "",
+        address: initialData.address ?? "",
+        model: initialData.model ?? "",
       }))
-      setSelectedDeviceId((initialData as any).selectedDeviceId)
+      setSelectedDeviceId(initialData.selectedDeviceId)
     }
     if (!open) {
       setEditingId(undefined)
