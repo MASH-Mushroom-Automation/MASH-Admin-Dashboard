@@ -122,7 +122,7 @@ export default function UsersManagement() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-4">
+      <div className="mx-auto w-full space-y-4">
         {/* Header */}
         <header>
           <h1 className="sm:text-3xl text-2xl font-bold">Users Management</h1>

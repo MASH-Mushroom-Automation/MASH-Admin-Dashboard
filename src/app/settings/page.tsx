@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { useForm, Controller } from "react-hook-form"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -47,8 +47,6 @@ export default function SettingsPage() {
 
   const form = useForm<SettingsForm>({ defaultValues })
   const { handleSubmit, reset, control, watch, setValue, getValues } = form
-  const [savedAt, setSavedAt] = useState<string | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   const onSave = (data: SettingsForm) => {
     // require current password when changing to a new password
@@ -56,16 +54,9 @@ export default function SettingsPage() {
       alert('Please enter your current password to change to a new password');
       return
     }
-    const payload = { ...data, _logoPreview: logoPreview }
     setValue("password", "")
     setValue("confirmPassword", "")
     setValue("currentPassword", "")
-  }
-
-  const handleLogo = (file?: File | null) => {
-    if (!file) return setLogoPreview(null)
-    const url = URL.createObjectURL(file)
-    setLogoPreview(url)
   }
 
   const password = watch("password")
@@ -154,6 +145,9 @@ export default function SettingsPage() {
                       <FormControl>
                         <Controller control={control} name="password" render={({ field }) => <Input {...field} type="password" />} />
                       </FormControl>
+                       {password && currentPassword && password !== currentPassword && (
+                        <p className="text-destructive text-sm">Wrong Password</p>
+                      )}
                       <FormDescription>Leave empty to keep current password.</FormDescription>
                     </FormItem>
 

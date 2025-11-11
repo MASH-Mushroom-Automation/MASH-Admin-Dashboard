@@ -17,74 +17,109 @@ import RegisterModal from "@/components/mash-grow/register-modal"
 import AssignDeviceModal from "@/components/mash-grow/assign-device-modal"
 import { toast } from "sonner"
 
-export default function RegisteredUsersPage() {
-  const DEFAULT_USERS = [
-    {
-      id: "1",
-      chamberNumber: "CH001",
-      name: "Ana Santos",
-      address: "Blk 2 Lot 5, Caloocan",
-      contactNumber: "+639171234567",
-      deviceId: "MASH-A1-CAL25-AC2523",
-    },
-    {
-      id: "2",
-      chamberNumber: "CH002",
-      name: "Rico Dela Cruz",
-      address: "123 Rizal St, Manila",
-      contactNumber: "+639172345678",
-      deviceId: "MASH-B2-CAL25-AC2524",
-    },
-    {
-      id: "3",
-      chamberNumber: "CH003",
-      name: "Liza Mercado",
-      address: "Unit 4, Quezon City",
-      contactNumber: "+639173456789",
-      deviceId: undefined,
-    },
-    // archived mock user for archive view
-    {
-      id: "4",
-      chamberNumber: "CH004",
-      name: "Old Account",
-      address: "Old St, Makati",
-      contactNumber: "+639174567890",
-      deviceId: "MASH-F6-ARCHIVED-AC2528",
-      archived: true,
-    },
-  ]
+// Types for users/devices used in this page
+type User = {
+  id: string
+  chamberNumber: string
+  name: string
+  address?: string
+  contactNumber?: string
+  deviceId?: string
+  archived?: boolean
+}
 
-  const [users, setUsers] = useState<any[]>([])
-  const [devices, setDevices] = useState<any[]>([])
-  const [selectedUser, setSelectedUser] = useState<any | null>(null)
-  const [editUser, setEditUser] = useState<any | null>(null)
+type Device = {
+  id: string
+  deviceId: string
+  model?: string
+  location?: string
+  status?: string
+  assigned?: boolean
+}
+
+type RegisterInitialData = {
+  id?: string
+  chamberName?: string
+  name?: string
+  address?: string
+  contactNumber?: string
+  deviceId?: string
+  selectedDeviceId?: string
+}
+
+type RegisterData = Partial<RegisterInitialData> & {
+  selectedDeviceId?: string
+}
+
+// Default mock users/devices moved to module scope so hooks don't need to include them as deps
+const DEFAULT_USERS: User[] = [
+  {
+    id: "1",
+    chamberNumber: "CH001",
+    name: "Ana Santos",
+    address: "Blk 2 Lot 5, Caloocan",
+    contactNumber: "+639171234567",
+    deviceId: "MASH-A1-CAL25-AC2523",
+  },
+  {
+    id: "2",
+    chamberNumber: "CH002",
+    name: "Rico Dela Cruz",
+    address: "123 Rizal St, Manila",
+    contactNumber: "+639172345678",
+    deviceId: "MASH-B2-CAL25-AC2524",
+  },
+  {
+    id: "3",
+    chamberNumber: "CH003",
+    name: "Liza Mercado",
+    address: "Unit 4, Quezon City",
+    contactNumber: "+639173456789",
+    deviceId: undefined,
+  },
+  // archived mock user for archive view
+  {
+    id: "4",
+    chamberNumber: "CH004",
+    name: "Old Account",
+    address: "Old St, Makati",
+    contactNumber: "+639174567890",
+    deviceId: "MASH-F6-ARCHIVED-AC2528",
+    archived: true,
+  },
+]
+
+const MOCK_DEVICES: Device[] = [
+  { id: "mock-1", deviceId: "MASH-AX1-CALOOCAN-AC2523", model: "AX1", location: "Caloocan", status: "Disconnected", assigned: false },
+  { id: "mock-2", deviceId: "MASH-BX2-MANILA-AC2524", model: "BX2", location: "Manila", status: "Connected", assigned: false },
+  { id: "mock-3", deviceId: "MASH-CX3-QUEZONCITY-AC2525", model: "CX3", location: "Quezon City", status: "Disconnected", assigned: false },
+]
+
+export default function RegisteredUsersPage() {
+  const [users, setUsers] = useState<User[]>([])
+  const [devices, setDevices] = useState<Device[]>([])
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [editUser, setEditUser] = useState<RegisterInitialData | null>(null)
   const [showArchived, setShowArchived] = useState(() => {
     try {
       const raw = localStorage.getItem("mash_users_showArchived")
       return raw === "true"
-    } catch (e) {
+    } catch {
       return false
     }
   })
   useEffect(() => {
     try {
       localStorage.setItem("mash_users_showArchived", showArchived ? "true" : "false")
-    } catch (e) {}
+    } catch {}
   }, [showArchived])
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
-  const [archivingUser, setArchivingUser] = useState<any | null>(null)
+  const [archivingUser, setArchivingUser] = useState<User | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
   const [registerOpen, setRegisterOpen] = useState(false)
   const [assignOpen, setAssignOpen] = useState(false)
-  const [userToAssign, setUserToAssign] = useState<any | null>(null)
+  const [userToAssign, setUserToAssign] = useState<User | null>(null)
 
-  // lightweight mock devices to show when no real devices exist in localStorage
-  const mockDevices = [
-    { id: "mock-1", deviceId: "MASH-AX1-CALOOCAN-AC2523", model: "AX1", location: "Caloocan", status: "Disconnected", assigned: false },
-    { id: "mock-2", deviceId: "MASH-BX2-MANILA-AC2524", model: "BX2", location: "Manila", status: "Connected", assigned: false },
-    { id: "mock-3", deviceId: "MASH-CX3-QUEZONCITY-AC2525", model: "CX3", location: "Quezon City", status: "Disconnected", assigned: false },
-  ]
 
   useEffect(() => {
     try {
@@ -96,11 +131,11 @@ export default function RegisteredUsersPage() {
           const parsed = JSON.parse(raw)
           if (Array.isArray(parsed) && parsed.length > 0) setUsers(parsed)
           else setUsers(DEFAULT_USERS)
-        } catch (e) {
+        } catch {
           setUsers(DEFAULT_USERS)
         }
       }
-    } catch (e) {
+    } catch {
       setUsers(DEFAULT_USERS)
     }
   }, [])
@@ -109,7 +144,7 @@ export default function RegisteredUsersPage() {
     try {
       const rawDevices = localStorage.getItem("mash_devices")
       setDevices(rawDevices ? JSON.parse(rawDevices) : [])
-    } catch (e) {
+    } catch {
       setDevices([])
     }
   }, [])
@@ -124,21 +159,21 @@ export default function RegisteredUsersPage() {
         try {
           const parsed = JSON.parse(raw)
           if (!Array.isArray(parsed) || parsed.length === 0) shouldSeed = true
-        } catch (e) {
+        } catch {
           shouldSeed = true
         }
       }
 
       // only seed when there's nothing persisted yet and our in-memory list is empty
       if (shouldSeed && devices.length === 0) {
-        setDevices(mockDevices)
+        setDevices(MOCK_DEVICES)
         try {
-          localStorage.setItem("mash_devices", JSON.stringify(mockDevices))
-        } catch (e) {
+          localStorage.setItem("mash_devices", JSON.stringify(MOCK_DEVICES))
+        } catch {
           // ignore
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [devices])
@@ -147,31 +182,25 @@ export default function RegisteredUsersPage() {
   useEffect(() => {
     try {
       localStorage.setItem("mash_users", JSON.stringify(users))
-    } catch (e) {}
+    } catch {}
   }, [users])
 
   useEffect(() => {
     try {
       localStorage.setItem("mash_devices", JSON.stringify(devices))
-    } catch (e) {}
+    } catch {}
   }, [devices])
 
-  const handleView = (u: any) => {
+  const handleView = (u: User) => {
     setSelectedUser(u)
     setViewOpen(true)
   }
 
-  const openAssign = (u: any) => {
+  const openAssign = (u: User) => {
     setUserToAssign(u)
     setAssignOpen(true)
   }
-
-  const handleDeleteUser = (u: any) => {
-    if (confirm(`Delete user ${u.name}? This will remove their registration.`)) {
-      setUsers((prev) => prev.filter((x) => x.id !== u.id))
-      toast.success("User deleted")
-    }
-  }
+ 
 
   const handleAssignSave = (selectedDeviceId: string | undefined) => {
     if (!userToAssign) return
@@ -187,7 +216,7 @@ export default function RegisteredUsersPage() {
 
     // unassign user's previous device if present
     setDevices((prev) => {
-      let next = prev.map((d) => ({ ...d }))
+      const next = prev.map((d) => ({ ...d }))
       const prevDevice = next.find((d) => d.deviceId === userToAssign.deviceId)
       if (prevDevice) prevDevice.assigned = false
       const newDevice = next.find((d) => d.id === selectedDeviceId)
@@ -200,7 +229,7 @@ export default function RegisteredUsersPage() {
     toast.success("Device assigned")
   }
 
-  const handleRegisterSave = (data: any) => {
+  const handleRegisterSave = (data: RegisterData) => {
     // If editing (id present), update existing entry
     if (data?.id) {
       setUsers((prev) =>
@@ -225,7 +254,7 @@ export default function RegisteredUsersPage() {
         address: data.address || "",
         contactNumber: data.contactNumber || "",
         // support selected device coming from either real devices or mockDevices
-        deviceId: data.deviceId || (data.selectedDeviceId ? (devices.find((d) => d.id === data.selectedDeviceId)?.deviceId ?? mockDevices.find((d) => d.id === data.selectedDeviceId)?.deviceId) : undefined),
+        deviceId: data.deviceId || (data.selectedDeviceId ? (devices.find((d) => d.id === data.selectedDeviceId)?.deviceId ?? MOCK_DEVICES.find((d: Device) => d.id === data.selectedDeviceId)?.deviceId) : undefined),
       }
 
       setUsers((prev) => [newUser, ...prev])
@@ -241,9 +270,8 @@ export default function RegisteredUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6 gap-4">
+      <div className="w-full px-4 py-8 overflow-x-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-2xl font-bold">{showArchived ? "Archive Users" : "Registered Users"}</h1>
             <p className="text-muted-foreground mt-1">{showArchived ? "Archived users" : "Users registered with devices"}</p>
@@ -263,6 +291,7 @@ export default function RegisteredUsersPage() {
             </Button>
           </div>
         </div>
+        
 
         <Card>
           <div className="overflow-x-auto">
@@ -334,9 +363,7 @@ export default function RegisteredUsersPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
-      </div>
-
+        </Card>     
         <ViewUserModal open={viewOpen} onOpenChange={setViewOpen} user={selectedUser ?? undefined} />
 
         {/* pass a fallback mock devices list when none exist in localStorage */}
@@ -350,13 +377,13 @@ export default function RegisteredUsersPage() {
             setRegisterOpen(false)
             handleRegisterSave(data)
           }}
-          availableDevices={(devices.filter((d) => !d.assigned).length > 0 ? devices.filter((d) => !d.assigned) : mockDevices)}
+          availableDevices={(devices.filter((d) => !d.assigned).length > 0 ? devices.filter((d) => !d.assigned) : MOCK_DEVICES)}
           initialData={editUser ?? undefined}
         />
         <AssignDeviceModal
           open={assignOpen}
           onOpenChange={setAssignOpen}
-          availableDevices={(devices.filter((d) => !d.assigned).length > 0 ? devices.filter((d) => !d.assigned) : mockDevices)}
+          availableDevices={(devices.filter((d) => !d.assigned).length > 0 ? devices.filter((d) => !d.assigned) : MOCK_DEVICES)}
           onAssign={(id) => handleAssignSave(id)}
         />
       {showArchiveConfirm && archivingUser && (

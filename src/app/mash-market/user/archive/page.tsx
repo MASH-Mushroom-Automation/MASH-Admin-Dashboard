@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 // Minimal mock of archived users (in a real app this would come from the server)
 const ARCHIVED_USERS = [
-  { id: "2", name: "Emma Davis", username: "emmadavis", email: "emma@example.com", phone: "+1 (555) 345-6789", role: "Customer", status: "Inactive" },
+  { id: "2", name: "Emma Davis", username: "emmadavis", email: "emma@example.com", phone: "+63 917 123 4567 345-6789", role: "Customer", status: "Inactive" },
 ]
 
 export default function UserArchivePage() {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,29 +17,32 @@ interface Props {
 }
 
 export default function ProductRejectReasonModal({ open, onOpenChange, onConfirm }: Props) {
-  const presetReasons = [
-    "Incomplete or inaccurate product details",
-    "Poor-quality or unclear product images",
-    "Misleading or false product information",
-    "Product violates marketplace policies",
-    "Product not allowed or restricted on the platform",
-    "Duplicate product listing",
-    "Incorrect product category or labeling",
-    "Pricing inconsistency or unrealistic pricing",
-    "Product description contains prohibited content",
-    "Low-quality or unsafe product for consumers",
-    "Other",
-  ]
+  const PRODUCT_PRESET_REASONS = useMemo(
+    () => [
+      "Incomplete or inaccurate product details",
+      "Poor-quality or unclear product images",
+      "Misleading or false product information",
+      "Product violates marketplace policies",
+      "Product not allowed or restricted on the platform",
+      "Duplicate product listing",
+      "Incorrect product category or labeling",
+      "Pricing inconsistency or unrealistic pricing",
+      "Product description contains prohibited content",
+      "Low-quality or unsafe product for consumers",
+      "Other",
+    ],
+    []
+  )
 
-  const [selectedReason, setSelectedReason] = useState<string>(presetReasons[0])
+  const [selectedReason, setSelectedReason] = useState<string>(PRODUCT_PRESET_REASONS[0])
   const [customReason, setCustomReason] = useState<string>("")
 
   useEffect(() => {
     if (open) {
-      setSelectedReason(presetReasons[0])
+      setSelectedReason(PRODUCT_PRESET_REASONS[0])
       setCustomReason("")
     }
-  }, [open])
+  }, [open, PRODUCT_PRESET_REASONS])
 
   const handleCancel = () => onOpenChange(false)
 
@@ -60,8 +63,8 @@ export default function ProductRejectReasonModal({ open, onOpenChange, onConfirm
           <p className="text-sm text-muted-foreground">Select a reason for rejecting this product.</p>
           <div>
             <label className="block text-sm font-medium mb-2">Reason</label>
-            <select className="w-full border rounded-md px-2 py-1" value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)}>
-              {presetReasons.map((r) => (
+              <select className="w-full border rounded-md px-2 py-1" value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)}>
+              {PRODUCT_PRESET_REASONS.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>

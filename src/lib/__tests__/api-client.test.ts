@@ -33,7 +33,7 @@ describe('apiClient', () => {
 
         const result = await apiClient.users.getAll()
 
-        expect(api.get).toHaveBeenCalledWith('v1/super-admin/users', { params: {} })
+        expect(api.get).toHaveBeenCalledWith('v1/super-admin/users')
         expect(result).toEqual(mockResponse)
       })
 
@@ -49,9 +49,7 @@ describe('apiClient', () => {
 
         await apiClient.users.getAll({ page: 2, limit: 50, search: 'john', role: 'Seller', status: 'Active' })
 
-        expect(api.get).toHaveBeenCalledWith('v1/super-admin/users', {
-          params: { page: 2, limit: 50, search: 'john', role: 'Seller', status: 'Active' },
-        })
+        expect(api.get).toHaveBeenCalledWith('v1/super-admin/users?page=2&limit=50&search=john&role=Seller&status=Active')
       })
 
       it('should log errors on fetch failure', async () => {
@@ -60,7 +58,7 @@ describe('apiClient', () => {
 
         await expect(apiClient.users.getAll()).rejects.toThrow('Network error')
         // logger.apiError is called, which internally calls logger.error
-        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users', mockError, {})
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users', mockError, undefined)
       })
     })
 
@@ -87,11 +85,11 @@ describe('apiClient', () => {
     describe('update', () => {
       it('should update user successfully', async () => {
         const mockUpdated = { id: '123', name: 'John Updated', email: 'john@example.com', role: 'Seller', status: 'Inactive' }
-        ;(api.patch as jest.Mock).mockResolvedValue({ data: mockUpdated })
+        ;(api.put as jest.Mock).mockResolvedValue({ data: mockUpdated })
 
         const result = await apiClient.users.update('123', { status: 'Inactive' })
 
-        expect(api.patch).toHaveBeenCalledWith('v1/super-admin/users/123', { status: 'Inactive' })
+        expect(api.put).toHaveBeenCalledWith('v1/super-admin/users/123', { status: 'Inactive' })
         expect(result).toEqual(mockUpdated)
       })
 
@@ -139,9 +137,7 @@ describe('apiClient', () => {
 
         const result = await apiClient.products.getAll({ status: 'Approved' })
 
-        expect(api.get).toHaveBeenCalledWith('v1/super-admin/products', {
-          params: { status: 'Approved' },
-        })
+        expect(api.get).toHaveBeenCalledWith('v1/super-admin/products?status=Approved')
         expect(result).toEqual(mockResponse)
       })
 
@@ -150,7 +146,7 @@ describe('apiClient', () => {
         ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.products.getAll()).rejects.toThrow('Network error')
-        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/products', mockError, {})
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/products', mockError, undefined)
       })
     })
 
@@ -217,7 +213,7 @@ describe('apiClient', () => {
         ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
         await expect(apiClient.sellers.getAll()).rejects.toThrow('Network error')
-        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/sellers', mockError, {})
+        expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/sellers', mockError, undefined)
       })
     })
 
@@ -282,7 +278,7 @@ describe('apiClient', () => {
       ;(api.get as jest.Mock).mockRejectedValue(mockError)
 
       await expect(apiClient.users.getAll()).rejects.toThrow('Request timeout')
-      expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users', mockError, {})
+      expect(logger.apiError).toHaveBeenCalledWith('v1/super-admin/users', mockError, undefined)
     })
 
     it('should handle 401 unauthorized errors', async () => {

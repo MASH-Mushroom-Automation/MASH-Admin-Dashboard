@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Search, ChevronLeft } from "lucide-react"
+import { Search } from "lucide-react"
 import { SellerTable } from "@/components/ecommerce/seller-table"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -100,8 +100,8 @@ export default function SellerContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+      
+      <div className="w-full px-4 py-8 overflow-x-hidden">
         {/* Header Section */}
         <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
@@ -172,19 +172,16 @@ export default function SellerContent() {
 
         {/* Table Section */}
         <Card className="overflow-hidden">
-  <SellerTable 
-    sellers={paginatedSellers.filter(seller => seller.status === activeTab)}
-    activeTab={activeTab as any}
-    searchQuery={searchQuery}
-    onView={handleView}
-    onAccept={handleAccept}
-    onReject={handleReject}
-    onArchive={handleArchive}
-  />
-</Card>
-
-        {/* View now navigates to the user detail page. Modal removed. */}
-
+          <SellerTable 
+            sellers={paginatedSellers.filter(seller => seller.status === activeTab)}
+            activeTab={activeTab}
+            searchQuery={searchQuery}
+            onView={handleView}
+            onAccept={handleAccept}
+            onReject={handleReject}
+            onArchive={handleArchive}
+          />
+        </Card>
 
         {/* Pagination Section */}
              <PaginationWrapper 
@@ -198,6 +195,5 @@ export default function SellerContent() {
         )}
 
       </div>
-    </div>
   )
 }

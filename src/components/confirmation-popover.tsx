@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
@@ -18,23 +18,28 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
   const [selectedReason, setSelectedReason] = useState<string>("")
   const [customReason, setCustomReason] = useState<string>("")
 
-  const presetReasons = [
-    "Incomplete business or personal information",
-    "Invalid identification or verification documents",
-    "Unverified contact information",
-    "Submitted products are not valid or allowed on the platform",
-    "Violation of seller application policies",
-    "Suspicious or duplicate application",
-    "Failure to meet platform requirements",
-    "Other",
-  ]
+// keep a simple static list - will be memoized inside the component to satisfy lint
 
   // preselect first reason for UX
+  const presetReasons = useMemo(
+    () => [
+      "Incomplete business or personal information",
+      "Invalid identification or verification documents",
+      "Unverified contact information",
+      "Submitted products are not valid or allowed on the platform",
+      "Violation of seller application policies",
+      "Suspicious or duplicate application",
+      "Failure to meet platform requirements",
+      "Other",
+    ],
+    []
+  )
+
   useEffect(() => {
     if (action === "reject" && !selectedReason) {
       setSelectedReason(presetReasons[0])
     }
-  }, [action])
+  }, [action, selectedReason, presetReasons])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, use } from "react";
+import React, { useEffect, useRef, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Product } from "@/app/mash-market/product/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -63,9 +62,7 @@ export default function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
   const product = MOCK_PRODUCTS.find((p) => p.id === id) ?? null;
-  const [loading, setLoading] = useState(false);
   const descRef = useRef<HTMLTextAreaElement | null>(null);
 
   // auto-resize description textarea to fit content and avoid scrollbars
@@ -84,7 +81,7 @@ export default function ProductDetailPage({
           <Card className="p-6">
             <h2 className="text-lg font-medium">Product not found</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              We couldn't find a product with that id.
+              We could not find a product with that id.
             </p>
             <div className="mt-4">
               <Link href="/mash-market/product">

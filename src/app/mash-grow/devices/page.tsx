@@ -15,7 +15,17 @@ import { Button } from "@/components/ui/button"
 import CreateDeviceModal from "@/components/mash-grow/create-device-modal"
 import { toast } from "sonner"
 
-const DEFAULT_DEVICES = [
+type Device = {
+  id: string
+  deviceId: string
+  model: string
+  location: string
+  status: "Connected" | "Disconnected"
+  assigned?: boolean
+  archived?: boolean
+}
+
+const DEFAULT_DEVICES: Device[] = [
   { id: "d1", deviceId: "MASH-A1-CALOOCAN-AC2523", model: "A1", location: "Caloocan", status: "Connected", assigned: true },
   { id: "d2", deviceId: "MASH-B2-MANILA-AC2524", model: "B2", location: "Manila", status: "Disconnected", assigned: false },
   { id: "d3", deviceId: "MASH-C3-QUEZONCITY-AC2525", model: "C3", location: "Quezon City", status: "Connected", assigned: false },
@@ -28,49 +38,49 @@ const DEFAULT_DEVICES = [
 ]
 
 export default function DevicesPage() {
-  const [devices, setDevices] = useState(() => {
+  const [devices, setDevices] = useState<Device[]>(() => {
     try {
       const raw = localStorage.getItem("mash_devices")
       if (!raw || raw === "null") return DEFAULT_DEVICES
       try {
-        const parsed = JSON.parse(raw)
+        const parsed = JSON.parse(raw) as Device[]
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
         return DEFAULT_DEVICES
-      } catch (e) {
+      } catch {
         return DEFAULT_DEVICES
       }
-    } catch (e) {
+    } catch {
       return DEFAULT_DEVICES
     }
   })
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [editDevice, setEditDevice] = useState<any | null>(null)
+  const [editDevice, setEditDevice] = useState<Device | null>(null)
   const [showArchived, setShowArchived] = useState(() => {
     try {
       const raw = localStorage.getItem("mash_devices_showArchived")
       return raw === "true"
-    } catch (e) {
+    } catch {
       return false
     }
   })
   useEffect(() => {
     try {
       localStorage.setItem("mash_devices_showArchived", showArchived ? "true" : "false")
-    } catch (e) {}
+    } catch {}
   }, [showArchived])
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
-  const [archivingDevice, setArchivingDevice] = useState<any | null>(null)
+  const [archivingDevice, setArchivingDevice] = useState<Device | null>(null)
 
   useEffect(() => {
     try {
       localStorage.setItem("mash_devices", JSON.stringify(devices))
-    } catch (e) {}
+    } catch {}
   }, [devices])
 
-  const handleCreateSave = (device: any) => {
+  const handleCreateSave = (device: Device) => {
     // if device exists update, otherwise prepend
-    setDevices((prev: any[]) => {
+    setDevices((prev: Device[]) => {
       const exists = prev.find((d) => d.id === device.id)
       if (exists) return prev.map((p) => (p.id === device.id ? device : p))
       return [device, ...prev]
@@ -79,8 +89,8 @@ export default function DevicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full px-4 py-8 overflow-x-hidden">
+      <div>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">{showArchived ? "Devices Archive" : "Devices"}</h1>
@@ -114,7 +124,7 @@ export default function DevicesPage() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {devices.filter((d: any) => (showArchived ? Boolean(d.archived) : !d.archived)).map((d: any) => (
+                {devices.filter((d) => (showArchived ? Boolean(d.archived) : !d.archived)).map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-mono">{d.deviceId}</TableCell>
                     <TableCell>{d.model}</TableCell>
@@ -145,7 +155,7 @@ export default function DevicesPage() {
                               <>
                                 <DropdownMenuItem onSelect={() => {
                                   // restore archived device
-                                  setDevices((prev: any[]) => prev.map((p) => (p.id === d.id ? { ...p, archived: false } : p)))
+                                  setDevices((prev: Device[]) => prev.map((p) => (p.id === d.id ? { ...p, archived: false } : p)))
                                   toast.success("Device restored")
                                 }}>Restore</DropdownMenuItem>
                               </>
@@ -169,14 +179,24 @@ export default function DevicesPage() {
           if (!open) setEditDevice(null)
         }}
         onSave={handleCreateSave}
-        initialDevice={editDevice ?? undefined}
+        initialDevice={
+          editDevice
+            ? {
+                id: editDevice.id,
+                deviceId: editDevice.deviceId,
+                model: editDevice.model ?? "",
+                location: editDevice.location ?? "",
+                status: editDevice.status === "Connected" ? "Connected" : "Disconnected",
+              }
+            : undefined
+        }
       />
       {showArchiveConfirm && archivingDevice && (
         <ConfirmationPopover
           action="Archive"
           entity="Device"
           onConfirm={() => {
-            setDevices((prev: any[]) => prev.map((p) => (p.id === archivingDevice.id ? { ...p, archived: true, assigned: false } : p)))
+            setDevices((prev: Device[]) => prev.map((p) => (p.id === archivingDevice.id ? { ...p, archived: true, assigned: false } : p)))
             setShowArchiveConfirm(false)
             setArchivingDevice(null)
             toast.success("Device archived")
