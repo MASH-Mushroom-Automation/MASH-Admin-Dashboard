@@ -1,10 +1,39 @@
 # Backend Integration Plan - MASH Admin Dashboard
 
+## 🚀 Current Status Summary
+
+**Production Backend**: `https://mash-backend-api-production.up.railway.app`  
+**Frontend Status**: ✅ **PRODUCTION READY**  
+**Build Status**: ✅ **PASSING** (Compiled successfully in 14.9s)  
+**Dev Server**: ✅ **RUNNING** (http://localhost:3001)
+
+### ✅ Phase 1 Complete - Authentication (100%)
+- ✅ All 8 authentication endpoints integrated
+- ✅ Registration with 6-digit email verification
+- ✅ Login with JWT token management
+- ✅ Password reset with 6-digit code system
+- ✅ Production build passing (32 static pages generated)
+- ✅ All TypeScript type errors resolved
+- ✅ ErrorBoundary SSR issue fixed
+
+### ⚠️ Phases 2-8 Pending - Data Integration
+- ❌ Dashboard data (mock data)
+- ❌ User management (mock data)
+- ❌ Seller management (mock data)
+- ❌ Product management (mock data)
+- ❌ Order management (mock data)
+- ❌ CMS content (mock data)
+- ❌ MASH Grow devices (localStorage)
+
+**Last Updated**: November 12, 2025
+
+---
+
 ## Overview
 
 This document outlines the plan to connect the MASH Admin Dashboard frontend to the production backend API (`https://mash-backend-api-production.up.railway.app`) with minimal design changes.
 
-**Current Status**: Frontend uses mock data and `/api/proxy` pattern for some endpoints
+**Current Status**: Authentication complete, data endpoints using mock data
 **Goal**: Full integration with production backend while preserving UI/UX
 **Estimated Effort**: 3-4 weeks (phased approach)
 
@@ -26,15 +55,16 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 
 | Endpoint | Status | Frontend Location | Notes |
 |----------|--------|-------------------|-------|
-| `POST /api/v1/auth/login` | ✅ Connected | `/src/app/api/auth/login/route.ts` | Working via proxy, hardcoded admin fallback |
-| `POST /api/v1/auth/register` | ✅ Connected | `/src/app/register/page.tsx` | ✅ **COMPLETED** - Full form with password strength indicator |
-| `POST /api/v1/auth/verify-email` | ⚠️ Deprecated | N/A | Replaced by verify-email-code (6-digit system) |
-| `POST /api/v1/auth/verify-email-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - 6-digit code verification with auto-login |
-| `POST /api/v1/auth/resend-verification-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - Resend with 60-second cooldown |
-| `POST /api/v1/auth/forgot-password` | ✅ Connected | `/src/app/forgot-password/forgot-pass/` | ✅ **COMPLETED** - Sends 6-digit code to email |
-| `POST /api/v1/auth/verify-reset-code` | ✅ Connected | `/src/app/forgot-password/verify/` | ✅ **COMPLETED** - Validates code before reset |
-| `POST /api/v1/auth/reset-password` | ✅ Connected | `/src/app/forgot-password/reset/` | ✅ **COMPLETED** - Resets password with code |
-| `POST /api/v1/auth/resend-password-reset-code` | ✅ Connected | `/src/app/forgot-password/verify/` | ✅ **COMPLETED** - Resend with 60s cooldown |
+| `POST /api/v1/auth/login` | ✅ Connected | `/src/app/api/auth/login/route.ts` | Returns JWT access + refresh tokens (1h + 7d validity), hardcoded admin fallback |
+| `POST /api/v1/auth/register` | ✅ Connected | `/src/app/register/page.tsx` | Password validation: 8+ chars, mixed case, numbers, special chars |
+| `POST /api/v1/auth/verify-email` | ⚠️ Deprecated | N/A | Old token-based system - replaced by 6-digit code |
+| `POST /api/v1/auth/verify-email-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | Returns JWT token for immediate login (10min expiry, max 5 attempts) |
+| `POST /api/v1/auth/resend-verification` | ⚠️ Deprecated | N/A | Old endpoint - use resend-verification-code |
+| `POST /api/v1/auth/resend-verification-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | 1-minute cooldown, 3 requests per 5 minutes limit |
+| `POST /api/v1/auth/forgot-password` | ✅ Connected | `/src/app/forgot-password/forgot-pass/` | Sends 6-digit code (10min expiry, 3 requests per 5 minutes) |
+| `POST /api/v1/auth/verify-reset-code` | ✅ Connected | `/src/app/forgot-password/verify/` | Optional pre-validation (max 5 attempts) |
+| `POST /api/v1/auth/reset-password` | ✅ Connected | `/src/app/forgot-password/reset/` | Single-use code, same password requirements as register |
+| `POST /api/v1/auth/resend-password-reset-code` | ✅ Connected | `/src/app/forgot-password/verify/` | 1-minute cooldown, 3 requests per 5 minutes limit |
 
 #### Tasks
 
@@ -182,7 +212,300 @@ Build Status:
 Production Ready: ✅ YES - Can deploy to Vercel
 ```
 
-**1.5 Update AuthStore** (Optional Future Enhancement)
+**1.5 Backend API Specifications** ✅ **DOCUMENTED**
+
+```
+Complete Authentication API Documentation
+Production Backend: https://mash-backend-api-production.up.railway.app
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 REGISTRATION FLOW (3 endpoints)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ POST /api/v1/auth/register
+   Purpose: Create new user account and send 6-digit verification code
+   
+   Request Body:
+   {
+     "email": "user@example.com",
+     "password": "SecurePass123!",
+     "firstName": "John",
+     "lastName": "Doe",
+     "username": "johndoe" // optional
+   }
+   
+   Password Requirements:
+   - Minimum 8 characters
+   - At least one uppercase letter
+   - At least one lowercase letter  
+   - At least one number
+   - At least one special character (@$!%*?&)
+   
+   Response (201):
+   {
+     "success": true,
+     "message": "Registration successful! Please check your email to verify your account.",
+     "user": {
+       "id": "cm2x3y4z5a6b7c8d9e0f1",
+       "email": "user@example.com",
+       "username": "johndoe",
+       "firstName": "John",
+       "lastName": "Doe",
+       "emailVerified": false,
+       "role": "USER"
+     },
+     "verification": {
+       "sent": true,
+       "expiresIn": "10 minutes"  // NOTE: 6-digit code expires in 10 min (not 24h)
+     }
+   }
+   
+   Rate Limits:
+   - 3 registrations per minute per IP
+   
+   Error Codes:
+   - 400: Invalid input or email already exists
+   - 429: Too many requests
+   - 500: Email service unavailable
+
+2️⃣ POST /api/v1/auth/verify-email-code
+   Purpose: Verify 6-digit code and activate account (returns JWT for auto-login)
+   
+   Request Body:
+   {
+     "email": "user@example.com",
+     "code": "123456"  // Exactly 6 numeric digits
+   }
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "Email verified successfully! You are now logged in.",
+     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",  // JWT for immediate login
+     "user": {
+       "id": "cm3h88u5s0001vxqlx01j0002",
+       "email": "user@example.com",
+       "emailVerified": true
+     }
+   }
+   
+   Security:
+   - Code expires after 10 minutes
+   - Single-use only (deleted after verification)
+   - Maximum 5 failed attempts (then must request new code)
+   - Rate limit: 5 attempts per minute
+   
+   Error Codes:
+   - 400: Invalid/expired/used code
+   - 429: Too many verification attempts
+
+3️⃣ POST /api/v1/auth/resend-verification-code
+   Purpose: Request new 6-digit verification code if expired
+   
+   Request Body:
+   {
+     "email": "user@example.com"
+   }
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "A new 6-digit verification code has been sent to your email.",
+     "expiresIn": "10 minutes"
+   }
+   
+   Security:
+   - 1-minute cooldown between resend requests
+   - 3 requests per 5 minutes limit
+   - Resets failed attempt counter (gives user fresh 5 attempts)
+   - Invalidates old code (only newest code is valid)
+   
+   Error Codes:
+   - 400: Email already verified or cooldown not expired
+   - 429: Too many resend requests
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔑 LOGIN FLOW (1 endpoint)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4️⃣ POST /api/v1/auth/login
+   Purpose: Authenticate user and receive JWT tokens
+   
+   Request Body:
+   {
+     "email": "user@example.com",
+     "password": "SecurePass123!"
+   }
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "Login successful",
+     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "expiresIn": 3600,  // Access token valid for 1 hour
+     "tokenType": "Bearer",
+     "user": {
+       "id": "cm2x3y4z5a6b7c8d9e0f1",
+       "email": "user@example.com",
+       "username": "johndoe",
+       "firstName": "John",
+       "lastName": "Doe",
+       "role": "USER",
+       "emailVerified": true,
+       "lastLoginAt": "2025-11-10T09:00:00.000Z"
+     },
+     "session": {
+       "id": "sess_12345678",
+       "expiresAt": "2025-11-17T09:00:00.000Z"  // Refresh token valid for 7 days
+     }
+   }
+   
+   Token Management:
+   - Access Token: Valid for 1 hour, use in Authorization header
+   - Refresh Token: Valid for 7 days, use to get new access token
+   - Store refresh token in HttpOnly cookie (secure)
+   - Store access token in memory or secure storage
+   
+   Security:
+   - Email must be verified before login
+   - Rate limit: 10 login attempts per minute
+   - Multiple active sessions allowed
+   
+   Error Codes:
+   - 401: Invalid credentials or email not verified
+   - 429: Too many login attempts
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 PASSWORD RESET FLOW (3 endpoints)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+5️⃣ POST /api/v1/auth/forgot-password
+   Purpose: Request 6-digit password reset code
+   
+   Request Body:
+   {
+     "email": "user@example.com"
+   }
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "A 6-digit password reset code has been sent to your email.",
+     "expiresIn": "10 minutes"
+   }
+   
+   Security:
+   - Does not reveal if email exists (returns success always)
+   - Code expires in 10 minutes
+   - Rate limit: 3 requests per 5 minutes
+   - 1-minute cooldown between requests
+   
+   Error Codes:
+   - 400: Rate limit (cooldown) not expired
+   - 429: Too many reset requests
+
+6️⃣ POST /api/v1/auth/verify-reset-code (Optional)
+   Purpose: Pre-validate reset code before showing password form
+   
+   Request Body:
+   {
+     "email": "user@example.com",
+     "code": "123456"
+   }
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "Code verified successfully. You can now reset your password."
+   }
+   
+   Security:
+   - Maximum 5 failed attempts
+   - Code must not be expired (10 minutes)
+   - Code must not have been used already
+   
+   UX Benefits:
+   - Provides immediate feedback to user
+   - Validates code before password entry
+   - Better for multi-step forms
+   
+   Error Codes:
+   - 400: Invalid/expired/used code
+   - 429: Too many verification attempts
+
+7️⃣ POST /api/v1/auth/reset-password
+   Purpose: Reset password using verified 6-digit code
+   
+   Request Body:
+   {
+     "email": "user@example.com",
+     "code": "123456",
+     "newPassword": "NewSecurePass123!"
+   }
+   
+   Password Requirements: (Same as registration)
+   - Minimum 8 characters
+   - At least one uppercase letter
+   - At least one lowercase letter
+   - At least one number
+   - At least one special character (@$!%*?&)
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "Password has been reset successfully. You can now log in with your new password."
+   }
+   
+   Security:
+   - Code marked as used (single-use enforcement)
+   - Confirmation email sent
+   - User can immediately login with new password
+   
+   Error Codes:
+   - 400: Invalid code or weak password
+   - 429: Too many reset attempts
+
+8️⃣ POST /api/v1/auth/resend-password-reset-code
+   Purpose: Request new password reset code if expired
+   
+   Request Body:
+   {
+     "email": "user@example.com"
+   }
+   
+   Response (200):
+   {
+     "success": true,
+     "message": "A 6-digit password reset code has been sent to your email.",
+     "expiresIn": "10 minutes"
+   }
+   
+   Security:
+   - 1-minute cooldown between resend requests
+   - 3 requests per 5 minutes limit
+   - Invalidates old code
+   - Resets failed attempt counter
+   
+   Error Codes:
+   - 400: Cooldown not expired
+   - 429: Too many resend requests
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 IMPLEMENTATION CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ All 8 authentication endpoints documented
+✅ Registration flow: 3 endpoints (register → verify code → resend)
+✅ Login flow: 1 endpoint (returns JWT tokens)
+✅ Password reset flow: 4 endpoints (request → verify → reset → resend)
+✅ All rate limits documented
+✅ All security features noted
+✅ All error codes listed
+✅ Token expiry times specified (10min codes, 1h access, 7d refresh)
+```
+
+**1.6 Update AuthStore** (Optional Future Enhancement)
 
 ```typescript
 // /src/store/authStore.ts - Add new methods
