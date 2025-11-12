@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,9 +40,18 @@ export default function ResetPasswordPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm<ResetFormData>({
     resolver: zodResolver(resetSchema),
   });
+
+  // Auto-fill the code if it was verified in the previous step
+  useEffect(() => {
+    const verifiedCode = sessionStorage.getItem("resetCode");
+    if (verifiedCode) {
+      setValue("otp", verifiedCode);
+    }
+  }, [setValue]);
 
   // Uncomment below to display password strength indicator
   // const password = watch("newPassword");
@@ -76,8 +85,9 @@ export default function ResetPasswordPage() {
         throw new Error("Session expired. Please start over.");
       }
 
+      // Use the correct reset-password endpoint with 6-digit code
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/forgot-password`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/reset-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -96,6 +106,7 @@ export default function ResetPasswordPage() {
 
       toast.success("Password successfully reset. Redirecting to login...");
       sessionStorage.removeItem("resetEmail");
+      sessionStorage.removeItem("resetCode"); // Clean up the stored code
       setTimeout(() => {
         router.push("/login");
       }, 1500);

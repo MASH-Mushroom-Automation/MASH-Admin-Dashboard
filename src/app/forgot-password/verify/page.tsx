@@ -60,11 +60,10 @@ export default function VerifyOTPPage() {
 
   const onSubmit = async (data: OTPFormData) => {
     setIsLoading(true);
-//   const onSubmit = async (_data: OTPFormData) => {
-//     setIsLoading(true)
     try {
+      // Call the verify-reset-code endpoint (optional pre-validation)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/verify-email`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/verify-reset-code`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -74,11 +73,14 @@ export default function VerifyOTPPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Invalid OTP");
+        throw new Error(errorData.message || "Invalid or expired code");
       }
 
+      // Store the verified code in sessionStorage for the reset page
+      sessionStorage.setItem("resetCode", data.otp);
+      
       toast.success(
-        "OTP verified successfully. Proceed to reset your password."
+        "Code verified successfully. Proceed to reset your password."
       );
       router.push("/forgot-password/reset");
     } catch (error) {
@@ -93,8 +95,9 @@ export default function VerifyOTPPage() {
   const handleResendOTP = async () => {
     setResendLoading(true);
     try {
+      // Use the correct password reset resend endpoint
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/resend-verification`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/resend-password-reset-code`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -104,14 +107,14 @@ export default function VerifyOTPPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to resend OTP");
+        throw new Error(errorData.message || "Failed to resend code");
       }
 
-      toast.success("OTP resent to your email.");
+      toast.success("New code sent to your email.");
       setTimeLeft(60);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to resend OTP"
+        error instanceof Error ? error.message : "Failed to resend code"
       );
     } finally {
       setResendLoading(false);

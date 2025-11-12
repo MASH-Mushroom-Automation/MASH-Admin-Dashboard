@@ -12,9 +12,9 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 
 ## 🎯 Integration Strategy
 
-### Phase 1: Authentication System (Week 1) ✅ PARTIALLY DONE
+### Phase 1: Authentication System (Week 1) ✅ 100% COMPLETE
 
-**Status**: Login flow exists, needs enhancement for new auth endpoints
+**Status**: All authentication flows complete with 6-digit verification system. Login, Registration, and Password Reset fully integrated.
 
 #### Current Implementation
 - ✅ Login endpoint: `/src/app/api/auth/login/route.ts`
@@ -26,15 +26,15 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 
 | Endpoint | Status | Frontend Location | Notes |
 |----------|--------|-------------------|-------|
-| `POST /api/v1/auth/login` | ✅ Connected | `/src/app/api/auth/login/route.ts` | Working via proxy |
-| `POST /api/v1/auth/register` | ✅ Connected | `/src/app/register/page.tsx` | ✅ **COMPLETED** - Registration form with validation |
-| `POST /api/v1/auth/verify-email` | ⚠️ Partial | `/src/app/forgot-password/verify/` | Currently for password reset only |
-| `POST /api/v1/auth/verify-email-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - 6-digit code verification |
-| `POST /api/v1/auth/resend-verification-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - Resend with cooldown |
-| `POST /api/v1/auth/forgot-password` | ✅ Connected | `/src/app/forgot-password/forgot-pass/` | Already implemented |
-| `POST /api/v1/auth/verify-reset-code` | ❌ Missing | Create: `/src/app/forgot-password/verify-code/` | Optional pre-validation step |
-| `POST /api/v1/auth/reset-password` | ✅ Connected | `/src/app/forgot-password/reset/` | Already implemented |
-| `POST /api/v1/auth/resend-password-reset-code` | ❌ Missing | Add to: `/src/app/forgot-password/verify/` | Enhance existing resend |
+| `POST /api/v1/auth/login` | ✅ Connected | `/src/app/api/auth/login/route.ts` | Working via proxy, hardcoded admin fallback |
+| `POST /api/v1/auth/register` | ✅ Connected | `/src/app/register/page.tsx` | ✅ **COMPLETED** - Full form with password strength indicator |
+| `POST /api/v1/auth/verify-email` | ⚠️ Deprecated | N/A | Replaced by verify-email-code (6-digit system) |
+| `POST /api/v1/auth/verify-email-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - 6-digit code verification with auto-login |
+| `POST /api/v1/auth/resend-verification-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - Resend with 60-second cooldown |
+| `POST /api/v1/auth/forgot-password` | ✅ Connected | `/src/app/forgot-password/forgot-pass/` | ✅ **COMPLETED** - Sends 6-digit code to email |
+| `POST /api/v1/auth/verify-reset-code` | ✅ Connected | `/src/app/forgot-password/verify/` | ✅ **COMPLETED** - Validates code before reset |
+| `POST /api/v1/auth/reset-password` | ✅ Connected | `/src/app/forgot-password/reset/` | ✅ **COMPLETED** - Resets password with code |
+| `POST /api/v1/auth/resend-password-reset-code` | ✅ Connected | `/src/app/forgot-password/verify/` | ✅ **COMPLETED** - Resend with 60s cooldown |
 
 #### Tasks
 
@@ -49,53 +49,76 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 ```
 Location: /src/app/register/
 Components created:
-  ✅ page.tsx - Registration form with React Hook Form + Zod validation
-  ✅ layout.tsx - Consistent styling with login page
-  ✅ verify/page.tsx - 6-digit code verification with auto-login
+  ✅ page.tsx - Registration form with React Hook Form + Zod validation (267 lines)
+  ✅ layout.tsx - Consistent styling with login page (15 lines)
+  ✅ verify/page.tsx - 6-digit code verification with auto-login (238 lines)
   
 Features implemented:
   ✅ Email validation (DNS check via backend)
-  ✅ Password strength indicator (5-level visual feedback)
+  ✅ Password strength indicator (5-level visual feedback: Weak→Strong)
   ✅ First name, last name, username (optional) fields
   ✅ Real-time form validation with error messages
-  ✅ Loading states with spinners
+  ✅ Loading states with spinners (Loader2 icon)
   ✅ Resend code with 60-second cooldown timer
   ✅ Direct backend API calls (bypasses proxy for registration)
   ✅ Auto-login after verification (JWT token stored in tokenManager)
   ✅ SessionStorage for email persistence between steps
   ✅ Redirect to dashboard after successful verification
+  ✅ Show/hide password toggle with Eye/EyeOff icons
+  ✅ Numeric-only input for 6-digit code (auto-focus, maxLength)
+  
+Backend Integration:
+  ✅ POST /api/v1/auth/register - Create new user account
+  ✅ POST /api/v1/auth/verify-email-code - Verify 6-digit code
+  ✅ POST /api/v1/auth/resend-verification-code - Resend code with cooldown
   
 Flow:
-  1. User fills registration form
-  2. POST /api/v1/auth/register (direct to backend)
-  3. Email stored in sessionStorage
+  1. User fills registration form → validates all fields
+  2. POST /api/v1/auth/register (direct to backend, no proxy)
+  3. Email stored in sessionStorage.setItem('registerEmail', email)
   4. Redirect to /register/verify
-  5. User enters 6-digit code from email
+  5. User enters 6-digit code from email (expires in 10 minutes)
   6. POST /api/v1/auth/verify-email-code
-  7. JWT token stored in memory (tokenManager)
-  8. User object stored in authStore
-  9. Redirect to /dashboard (auto-logged in)
+  7. JWT accessToken + refreshToken received
+  8. setAccessToken(token, expiresIn) → stores in memory (tokenManager)
+  9. setUser(user) → stores in Zustand (authStore)
+  10. sessionStorage.removeItem('registerEmail') → cleanup
+  11. Redirect to /dashboard (auto-logged in, can make authenticated requests)
 ```
 
-**1.3 Migrate to 6-Digit Code System**
-
-Current forgot-password flow uses token-based verification (24h expiry).
-Backend uses 6-digit codes (10min expiry) for both email verification and password reset.
-
-Changes needed:
-```typescript
-// OLD: /src/app/forgot-password/verify/page.tsx
-const otpSchema = z.object({
-  otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
-})
-
-// Update API calls:
-// FROM: POST /api/v1/auth/verify-email (token-based)
-// TO:   POST /api/v1/auth/verify-reset-code (code-based)
-
-// Add resend with cooldown UI:
-// Backend enforces 1-minute cooldown
-// Show countdown timer: "Resend code in 45 seconds"
+**1.3 Migrate to 6-Digit Code System** ✅ **COMPLETED**
+```
+Location: /src/app/forgot-password/
+Files updated:
+  ✅ verify/page.tsx - Now uses POST /api/v1/auth/verify-reset-code
+  ✅ reset/page.tsx - Now uses POST /api/v1/auth/reset-password with code
+  
+Changes implemented:
+  ✅ Replaced verify-email endpoint with verify-reset-code
+  ✅ Replaced forgot-password endpoint with reset-password in reset page
+  ✅ Updated resend to use resend-password-reset-code endpoint
+  ✅ Code stored in sessionStorage between verify and reset steps
+  ✅ Auto-fill verified code in reset page for better UX
+  ✅ 60-second cooldown timer already implemented
+  ✅ Clean up sessionStorage after successful password reset
+  
+Backend Integration:
+  ✅ POST /api/v1/auth/verify-reset-code - Verify 6-digit code before reset
+  ✅ POST /api/v1/auth/reset-password - Reset password with code + new password
+  ✅ POST /api/v1/auth/resend-password-reset-code - Resend code with cooldown
+  
+Flow (Updated):
+  1. User enters email → POST /api/v1/auth/forgot-password
+  2. Email stored in sessionStorage.setItem('resetEmail', email)
+  3. Redirect to /forgot-password/verify
+  4. User enters 6-digit code from email (expires in 10 minutes)
+  5. POST /api/v1/auth/verify-reset-code (optional pre-validation)
+  6. Code stored in sessionStorage.setItem('resetCode', code)
+  7. Redirect to /forgot-password/reset
+  8. Code auto-filled in form (from sessionStorage)
+  9. User enters new password + confirms
+  10. POST /api/v1/auth/reset-password with { email, code, newPassword }
+  11. Success → sessionStorage cleanup → redirect to /login
 ```
 
 **1.4 Add Verification Step (Optional)**
