@@ -40,9 +40,9 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 
 **1.1 Update Login Flow**
 - [x] Keep hardcoded admin fallback (requirement)
-- [ ] Add JWT token handling (access + refresh tokens)
-- [ ] Store tokens in HttpOnly cookies (already done)
-- [ ] Handle token refresh mechanism
+- [x] Add JWT token handling (access + refresh tokens) ✅ **COMPLETED**
+- [x] Store tokens in HttpOnly cookies (already done)
+- [x] Handle token refresh mechanism ✅ **COMPLETED** - `/api/auth/refresh` route created
 - [ ] Add session management UI in navbar
 
 **1.2 Create Registration Flow** (NEW)
@@ -708,11 +708,11 @@ export const sentry = {
 - [ ] Document expected error responses
 
 ### Frontend Preparation
-- [ ] Create logger and sentry stub files
-- [ ] Set up error boundary components
+- [x] Create logger and sentry stub files ✅ **COMPLETED**
+- [x] Set up error boundary components ✅ **COMPLETED**
 - [ ] Create all service files (userService, productService, etc.)
-- [ ] Set up TypeScript types for API responses
-- [ ] Configure axios interceptors for token refresh
+- [x] Set up TypeScript types for API responses ✅ **COMPLETED**
+- [x] Configure axios interceptors for token refresh ✅ **COMPLETED**
 - [ ] Test `/api/proxy` with real backend
 
 ### Environment Configuration
