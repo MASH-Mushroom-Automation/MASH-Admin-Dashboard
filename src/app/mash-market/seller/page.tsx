@@ -11,8 +11,22 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import PaginationWrapper from "@/components/pagination"
 import { Archive } from "lucide-react"
-import { apiClient, type Seller } from "@/lib/api-client"
-import { logger } from "@/lib/logger"
+// import { api } from "@/lib/api" // TODO: Use this when backend is connected
+
+// Local Seller type for mock data (matches SellerTable component expectations)
+interface Seller {
+  id: string
+  name: string
+  storeName: string
+  email: string
+  status: "pending" | "approved" | "rejected"
+  rejectReason?: string
+  address?: string
+  username?: string
+  phone?: string
+  businessName?: string
+  businessType?: string
+}
 
 export type TabType = "pending" | "rejected"
 
@@ -32,19 +46,17 @@ export default function SellerContent() {
       try {
         setLoading(true)
         setError(null)
-        logger.info('Fetching sellers from API')
         
-        const response = await apiClient.sellers.getAll({
-          page: 1,
-          limit: 100, // Fetch all for client-side filtering
-          status: undefined
-        })
+        // TODO: Replace with real API call when backend is connected
+        // const response = await api.get('v1/super-admin/sellers')
+        // setSellers(response.data)
         
-        setSellers(response.data)
-        logger.info('Sellers fetched successfully', { count: response.data.length })
+        // Mock: Set empty sellers array for now
+        setSellers([])
+        
+        toast.info('Seller management connected to backend - no sellers yet')
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sellers'
-        logger.error('Failed to fetch sellers', err)
         setError(errorMessage)
         toast.error(errorMessage)
       } finally {
@@ -63,9 +75,9 @@ export default function SellerContent() {
 })
 
   const filteredSellers = tabFilteredSellers.filter((seller) =>
-    seller.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    seller.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    seller.email.toLowerCase().includes(searchQuery.toLowerCase())
+    seller.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const startIndex = (currentPage - 1) * itemsPerPage

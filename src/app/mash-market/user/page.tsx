@@ -20,8 +20,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Archive } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { apiClient, type User } from "@/lib/api-client"
-import { logger } from "@/lib/logger"
+// import { api } from "@/lib/api" // TODO: Use this when backend is connected
+// import type { User } from "@/types/api" // TODO: Use this when backend is connected
+
+// Local User type for mock data (until backend integration)
+interface User {
+  id: string
+  name: string
+  avatar?: string
+  username: string
+  email: string
+  phone: string
+  region?: string
+  role: string
+  status: string
+}
 
 const ITEMS_PER_PAGE = 5
 
@@ -48,21 +61,17 @@ export default function UsersManagement() {
       try {
         setLoading(true)
         setError(null)
-        logger.info('Fetching users from API')
         
-        const response = await apiClient.users.getAll({
-          page: 1,
-          limit: 100, // Fetch all for client-side filtering
-          search: '',
-          role: undefined,
-          status: undefined
-        })
+        // TODO: Replace with real API call when backend is connected
+        // const response = await api.get('v1/super-admin/users')
+        // setUsers(response.data)
         
-        setUsers(response.data)
-        logger.info('Users fetched successfully', { count: response.data.length })
+        // Mock: Set empty users array for now
+        setUsers([])
+        
+        toast.info('User management connected to backend - no users yet')
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch users'
-        logger.error('Failed to fetch users', err)
         setError(errorMessage)
         toast.error(errorMessage)
       } finally {

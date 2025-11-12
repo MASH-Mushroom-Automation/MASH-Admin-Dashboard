@@ -99,7 +99,7 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (err: unknown) {
           const error = err as { message?: string };
-          logger.authError("login", err, { email });
+          logger.error("Login failed", { error: err, email });
           set({
             error: error.message || "Login failed",
             user: null,
@@ -139,7 +139,7 @@ export const useAuthStore = create<AuthState>()(
           set({ error: null });
         } catch (err: unknown) {
           const error = err as { message?: string };
-          logger.authError("forgot-password", err, { email });
+          logger.error("Forgot password failed", { error: err, email });
           set({ error: error?.message || "Failed to request password reset" });
           throw err;
         }

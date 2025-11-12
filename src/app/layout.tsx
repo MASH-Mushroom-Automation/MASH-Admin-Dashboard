@@ -5,7 +5,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { logger } from "@/lib/logger";
 
 // const _poppins = Poppins({
 //   subsets: ["latin"],
@@ -25,15 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased bg-background text-foreground">
-        <ErrorBoundary
-          onError={(error, errorInfo) => {
-            logger.error("Global error boundary caught error", error, {
-              componentStack: errorInfo.componentStack,
-            });
-          }}
-        >
-          {children}
-        </ErrorBoundary>
+        <ErrorBoundary>{children}</ErrorBoundary>
         {/* Sonner Toaster for global toast UI */}
         <Toaster position="top-right" richColors />
       </body>

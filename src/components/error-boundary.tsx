@@ -3,10 +3,10 @@
 import React from "react"
 import { AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/logger"
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void
 }
 
 interface ErrorBoundaryState {
@@ -34,8 +34,11 @@ export class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Call the optional onError callback
-    this.props.onError?.(error, errorInfo)
+    // Log error internally - no need for callback prop
+    logger.error("Global error boundary caught error", {
+      error,
+      componentStack: errorInfo.componentStack,
+    })
   }
 
   render() {

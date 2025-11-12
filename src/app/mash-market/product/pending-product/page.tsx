@@ -141,7 +141,7 @@ export default function PendingProductsPage() {
     return products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.seller.toLowerCase().includes(searchQuery.toLowerCase())
+        product.seller?.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "All Categories" || product.category === selectedCategory
       return matchesSearch && matchesCategory
     })
