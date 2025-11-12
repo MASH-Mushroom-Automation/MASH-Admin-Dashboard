@@ -228,10 +228,6 @@ export default function AdminProductsPage() {
     router.push(`/mash-market/product/archive?id=${product.id}`)
   }
 
-  const pendingCount = products.filter((p) => p.status === "pending").length
-  const approvedCount = products.filter((p) => p.status === "approved").length
-  const rejectedCount = products.filter((p) => p.status === "rejected").length
-
   return (
     <div className="w-full px-4 py-8 overflow-x-hidden">
       {/* Header */}

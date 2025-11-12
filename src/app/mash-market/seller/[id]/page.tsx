@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import RejectReasonModal from "@/components/ecommerce/reject-reason-modal";
@@ -119,7 +119,7 @@ export default function SellerDetailPage({
           <Card className="p-6">
             <h2 className="text-lg font-medium">Seller not found</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              We couldn't find a seller with that id.
+              We could not find a seller with that id.
             </p>
             <div className="mt-4">
               <Button onClick={() => router.push("/mash-market/seller")}>
@@ -147,12 +147,9 @@ export default function SellerDetailPage({
     try {
       // read persisted sellers
       const raw = localStorage.getItem("mash_sellers");
-      let list = raw ? JSON.parse(raw) : mockSellers;
-      list = list.map((s: any) =>
-        s.id === seller.id
-          ? { ...s, status: "rejected", rejectReason: reason }
-          : s
-      );
+      type MarketSeller = Seller & { rejectReason?: string };
+      const parsed = raw ? (JSON.parse(raw) as MarketSeller[]) : (mockSellers as MarketSeller[]);
+      const list = parsed.map((s) => (s.id === seller.id ? { ...s, status: "rejected", rejectReason: reason } : s));
       localStorage.setItem("mash_sellers", JSON.stringify(list));
       await new Promise((r) => setTimeout(r, 300));
       toast.error(`Seller rejected${reason ? ` — ${reason}` : ""}`);

@@ -22,15 +22,15 @@ import { Button } from "@/components/ui/button";
 import CreateDeviceModal from "@/components/mash-grow/create-device-modal";
 import { toast } from "sonner";
 
-interface Device {
+type Device = {
   id: string;
   deviceId: string;
   model: string;
   location: string;
   status: "Connected" | "Disconnected";
-  assigned: boolean;
+  assigned?: boolean;
   archived?: boolean;
-}
+};
 
 const DEFAULT_DEVICES: Device[] = [
   {
@@ -109,7 +109,7 @@ export default function DevicesPage() {
       const raw = localStorage.getItem("mash_devices");
       if (!raw || raw === "null") return DEFAULT_DEVICES;
       try {
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(raw) as Device[];
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         return DEFAULT_DEVICES;
       } catch {
@@ -136,9 +136,7 @@ export default function DevicesPage() {
         "mash_devices_showArchived",
         showArchived ? "true" : "false"
       );
-    } catch {
-      // Ignore localStorage errors
-    }
+    } catch {}
   }, [showArchived]);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [archivingDevice, setArchivingDevice] = useState<Device | null>(null);
@@ -146,9 +144,7 @@ export default function DevicesPage() {
   useEffect(() => {
     try {
       localStorage.setItem("mash_devices", JSON.stringify(devices));
-    } catch {
-      // Ignore localStorage errors
-    }
+    } catch {}
   }, [devices]);
 
   const handleCreateSave = (device: Device) => {
@@ -162,8 +158,8 @@ export default function DevicesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full px-4 py-8 overflow-x-hidden">
+      <div>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">
@@ -206,10 +202,10 @@ export default function DevicesPage() {
               </TableHeader>
               <TableBody>
                 {devices
-                  .filter((d: Device) =>
+                  .filter((d) =>
                     showArchived ? Boolean(d.archived) : !d.archived
                   )
-                  .map((d: Device) => (
+                  .map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="font-mono">{d.deviceId}</TableCell>
                       <TableCell>{d.model}</TableCell>
@@ -286,7 +282,22 @@ export default function DevicesPage() {
           if (!open) setEditDevice(null);
         }}
         onSave={handleCreateSave}
-        initialDevice={editDevice ?? undefined}
+        initialDevice={
+          editDevice
+            ? {
+                id: editDevice.id,
+                deviceId: editDevice.deviceId,
+                model: editDevice.model ?? "",
+                location: editDevice.location ?? "",
+                status:
+                  editDevice.status === "Connected"
+                    ? "Connected"
+                    : "Disconnected",
+                assigned: editDevice.assigned ?? false,
+                archived: editDevice.archived,
+              }
+            : undefined
+        }
       />
       {showArchiveConfirm && archivingDevice && (
         <ConfirmationPopover

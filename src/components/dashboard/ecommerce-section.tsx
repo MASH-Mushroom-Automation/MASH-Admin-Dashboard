@@ -28,6 +28,11 @@ import {
 } from "recharts";
 import { useDashboardStore } from "../../store/dashboardStore";
 
+type ChartPoint = {
+  day: string;
+  sales: number;
+}
+
 const weeklyData = [
   { label: "Mon", sales: 2400 },
   { label: "Tue", sales: 1398 },
@@ -83,36 +88,23 @@ function getDataForPeriod(period: string) {
 
 export default function ECommerceSection() {
   const [period, setPeriod] = useState<string>("weekly");
-  const [filterOpen, setFilterOpen] = useState<boolean>(false);
 
-  const displayData = useMemo(() => getDataForPeriod(period), [period]);
+  const displayData = useMemo<ChartPoint[]>(() => getDataForPeriod(period), [period]);
 
   const totalSales = useMemo(
     () =>
       displayData.reduce(
-        (sum: number, item: any) => sum + (item.sales || 0),
+        (sum: number, item: ChartPoint) => sum + (item.sales || 0),
         0
       ),
     [displayData]
   );
 
-  const totalOrders = displayData.length;
   const todaySales = displayData[displayData.length - 1]?.sales ?? 0;
 
-  const { sales, loading } = useDashboardStore();
+  const { sales } = useDashboardStore();
 
   // Summary numbers should not be affected by the chart filter — keep summary fixed (monthly)
-  const summaryData = useMemo(() => getDataForPeriod("monthly"), []);
-  const summaryTotalSales = useMemo(
-    () =>
-      summaryData.reduce(
-        (sum: number, item: any) => sum + (item.sales || 0),
-        0
-      ),
-    [summaryData]
-  );
-  const summaryTotalOrders = summaryData.length;
-  const summaryTodaySales = summaryData[summaryData.length - 1]?.sales ?? 0;
 
   const titleMap: Record<string, string> = {
     // daily: "Daily Sales",
@@ -123,7 +115,7 @@ export default function ECommerceSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* ---------- Sales Summary (visible for all periods) ---------- */}
-      <Card className="border-1 shadow-sm">
+  <Card className="border shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle>Sales Summary</CardTitle>
           <CardDescription>Today&apos;s performance</CardDescription>
@@ -167,7 +159,7 @@ export default function ECommerceSection() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <DropdownMenu onOpenChange={(open) => setFilterOpen(open)}>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="ghost" aria-label="Filter">
                   <Filter className="w-4 h-4" />

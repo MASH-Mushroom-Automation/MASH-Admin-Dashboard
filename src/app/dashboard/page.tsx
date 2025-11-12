@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/navbar";
-import Sidebar from "@/components/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import AppSidebar from "@/components/sidebar"
 import DashboardContent from "@/components/dashboard/dashboard-content";
 import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
@@ -66,22 +67,32 @@ export default function DashboardPage() {
   }, [fetchOverview, fetchSales, fetchChambers, fetchUsersStats, fetchCards]);
   const isLoading = useDashboardLoading();
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+   <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+  <div className="flex min-h-screen w-full bg-background overflow-hidden">
+        {/* Sidebar: responsive wrapper */}
+        <div
+          className={`fixed inset-y-0 left-0 z-40 bg-background transition-[left] duration-300 ease-in-out md:relative md:left-0
+          ${sidebarOpen ? "left-0" : "-left-full"}`}
+        >
+          <AppSidebar />
+        </div>
 
-      {/* Main Content Area */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-        <main className="flex-1 overflow-auto bg-muted/5">
-          {/* Show skeleton while loading, real content when ready */}
-          {isLoading ? <DashboardSkeleton /> : <DashboardContent />}
-        </main>
+        {/* Main content */}
+        <SidebarInset className="flex flex-col flex-1 overflow-hidden">
+          <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+          <main className="flex-1 overflow-auto bg-muted/5">
+            {isLoading ? <DashboardSkeleton /> : <DashboardContent />}
+          </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

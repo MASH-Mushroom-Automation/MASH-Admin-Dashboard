@@ -176,8 +176,8 @@ export default function OrdersContent() {
   }
 
   return (
-    <main className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl">
+    
+      <div className="w-full px-4 py-8 overflow-x-hidden">
         <div className="mb-8">
           <h1 className="sm:text-3xl text-2xl font-bold">Seller Order Logs</h1>
           <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
@@ -318,7 +318,7 @@ export default function OrdersContent() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
+      
 
       {selectedOrder && (
         <OrderDetailsDrawer
@@ -327,6 +327,6 @@ export default function OrdersContent() {
           onClose={() => setIsDrawerOpen(false)}
         />
       )}
-    </main>
+      </div>
   )
 }

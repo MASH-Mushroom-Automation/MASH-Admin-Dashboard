@@ -1,369 +1,232 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
-  ChevronDown,
   LayoutDashboard,
   Sprout,
   ShoppingCart,
   LogOut,
   Settings,
-  X,
+  ChevronDown,
+  ChevronsUpDown
 } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+  SidebarRail,
+} from "@/components/ui/sidebar";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
-interface SidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export default function AppSidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout } = useAuthStore();
+
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMashMarketOpen, setIsMashMarketOpen] = useState(false);
   const [isMashGrowOpen, setIsMashGrowOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const pathname = usePathname();
-
-  // Generate user initials from first and last name
-  const getUserInitials = () => {
-    if (!user || !user.firstName || !user.lastName) return "AU";
-    return `${user.firstName.charAt(0).toUpperCase()}${user.lastName.charAt(0).toUpperCase()}`;
-  };
-
-  // Get user display name
-  const getUserDisplayName = () => {
-    if (!user) return "Admin User";
-    return `${user.firstName} ${user.lastName}`;
-  };
 
   useEffect(() => {
-    // lock body scroll when sidebar is open on small screens (mobile)
-    const handle = () => {
-      if (typeof window === "undefined") return;
-      if (isOpen && window.innerWidth < 768) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "";
-      }
-    };
-
-    handle();
-    window.addEventListener("resize", handle);
-    return () => {
-      window.removeEventListener("resize", handle);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (pathname.startsWith("/mash-market")) setIsMashMarketOpen(true);
-    if (pathname.startsWith("/mash-grow")) setIsMashGrowOpen(true);
+    if (pathname?.startsWith("/mash-market")) setIsMashMarketOpen(true);
+    if (pathname?.startsWith("/mash-grow")) setIsMashGrowOpen(true);
   }, [pathname]);
 
-  const mashMarketChildren = ["User", "Seller", "Order", "Product", "CMS"];
-  const mashGrowChildren = ["devices", "registered-users", "cms"];
+  const getUserInitials = () => {
+    if (!user?.firstName || !user?.lastName) return "AU";
+    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  };
 
-  const isMashMarketActive = mashMarketChildren.some((child) =>
-    pathname.startsWith(`/mash-market/${child.toLowerCase()}`)
-  );
-  const isMashGrowActive = mashGrowChildren.some((child) =>
-    pathname.startsWith(`/mash-grow/${child}`)
-  );
+  const getUserDisplayName = () =>
+    user ? `${user.firstName} ${user.lastName}` : "Admin User";
+
+  const mashMarketItems = [
+    { label: "Users", href: "/mash-market/user" },
+    { label: "Sellers", href: "/mash-market/seller" },
+    { label: "Orders", href: "/mash-market/order" },
+    { label: "Products", href: "/mash-market/product" },
+  ];
+
+  const mashGrowItems = [
+    { label: "Devices", href: "/mash-grow/devices" },
+    { label: "Registered Users", href: "/mash-grow/registered-users" },
+  ];
 
   return (
-    <>
-      {/* Sidebar */}
-      <aside
-        className={`bg-sidebar border-r border-sidebar-border overflow-y-auto flex flex-col min-h-screen h-screen md:h-auto
-          ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
-          ${isOpen ? "w-64 md:w-64" : "w-20 md:w-20"}
-          fixed md:static top-0 bottom-0 left-0 z-50 md:z-auto`}
-      >
-        {/* Mobile close button */}
-        <div className="md:hidden flex items-center justify-end p-2">
-          {isOpen && (
-            <button
-              aria-label="Close sidebar"
-              onClick={onToggle}
-              className="p-2 rounded-md hover:bg-accent/10"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-        <div className="p-2 border-b border-sidebar-border flex items-center justify-center">
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="flex items-center justify-center border-b border-sidebar-border p-2">
           <Image
             src="/pictures/logo.png"
             alt="Logo"
-            width={isOpen ? 65 : 32}
-            height={isOpen ? 65 : 32}
-            className={`cursor-pointer transition-all duration-300 ${
-              isOpen ? "" : "py-3"
-            }`}
-            onClick={onToggle}
+            width={48}
+            height={48}
+            className="cursor-pointer transition-all"
           />
-        </div>
+        </SidebarHeader>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* Dashboard */}
-          <NavItem
-            icon={<LayoutDashboard className="w-5 h-5" />}
-            label="Dashboard"
-            href="/dashboard"
-            isOpen={isOpen}
-            pathname={pathname}
-          />
-
-          {/* MashMarket Section */}
-          <CollapsibleSection
-            title="MashMarket"
-            icon={<ShoppingCart className="w-5 h-5" />}
-            isOpen={isOpen}
-            isActive={isMashMarketActive}
-            isExpanded={isMashMarketOpen}
-            onToggle={() => setIsMashMarketOpen((prev) => !prev)}
-          >
-            <SubNavItem
-              label="Users"
-              href="/mash-market/user"
-              pathname={pathname}
-            />
-            <SubNavItem
-              label="Sellers"
-              href="/mash-market/seller"
-              pathname={pathname}
-            />
-            <SubNavItem
-              label="Orders"
-              href="/mash-market/order"
-              pathname={pathname}
-            />
-            <SubNavItem
-              label="Products"
-              href="/mash-market/product"
-              pathname={pathname}
-            />
-            {/* <SubNavItem label="CMS" href="/mash-market/cms" pathname={pathname} /> */}
-          </CollapsibleSection>
-
-          {/* MashGrow Section */}
-          <CollapsibleSection
-            title="MashGrow"
-            icon={<Sprout className="w-5 h-5" />}
-            isOpen={isOpen}
-            isActive={isMashGrowActive}
-            isExpanded={isMashGrowOpen}
-            onToggle={() => setIsMashGrowOpen((prev) => !prev)}
-          >
-            <SubNavItem
-              label="Devices"
-              href="/mash-grow/devices"
-              pathname={pathname}
-            />
-            <SubNavItem
-              label="Registered Users"
-              href="/mash-grow/registered-users"
-              pathname={pathname}
-            />
-            {/* <SubNavItem label="CMS" href="/mash-grow/cms" pathname={pathname} /> */}
-          </CollapsibleSection>
-        </nav>
-
-        {/* User Info */}
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="rounded-full focus:outline-none">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align="start" className="w-40">
-                {/* Link to settings page for super-admin */}
-                <DropdownMenuItem asChild className="flex items-center gap-2">
-                  <Link href="/settings" className="flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-muted-foreground" />
-                    <span>Settings</span>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {/* Dashboard */}
+                <SidebarMenuItem>
+                  <Link href="/dashboard" legacyBehavior>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === "/dashboard"}
+                      tooltip="Dashboard"
+                    >
+                      <a>
+                        <LayoutDashboard />
+                        <span>Dashboard</span>
+                      </a>
+                    </SidebarMenuButton>
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="flex items-center gap-2 text-destructive"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </SidebarMenuItem>
 
-            {isOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {getUserDisplayName()}
-                </p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">
-                  {user?.email || "admin@gmail.com"}
-                </p>
-              </div>
-            )}
-          </div>
+                {/* MashMarket */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setIsMashMarketOpen((p) => !p)}
+                    isActive={pathname?.startsWith("/mash-market")}
+                    tooltip="MashMarket"
+                  >
+                    <ShoppingCart />
+                    <span>MashMarket</span>
+                    <ChevronDown
+                      className={`ml-auto transition-transform ${
+                        isMashMarketOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </SidebarMenuButton>
+
+                  {isMashMarketOpen && (
+                    <SidebarMenuSub>
+                      {mashMarketItems.map((item) => (
+                        <SidebarMenuSubItem key={item.href}>
+                          {/* Use legacyBehavior + asChild to avoid nested anchors */}
+                          <Link href={item.href} legacyBehavior>
+                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                              <a>{item.label}</a>
+                            </SidebarMenuSubButton>
+                          </Link>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
+                </SidebarMenuItem>
+
+                {/* MashGrow */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setIsMashGrowOpen((p) => !p)}
+                    isActive={pathname?.startsWith("/mash-grow")}
+                    tooltip="MashGrow"
+                  >
+                    <Sprout />
+                    <span>MashGrow</span>
+                    <ChevronDown
+                      className={`ml-auto transition-transform ${
+                        isMashGrowOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </SidebarMenuButton>
+
+                  {isMashGrowOpen && (
+                    <SidebarMenuSub>
+                      {mashGrowItems.map((item) => (
+                        <SidebarMenuSubItem key={item.href}>
+                          <Link href={item.href} legacyBehavior>
+                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                              <a>{item.label}</a>
+                            </SidebarMenuSubButton>
+                          </Link>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarRail />
+
+       <SidebarFooter>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <button className="flex items-center w-full gap-3 rounded-md p-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
+        <Avatar className="w-5 h-5">
+          <AvatarFallback>{getUserInitials()}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 text-left min-w-0">
+          <p className="text-sm font-medium truncate">
+            {getUserDisplayName()}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {user?.email ?? "admin@gmail.com"}
+          </p>
         </div>
-
-        {showLogoutConfirm && (
-          <ConfirmationPopover
-            action="logout"
-            onCancel={() => setShowLogoutConfirm(false)}
-            onConfirm={async () => {
-              setShowLogoutConfirm(false);
-              // Call logout to clear cookies and auth state
-              console.log("Logging out...");
-              logout();
-              // Redirect to login page
-              router.push("/login");
-            }}
-          />
-        )}
-      </aside>
-
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={onToggle}
-        />
-      )}
-    </>
-  );
-}
-
-/* -------------------- Collapsible Section -------------------- */
-function CollapsibleSection({
-  title,
-  icon,
-  isOpen,
-  isActive,
-  isExpanded,
-  onToggle,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  isOpen: boolean;
-  isActive: boolean;
-  isExpanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition-colors
-          ${
-            isActive
-              ? "bg-primary/15 text-primary font-semibold"
-              : "text-gray-400 font-normal hover:text-gray-400 hover:bg-primary/15"
-          }`}
-        title={isOpen ? "" : title}
-      >
-        <span className="flex items-center gap-3">
-          {icon}
-          {isOpen && <span>{title}</span>}
-        </span>
-        {isOpen && (
-          <ChevronDown
-            className={`w-4 h-4 transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-          />
-        )}
+        <ChevronsUpDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
       </button>
+    </DropdownMenuTrigger>
 
-      {isExpanded && isOpen && (
-        <div className="ml-4 mt-2 space-y-1 border-l border-sidebar-border pl-4">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
+    <DropdownMenuContent align="start" className="w-48 p-1">
+      <DropdownMenuItem asChild>
+        <Link href="/settings" legacyBehavior>
+          <a className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-muted/5">
+            <Settings className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm">Settings</span>
+          </a>
+        </Link>
+      </DropdownMenuItem>
 
-/* -------------------- NavItem -------------------- */
-function NavItem({
-  icon,
-  label,
-  href,
-  isOpen,
-  pathname,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  href: string;
-  isOpen: boolean;
-  pathname: string;
-}) {
-  const isActive = pathname === href;
+      <DropdownMenuItem asChild>
+        <button
+          onClick={() => setShowLogoutConfirm(true)}
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-muted/5 text-destructive"
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span className="text-sm">Logout</span>
+        </button>
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
 
-  return (
-    <Link
-      href={href}
-      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors justify-center md:justify-start
-        ${
-          isActive
-            ? "bg-primary/15 text-primary font-semibold"
-            : "text-gray-400 font-normal hover:text-gray-400 hover:bg-primary/15"
-        }`}
-      title={isOpen ? "" : label}
-    >
-      {icon}
-      {isOpen && <span>{label}</span>}
-    </Link>
-  );
-}
-
-/* -------------------- SubNavItem -------------------- */
-function SubNavItem({
-  label,
-  href,
-  pathname,
-}: {
-  label: string;
-  href: string;
-  pathname: string;
-}) {
-  const isActive = pathname === href;
-
-  return (
-    <Link
-      href={href}
-      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors justify-center md:justify-start
-        ${
-          isActive
-            ? "bg-primary/15 text-primary font-semibold"
-            : "text-gray-400 font-normal hover:text-gray-400 hover:bg-primary/15"
-        }`}
-    >
-      {label}
-    </Link>
+  {showLogoutConfirm && (
+    <ConfirmationPopover
+      action="logout"
+      onCancel={() => setShowLogoutConfirm(false)}
+      onConfirm={async () => {
+        setShowLogoutConfirm(false)
+        logout()
+        router.push("/login")
+      }}
+    />
+  )}
+</SidebarFooter>
+      </Sidebar>
   );
 }

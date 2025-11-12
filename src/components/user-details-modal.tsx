@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+// "use client" component - no default React import needed
 import {
   Dialog,
   DialogContent,

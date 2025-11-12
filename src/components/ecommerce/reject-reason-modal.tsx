@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,26 +17,29 @@ interface Props {
 }
 
 export default function RejectReasonModal({ open, onOpenChange, onConfirm }: Props) {
-  const presetReasons = [
-    "Incomplete business or personal information",
-    "Invalid identification or verification documents",
-    "Unverified contact information",
-    "Submitted products are not valid or allowed on the platform",
-    "Violation of seller application policies",
-    "Suspicious or duplicate application",
-    "Failure to meet platform requirements",
-    "Other",
-  ]
+  const SELLER_PRESET_REASONS = useMemo(
+    () => [
+      "Incomplete business or personal information",
+      "Invalid identification or verification documents",
+      "Unverified contact information",
+      "Submitted products are not valid or allowed on the platform",
+      "Violation of seller application policies",
+      "Suspicious or duplicate application",
+      "Failure to meet platform requirements",
+      "Other",
+    ],
+    []
+  )
 
-  const [selectedReason, setSelectedReason] = useState<string>(presetReasons[0])
+  const [selectedReason, setSelectedReason] = useState<string>(SELLER_PRESET_REASONS[0])
   const [customReason, setCustomReason] = useState<string>("")
 
   useEffect(() => {
     if (open) {
-      setSelectedReason(presetReasons[0])
+      setSelectedReason(SELLER_PRESET_REASONS[0])
       setCustomReason("")
     }
-  }, [open])
+  }, [open, SELLER_PRESET_REASONS])
 
   const handleCancel = () => {
     onOpenChange(false)
@@ -59,12 +62,12 @@ export default function RejectReasonModal({ open, onOpenChange, onConfirm }: Pro
           <p className="text-sm text-muted-foreground">Select a reason for rejecting this seller.</p>
           <div>
             <label className="block text-sm font-medium mb-2">Reason</label>
-            <select
-              className="w-full border rounded-md px-2 py-1"
-              value={selectedReason}
-              onChange={(e) => setSelectedReason(e.target.value)}
-            >
-              {presetReasons.map((r) => (
+              <select
+                className="w-full border rounded-md px-2 py-1"
+                value={selectedReason}
+                onChange={(e) => setSelectedReason(e.target.value)}
+              >
+                {SELLER_PRESET_REASONS.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
