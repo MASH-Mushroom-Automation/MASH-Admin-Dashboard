@@ -53,8 +53,40 @@ This configuration allows development and testing of password reset functionalit
 ```
 
 **Error Responses**:
-- `400` - Rate limit with countdown: "Please wait 45 seconds before requesting a new code."
-- `429` - Too many requests: "Too many reset requests. Please try again later."
+
+400 - Rate limit with countdown:
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "error": {
+    "type": "BadRequestException",
+    "code": "INTERNAL_SERVER_ERROR",
+    "message": "Please wait 59 seconds before requesting a new code."
+  }
+}
+```
+
+429 - Too many requests:
+```json
+{
+  "success": false,
+  "statusCode": 429,
+  "error": {
+    "message": "Too many reset requests. Please try again later."
+  }
+}
+```
+
+**Error Handling**:
+The frontend extracts error messages from nested structure:
+```typescript
+const errorMessage = 
+  result.error?.message || 
+  result.message || 
+  result.error?.details?.message ||
+  "Failed to send reset code";
+```
 
 **Toast Notifications**:
 - Loading: "Sending reset code to your email..."

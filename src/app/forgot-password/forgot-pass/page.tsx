@@ -86,15 +86,23 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (!response.ok) {
+        // Extract error message from nested structure
+        // Backend returns: { error: { message: "..." } } or { message: "..." }
+        const errorMessage = 
+          result.error?.message || 
+          result.message || 
+          result.error?.details?.message ||
+          "Failed to send reset code";
+        
         // Handle rate limiting (429) and other errors
         if (response.status === 429) {
-          throw new Error("Too many requests. Please wait a moment and try again.");
+          throw new Error(errorMessage || "Too many requests. Please wait a moment and try again.");
         }
-        if (response.status === 400 && result.message) {
-          // Rate limit with countdown (e.g., "Please wait 45 seconds...")
-          throw new Error(result.message);
+        if (response.status === 400) {
+          // Rate limit with countdown (e.g., "Please wait 59 seconds...")
+          throw new Error(errorMessage);
         }
-        throw new Error(result.message || "Failed to send reset code");
+        throw new Error(errorMessage);
       }
 
       // Dismiss loading toast

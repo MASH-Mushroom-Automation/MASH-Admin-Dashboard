@@ -158,17 +158,24 @@ export default function ResetPasswordPage() {
         // Dismiss loading toast
         toast.dismiss(loadingToast);
         
+        // Extract error message from nested structure
+        const errorMessage = 
+          result.error?.message || 
+          result.message || 
+          result.error?.details?.message ||
+          "Failed to reset password";
+        
         // Handle specific error cases
-        if (result.message?.includes("expired")) {
+        if (errorMessage.includes("expired")) {
           throw new Error("Reset code has expired. Please request a new one.");
         }
-        if (result.message?.includes("invalid")) {
+        if (errorMessage.includes("invalid")) {
           throw new Error("Invalid reset code. Please check and try again.");
         }
-        if (result.message?.includes("password")) {
+        if (errorMessage.includes("password") || errorMessage.includes("requirement")) {
           throw new Error("Password does not meet security requirements.");
         }
-        throw new Error(result.message || "Failed to reset password");
+        throw new Error(errorMessage);
       }
 
       // Dismiss loading toast

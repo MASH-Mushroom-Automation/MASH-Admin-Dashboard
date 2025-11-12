@@ -108,17 +108,24 @@ export default function VerifyOTPPage() {
         // Dismiss loading toast
         toast.dismiss(loadingToast);
         
+        // Extract error message from nested structure
+        const errorMessage = 
+          result.error?.message || 
+          result.message || 
+          result.error?.details?.message ||
+          "Invalid or expired code";
+        
         // Handle specific error cases
-        if (result.message?.includes("expired")) {
+        if (errorMessage.includes("expired")) {
           throw new Error("Code has expired. Please request a new one.");
         }
-        if (result.message?.includes("invalid")) {
+        if (errorMessage.includes("invalid")) {
           throw new Error("Invalid code. Please check and try again.");
         }
-        if (result.message?.includes("attempts")) {
+        if (errorMessage.includes("attempts")) {
           throw new Error("Too many failed attempts. Please request a new code.");
         }
-        throw new Error(result.message || "Invalid or expired code");
+        throw new Error(errorMessage);
       }
 
       // Store the verified code in sessionStorage for the reset page
@@ -173,11 +180,18 @@ export default function VerifyOTPPage() {
         // Dismiss loading toast
         toast.dismiss(loadingToast);
         
+        // Extract error message from nested structure
+        const errorMessage = 
+          result.error?.message || 
+          result.message || 
+          result.error?.details?.message ||
+          "Failed to resend code";
+        
         // Handle rate limiting
-        if (response.status === 429 || result.message?.includes("wait")) {
-          throw new Error(result.message || "Please wait before requesting a new code.");
+        if (response.status === 429 || errorMessage.includes("wait")) {
+          throw new Error(errorMessage);
         }
-        throw new Error(result.message || "Failed to resend code");
+        throw new Error(errorMessage);
       }
 
       // Dismiss loading toast
