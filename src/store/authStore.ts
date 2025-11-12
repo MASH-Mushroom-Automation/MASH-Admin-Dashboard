@@ -1,6 +1,8 @@
 // src/store/authStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { logger } from "@/lib/logger";
+import { sentry } from "@/lib/sentry";
 
 interface User {
   id: string;
@@ -36,6 +38,9 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       logout: () => {
+        logger.info("User logged out");
+        sentry.setUser(null);
+        
         // Call logout endpoint to clear HttpOnly cookies
         fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
         set({
@@ -47,7 +52,8 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email: string, password: string) => {
         try {
-          console.log("Calling /api/auth/login proxy...");
+          logger.info("Attempting login", { email });
+          
           const response = await fetch(`/api/auth/login`, {
             method: "POST",
             headers: {
@@ -76,22 +82,24 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
 
-          console.log("Login successful. HttpOnly cookies set by proxy.");
+          logger.info("Login successful", { userId: result.user.id });
+          sentry.setUser({ id: result.user.id, email: result.user.email });
+          sentry.addBreadcrumb("User logged in", "auth");
 
           // DEBUG: Cookie is HttpOnly → JS cannot read it → expect "none"
           try {
             const cookie = document.cookie;
             const hasAuth = cookie.includes("authToken=");
-            console.log(
-              "[authStore] authToken cookie visible to JS:",
-              hasAuth ? "YES (not HttpOnly!)" : "none (correct – HttpOnly)"
-            );
-          } catch {
-            console.warn("Cookie check failed");
+            logger.debug("Auth cookie check", { 
+              visible: hasAuth,
+              expected: "HttpOnly - not visible"
+            });
+          } catch (err) {
+            logger.warn("Cookie check failed", { error: String(err) });
           }
         } catch (err: unknown) {
           const error = err as { message?: string };
-          console.error("Login error:", err);
+          logger.authError("login", err, { email });
           set({
             error: error.message || "Login failed",
             user: null,
@@ -104,6 +112,8 @@ export const useAuthStore = create<AuthState>()(
       forgotPassword: async (email: string) => {
         try {
           set({ error: null });
+          logger.info("Forgot password request", { email });
+          
           const response = await fetch(`/api/auth/forgot-password`, {
             method: "POST",
             headers: {
@@ -125,11 +135,11 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(result.message || "Failed to send reset link");
           }
 
-          // success - don't change auth state, just clear error
+          logger.info("Password reset email sent", { email });
           set({ error: null });
         } catch (err: unknown) {
           const error = err as { message?: string };
-          console.error("forgotPassword error:", err);
+          logger.authError("forgot-password", err, { email });
           set({ error: error?.message || "Failed to request password reset" });
           throw err;
         }
