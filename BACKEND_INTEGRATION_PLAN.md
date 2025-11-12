@@ -27,10 +27,10 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 | Endpoint | Status | Frontend Location | Notes |
 |----------|--------|-------------------|-------|
 | `POST /api/v1/auth/login` | ✅ Connected | `/src/app/api/auth/login/route.ts` | Working via proxy |
-| `POST /api/v1/auth/register` | ❌ Missing | Create: `/src/app/register/` | New registration page needed |
+| `POST /api/v1/auth/register` | ✅ Connected | `/src/app/register/page.tsx` | ✅ **COMPLETED** - Registration form with validation |
 | `POST /api/v1/auth/verify-email` | ⚠️ Partial | `/src/app/forgot-password/verify/` | Currently for password reset only |
-| `POST /api/v1/auth/verify-email-code` | ❌ Missing | Update: `/src/app/forgot-password/verify/` | Replace token with 6-digit code |
-| `POST /api/v1/auth/resend-verification` | ⚠️ Exists | `/src/app/forgot-password/verify/` | Update for 6-digit code system |
+| `POST /api/v1/auth/verify-email-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - 6-digit code verification |
+| `POST /api/v1/auth/resend-verification-code` | ✅ Connected | `/src/app/register/verify/page.tsx` | ✅ **COMPLETED** - Resend with cooldown |
 | `POST /api/v1/auth/forgot-password` | ✅ Connected | `/src/app/forgot-password/forgot-pass/` | Already implemented |
 | `POST /api/v1/auth/verify-reset-code` | ❌ Missing | Create: `/src/app/forgot-password/verify-code/` | Optional pre-validation step |
 | `POST /api/v1/auth/reset-password` | ✅ Connected | `/src/app/forgot-password/reset/` | Already implemented |
@@ -45,28 +45,36 @@ This document outlines the plan to connect the MASH Admin Dashboard frontend to 
 - [x] Handle token refresh mechanism ✅ **COMPLETED** - `/api/auth/refresh` route created
 - [ ] Add session management UI in navbar
 
-**1.2 Create Registration Flow** (NEW)
+**1.2 Create Registration Flow** ✅ **COMPLETED**
 ```
 Location: /src/app/register/
-Components needed:
-  - page.tsx (registration form)
-  - layout.tsx (same style as login)
+Components created:
+  ✅ page.tsx - Registration form with React Hook Form + Zod validation
+  ✅ layout.tsx - Consistent styling with login page
+  ✅ verify/page.tsx - 6-digit code verification with auto-login
   
-Form Fields:
-  - email (validation: DNS check)
-  - password (strength indicator)
-  - firstName
-  - lastName
-  - username (optional)
+Features implemented:
+  ✅ Email validation (DNS check via backend)
+  ✅ Password strength indicator (5-level visual feedback)
+  ✅ First name, last name, username (optional) fields
+  ✅ Real-time form validation with error messages
+  ✅ Loading states with spinners
+  ✅ Resend code with 60-second cooldown timer
+  ✅ Direct backend API calls (bypasses proxy for registration)
+  ✅ Auto-login after verification (JWT token stored in tokenManager)
+  ✅ SessionStorage for email persistence between steps
+  ✅ Redirect to dashboard after successful verification
   
 Flow:
-  1. User fills form
-  2. POST /api/v1/auth/register
-  3. Redirect to /register/verify-email
-  4. Enter 6-digit code
-  5. POST /api/v1/auth/verify-email-code
-  6. Auto-login with returned JWT
-  7. Redirect to /dashboard
+  1. User fills registration form
+  2. POST /api/v1/auth/register (direct to backend)
+  3. Email stored in sessionStorage
+  4. Redirect to /register/verify
+  5. User enters 6-digit code from email
+  6. POST /api/v1/auth/verify-email-code
+  7. JWT token stored in memory (tokenManager)
+  8. User object stored in authStore
+  9. Redirect to /dashboard (auto-logged in)
 ```
 
 **1.3 Migrate to 6-Digit Code System**
