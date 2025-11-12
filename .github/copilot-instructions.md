@@ -295,6 +295,13 @@ Production URL: `https://mash-admin-dashboard-ashy.vercel.app`
   - CORS configuration
   - Diagnostic tools (`/diagnostics` page, `/api/test-backend`)
   - Production URL: `https://mash-admin-dashboard-ashy.vercel.app`
+- **BACKEND_INTEGRATION_PLAN.md**: Complete roadmap for connecting to production backend
+  - 8-phase integration plan (3-4 weeks estimated)
+  - Authentication system upgrade (6-digit code verification)
+  - Service layer architecture for all entities (users, sellers, products, orders)
+  - Token management strategy (in-memory access tokens + HttpOnly refresh tokens)
+  - Error handling patterns and TypeScript type definitions
+  - Testing strategy and deployment checklist
 
 ### Immediate Priorities (Make Production-Ready)
 1. **Fix missing logger/sentry libs**: Create stub implementations in `/src/lib/` or remove all imports
