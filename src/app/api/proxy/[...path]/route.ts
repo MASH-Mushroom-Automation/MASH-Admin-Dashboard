@@ -1,7 +1,10 @@
 // src/app/api/proxy/[...path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Log the backend URL on module load to help with debugging
+console.log("[PROXY] Backend URL configured as:", BACKEND_URL || "NOT SET");
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +12,18 @@ async function handler(
   req: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
+  // Check if BACKEND_URL is configured
+  if (!BACKEND_URL) {
+    console.error("[PROXY] NEXT_PUBLIC_API_URL is not configured in .env file");
+    return NextResponse.json(
+      {
+        error:
+          "Backend API URL not configured. Please set NEXT_PUBLIC_API_URL in .env file",
+      },
+      { status: 500 }
+    );
+  }
+
   const params = await context.params; // ← AWAIT
   const path = params.path.join("/");
   const search = req.nextUrl.search;
@@ -65,6 +80,14 @@ async function handler(
       json = JSON.parse(data) as Record<string, unknown>;
     } catch {
       json = { message: data };
+    }
+
+    // Log error responses for debugging
+    if (res.status >= 400) {
+      console.error(
+        `[PROXY] Error response from backend:`,
+        JSON.stringify(json, null, 2)
+      );
     }
 
     const response = NextResponse.json(json, { status: res.status });

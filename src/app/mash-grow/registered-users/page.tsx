@@ -187,7 +187,7 @@ export default function RegisteredUsersPage() {
 
     // unassign user's previous device if present
     setDevices((prev) => {
-      let next = prev.map((d) => ({ ...d }))
+      const next = prev.map((d) => ({ ...d }))
       const prevDevice = next.find((d) => d.deviceId === userToAssign.deviceId)
       if (prevDevice) prevDevice.assigned = false
       const newDevice = next.find((d) => d.id === selectedDeviceId)

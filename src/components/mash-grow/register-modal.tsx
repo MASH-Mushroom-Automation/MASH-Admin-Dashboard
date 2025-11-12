@@ -1,11 +1,17 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,125 +19,156 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 function generateUniqueDecimal(): string {
-  const chars = "0123456789ABCDEF"
-  let result = ""
+  const chars = "0123456789ABCDEF";
+  let result = "";
   for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result
+  return result;
 }
 
 function generateLocationYear(address: string): string {
-  if (!address.trim()) return ""
-  const location = address.substring(0, 3).toUpperCase()
-  const year = new Date().getFullYear().toString().slice(-2)
-  return `${location}${year}`
+  if (!address.trim()) return "";
+  const location = address.substring(0, 3).toUpperCase();
+  const year = new Date().getFullYear().toString().slice(-2);
+  return `${location}${year}`;
 }
 
 interface RegisterData {
-  chamberName: string
-  contactNumber: string
-  address: string
-  model: string
-  locationYear: string
-  uniqueDecimal: string
-  deviceId: string
+  chamberName: string;
+  contactNumber: string;
+  address: string;
+  model: string;
+  locationYear: string;
+  uniqueDecimal: string;
+  deviceId: string;
 }
 
 interface RegisterModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSave?: (data: RegisterData & { selectedDeviceId?: string }) => void
-  availableDevices?: { id: string; deviceId: string; status?: string }[]
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave?: (data: RegisterData & { selectedDeviceId?: string }) => void;
+  availableDevices?: { id: string; deviceId: string; status?: string }[];
   // optional initial data for edit
-  initialData?: Partial<RegisterData & { id?: string }>
+  initialData?: Partial<RegisterData & { id?: string }>;
 }
-export default function RegisterModal({ open, onOpenChange, onSave, availableDevices, initialData }: RegisterModalProps) {
-  const [editingId, setEditingId] = useState<string | undefined>(undefined)
+export default function RegisterModal({
+  open,
+  onOpenChange,
+  onSave,
+  availableDevices,
+  initialData,
+}: RegisterModalProps) {
+  const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [formData, setFormData] = useState({
     chamberName: "",
     contactNumber: "",
     address: "",
     model: "",
-  })
+  });
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [uniqueDecimal] = useState(generateUniqueDecimal())
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(undefined)
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uniqueDecimal] = useState(generateUniqueDecimal());
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(
+    undefined
+  );
 
-  const locationYear = generateLocationYear(formData.address)
-  const deviceId = `MASH-${formData.model || "---"}-${locationYear || "---"}-${uniqueDecimal}`
+  const locationYear = generateLocationYear(formData.address);
+  const deviceId = `MASH-${formData.model || "---"}-${
+    locationYear || "---"
+  }-${uniqueDecimal}`;
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
-    if (!formData.chamberName.trim()) newErrors.chamberName = "Chamber Name is required"
-    if (!formData.contactNumber.trim()) newErrors.contactNumber = "Contact Number is required"
-    if (!formData.address.trim()) newErrors.address = "Address is required"
+    if (!formData.chamberName.trim())
+      newErrors.chamberName = "Chamber Name is required";
+    if (!formData.contactNumber.trim())
+      newErrors.contactNumber = "Contact Number is required";
+    if (!formData.address.trim()) newErrors.address = "Address is required";
     // If the user selected an existing device, model is not required (device already exists).
-    if (!selectedDeviceId && !formData.model.trim()) newErrors.model = "Model is required"
+    if (!selectedDeviceId && !formData.model.trim())
+      newErrors.model = "Model is required";
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
+    }));
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: "",
-      }))
+      }));
     }
-  }
+  };
 
   const handleSave = () => {
     if (validateForm()) {
       // if a device was selected from availableDevices, use that deviceId and include selectedDeviceId
-      const selectedDevice = selectedDeviceId ? availableDevices?.find((a) => a.id === selectedDeviceId) : undefined
-      const payloadDeviceId = selectedDevice ? selectedDevice.deviceId : deviceId
+      const selectedDevice = selectedDeviceId
+        ? availableDevices?.find((a) => a.id === selectedDeviceId)
+        : undefined;
+      const payloadDeviceId = selectedDevice
+        ? selectedDevice.deviceId
+        : deviceId;
 
-      const registrationData: any = {
+      const registrationData: RegisterData & {
+        id?: string;
+        selectedDeviceId?: string;
+      } = {
         id: editingId,
         ...formData,
         locationYear,
         uniqueDecimal,
         deviceId: payloadDeviceId,
-      }
+      };
 
-      if (selectedDeviceId) registrationData.selectedDeviceId = selectedDeviceId
+      if (selectedDeviceId)
+        registrationData.selectedDeviceId = selectedDeviceId;
 
-      console.log("Chamber and Device registered:", registrationData)
-      onSave?.(registrationData)
-      handleCancel()
+      console.log("Chamber and Device registered:", registrationData);
+      onSave?.(registrationData);
+      handleCancel();
     }
-  }
+  };
 
   // populate when opening for edit
   useEffect(() => {
     if (open && initialData) {
-      setEditingId((initialData as any).id)
+      const data = initialData as RegisterData & {
+        id?: string;
+        selectedDeviceId?: string;
+      };
+      setEditingId(data.id);
       setFormData((prev) => ({
         ...prev,
-        chamberName: (initialData as any).chamberName ?? "",
-        contactNumber: (initialData as any).contactNumber ?? "",
-        address: (initialData as any).address ?? "",
-        model: (initialData as any).model ?? "",
-      }))
-      setSelectedDeviceId((initialData as any).selectedDeviceId)
+        chamberName: data.chamberName ?? "",
+        contactNumber: data.contactNumber ?? "",
+        address: data.address ?? "",
+        model: data.model ?? "",
+      }));
+      setSelectedDeviceId(data.selectedDeviceId);
     }
     if (!open) {
-      setEditingId(undefined)
+      setEditingId(undefined);
     }
-  }, [open, initialData])
+  }, [open, initialData]);
 
   const handleCancel = () => {
     setFormData({
@@ -139,17 +176,19 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
       contactNumber: "",
       address: "",
       model: "",
-    })
-    setErrors({})
-    onOpenChange(false)
-  }
+    });
+    setErrors({});
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Register Chamber & Device</DialogTitle>
-          <DialogDescription>Enter chamber information and device registration details</DialogDescription>
+          <DialogDescription>
+            Enter chamber information and device registration details
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -161,7 +200,10 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="chamberName" className="text-foreground font-medium">
+                <Label
+                  htmlFor="chamberName"
+                  className="text-foreground font-medium"
+                >
                   Name
                 </Label>
                 <Input
@@ -172,11 +214,18 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
                   onChange={handleInputChange}
                   className={errors.chamberName ? "border-destructive" : ""}
                 />
-                {errors.chamberName && <p className="text-sm text-destructive">{errors.chamberName}</p>}
+                {errors.chamberName && (
+                  <p className="text-sm text-destructive">
+                    {errors.chamberName}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contactNumber" className="text-foreground font-medium">
+                <Label
+                  htmlFor="contactNumber"
+                  className="text-foreground font-medium"
+                >
                   Contact Number
                 </Label>
                 <Input
@@ -187,11 +236,18 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
                   onChange={handleInputChange}
                   className={errors.contactNumber ? "border-destructive" : ""}
                 />
-                {errors.contactNumber && <p className="text-sm text-destructive">{errors.contactNumber}</p>}
+                {errors.contactNumber && (
+                  <p className="text-sm text-destructive">
+                    {errors.contactNumber}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address" className="text-foreground font-medium">
+                <Label
+                  htmlFor="address"
+                  className="text-foreground font-medium"
+                >
                   Address
                 </Label>
                 <Input
@@ -202,7 +258,9 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
                   onChange={handleInputChange}
                   className={errors.address ? "border-destructive" : ""}
                 />
-                {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
+                {errors.address && (
+                  <p className="text-sm text-destructive">{errors.address}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -211,16 +269,29 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Device Registration</CardTitle>
-              <CardDescription>Device ID will be auto-generated</CardDescription>
+              <CardDescription>
+                Device ID will be auto-generated
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* If there are available devices, allow selecting one; otherwise generate a new ID */}
               {Array.isArray(availableDevices) ? (
                 <div className="space-y-2">
-                  <Label className="text-foreground font-medium">Select available device</Label>
-                  <Select value={selectedDeviceId} onValueChange={(v) => setSelectedDeviceId(v)}>
+                  <Label className="text-foreground font-medium">
+                    Select available device
+                  </Label>
+                  <Select
+                    value={selectedDeviceId}
+                    onValueChange={(v) => setSelectedDeviceId(v)}
+                  >
                     <SelectTrigger className="w-full bg-white border rounded-md">
-                      <SelectValue placeholder={availableDevices.length > 0 ? "Choose a device" : "No devices available"} />
+                      <SelectValue
+                        placeholder={
+                          availableDevices.length > 0
+                            ? "Choose a device"
+                            : "No devices available"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {availableDevices.length > 0 ? (
@@ -228,7 +299,7 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
                           <SelectItem key={d.id} value={d.id}>
                             <div className="flex items-center justify-between w-full">
                               <span className="font-mono">{d.deviceId}</span>
-                                  {/* intentionally omit network status in the Registered Users dropdown */}
+                              {/* intentionally omit network status in the Registered Users dropdown */}
                             </div>
                           </SelectItem>
                         ))
@@ -240,21 +311,36 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
                     </SelectContent>
                   </Select>
                   <div className="mt-2">
-                    <Label className="text-foreground font-medium">Device ID</Label>
+                    <Label className="text-foreground font-medium">
+                      Device ID
+                    </Label>
                     <div className="px-3 py-2 bg-primary/10 rounded-md text-foreground font-mono border border-primary/20">
-                      {selectedDeviceId ? (availableDevices.find((a) => a.id === selectedDeviceId)?.deviceId ?? "-") : (availableDevices.length > 0 ? "Select a device" : "No devices available")}
+                      {selectedDeviceId
+                        ? availableDevices.find(
+                            (a) => a.id === selectedDeviceId
+                          )?.deviceId ?? "-"
+                        : availableDevices.length > 0
+                        ? "Select a device"
+                        : "No devices available"}
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-foreground font-medium">Prefix</Label>
-                    <div className="px-3 py-2 bg-muted rounded-md text-foreground">MASH</div>
+                    <Label className="text-foreground font-medium">
+                      Prefix
+                    </Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-foreground">
+                      MASH
+                    </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="model" className="text-foreground font-medium">
+                    <Label
+                      htmlFor="model"
+                      className="text-foreground font-medium"
+                    >
                       Model
                     </Label>
                     <Input
@@ -265,22 +351,36 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
                       onChange={handleInputChange}
                       className={errors.model ? "border-destructive" : ""}
                     />
-                    {errors.model && <p className="text-sm text-destructive">{errors.model}</p>}
+                    {errors.model && (
+                      <p className="text-sm text-destructive">{errors.model}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-foreground font-medium">Location Year</Label>
-                    <div className="px-3 py-2 bg-muted rounded-md text-foreground font-mono">{locationYear || "---"}</div>
-                    <p className="text-xs text-muted-foreground">Auto-generated from address and current year</p>
+                    <Label className="text-foreground font-medium">
+                      Location Year
+                    </Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-foreground font-mono">
+                      {locationYear || "---"}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Auto-generated from address and current year
+                    </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-foreground font-medium">Unique Decimal</Label>
-                    <div className="px-3 py-2 bg-muted rounded-md text-foreground font-mono">{uniqueDecimal}</div>
+                    <Label className="text-foreground font-medium">
+                      Unique Decimal
+                    </Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-foreground font-mono">
+                      {uniqueDecimal}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-foreground font-medium">Device ID</Label>
+                    <Label className="text-foreground font-medium">
+                      Device ID
+                    </Label>
                     <div className="px-3 py-2 bg-primary/10 rounded-md text-foreground font-mono border border-primary/20">
                       {deviceId}
                     </div>
@@ -295,11 +395,14 @@ export default function RegisterModal({ open, onOpenChange, onSave, availableDev
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSave}>
+          <Button
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={handleSave}
+          >
             Save
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

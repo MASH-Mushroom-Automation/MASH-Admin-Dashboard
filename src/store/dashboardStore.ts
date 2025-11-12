@@ -186,7 +186,8 @@ export const useDashboardStore = create<DashboardState>()(
 
         // Some backend responses are wrapped: { success, statusCode, data: { ... } }
         // Normalize to the inner data object if present.
-        const payload = res.data as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = res.data;
         const data: Overview = payload && payload.data ? payload.data : payload;
 
         // Defensive normalization: ensure nested objects exist to avoid runtime errors
@@ -376,8 +377,10 @@ export const useDashboardStore = create<DashboardState>()(
         // 1) { success, statusCode, data: { data: [...], meta: { total, page, limit } } }
         // 2) { success, statusCode, data: [...] }
         // 3) Array of users or plain object
-        const payload = res.data as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = res.data;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let items: any[] = [];
 
         if (Array.isArray(payload)) {
@@ -406,7 +409,7 @@ export const useDashboardStore = create<DashboardState>()(
           avatar:
             u.avatar ??
             (u.name
-              ? u.name
+              ? String(u.name)
                   .split(" ")
                   .map((s: string) => s[0])
                   .join("")
