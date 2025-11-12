@@ -7,17 +7,18 @@
 - **MASH Market**: E-commerce (users, sellers, orders, products, CMS)
 - **MASH Grow**: Cultivation management (devices, registered users, CMS)
 
-**Critical Architecture Decision**: This is a frontend-only app that proxies ALL backend requests through `/api/proxy/*` to avoid CORS issues. The backend API (`NEXT_PUBLIC_API_URL`) is a separate Railway-hosted service.
+**Critical Architecture Decision**: This is a frontend-only app that proxies ALL backend requests through `/api/proxy/*` to avoid CORS issues. The backend API (`NEXT_PUBLIC_API_URL`) is a separate Railway-hosted service at `https://mash-backend-api-production.up.railway.app`.
 
 ### Tech Stack
-- **Framework**: Next.js 15 App Router with React 19
-- **Language**: TypeScript (strict mode)
+- **Framework**: Next.js 15 App Router with React 19 (runs on port **3001**, not 3000)
+- **Language**: TypeScript (strict mode, but ESLint disabled in builds)
 - **Styling**: Tailwind CSS v4 + shadcn/ui components
 - **State**: Zustand with `persist` middleware (auth/dashboard stores)
 - **HTTP Client**: Axios instance at `/src/lib/api.ts` (baseURL: `/api/proxy`)
 - **Forms**: React Hook Form + Zod validation
-- **Toast Notifications**: Sonner (see forgot-password flow)
+- **Toast Notifications**: Sonner (NOT custom modals or alert())
 - **Icons**: Lucide React
+- **Token Management**: In-memory access tokens via `/src/lib/tokenManager.ts` (NOT localStorage)
 
 ## Critical File Reference
 
@@ -34,39 +35,61 @@
 
 ## Authentication Architecture (Critical!)
 
-**The auth flow is split between client state and HttpOnly cookies:**
+**Dual Token System**: Access tokens in memory (XSS protection) + refresh tokens in HttpOnly cookies (CSRF protection).
+
+### Auth Flow Components
 
 1. **Login** (`/src/app/api/auth/login/route.ts`):
-   - **HARDCODED ADMIN FALLBACK**: Checks `mash.mushroom.automation@gmail.com / PP@Namias99` FIRST
-   - If not admin → forwards credentials to backend `/api/v1/auth/login`
-   - Backend returns `{ accessToken, refreshToken, user }`
-   - Sets HttpOnly cookies: `authToken` (1 day), `refreshToken` (30 days)
-   - Returns ONLY `user` object to client (no tokens exposed)
+   - **HARDCODED ADMIN BYPASS**: `mash.mushroom.automation@gmail.com / PP@Namias99` checked FIRST (requirement)
+   - If not admin → forwards to backend `POST /api/v1/auth/login`
+   - Backend response: `{ accessToken, refreshToken, user }`
+   - Sets HttpOnly cookies: `authToken` (1d), `refreshToken` (30d)
+   - Returns ONLY `user` to client (tokens never exposed to JS)
 
-2. **Middleware** (`/middleware.ts`):
-   - Checks for `authToken` cookie on `/dashboard/*` requests
-   - Redirects to `/login` if missing
-   - Cookie is HttpOnly → JavaScript cannot read it (this is correct!)
+2. **Token Manager** (`/src/lib/tokenManager.ts`):
+   - In-memory access token storage with expiry tracking
+   - `setAccessToken(token, expiresIn)` - stores with timestamp
+   - `getAccessToken()` - returns null if expired
+   - `shouldRefreshToken()` - true if <5 min remaining
+   - **NEVER uses localStorage** (XSS vulnerability)
 
-3. **API Calls** (`/src/lib/api.ts` + `/src/app/api/proxy/[...path]/route.ts`):
-   - Frontend calls `/api/proxy/v1/super-admin/...`
-   - Proxy extracts `authToken` from cookies
-   - Forwards to backend as `Authorization: Bearer <token>`
+3. **Registration Flow** (`/src/app/register/` + `/verify`):
+   - **6-digit email verification** (10min expiry, 5 attempts max)
+   - Step 1: Register → backend sends code via email
+   - Step 2: Verify code → backend returns JWT token
+   - Auto-login after verification: `setAccessToken(result.token, 3600)`
+   - Uses `sessionStorage.setItem('registerEmail', email)` between steps
+   - Direct backend calls (bypasses `/api/proxy`)
 
-4. **State** (`/src/store/authStore.ts`):
-   - Persists user object to localStorage (NOT tokens)
-   - Login verification pattern: Check stored user → verify cookie with `/api/auth/verify`
-   - Logout: POST to `/api/auth/logout` (clears cookies) + clear Zustand state
-   - **ForgotPassword flow**: Calls authStore method which hits `/api/auth/login` (not `/api/proxy`)
-
-5. **Forgot Password Flow** (`/src/app/forgot-password/`):
+4. **Forgot Password Flow** (`/src/app/forgot-password/`):
    - **3-step wizard**: `/forgot-pass` → `/verify` → `/reset`
-   - Uses `sessionStorage.setItem('resetEmail', email)` to persist state between steps
-   - **Bypasses proxy**: Calls `process.env.NEXT_PUBLIC_API_URL` directly (not `/api/proxy`)
-   - Uses React Hook Form + Zod validation + Sonner toasts
-   - Endpoints: `POST /api/v1/auth/forgot-password` (request + reset), `POST /api/v1/auth/verify-email`, `POST /api/v1/auth/resend-verification`
+   - Same 6-digit code pattern as registration (10min expiry, 5 attempts max)
+   - `sessionStorage.setItem('resetEmail', email)` for persistence between steps
+   - **LOCALHOST ONLY**: Uses `http://localhost:3000` (NOT production URL) for all endpoints
+   - Endpoints: `forgot-password`, `verify-reset-code`, `reset-password`, `resend-password-reset-code`
+   - Rate limiting: 3 requests per 5 minutes, 1-minute resend cooldown
+   - Enhanced toast notifications with loading states and detailed error messages
 
-**Key Insight**: If you see auth issues, check both Zustand state AND cookie presence. User in store without valid cookie causes redirect loops.
+5. **Middleware Guard** (`/middleware.ts`):
+   - Protects `/dashboard/*` routes only
+   - Checks `authToken` cookie existence (HttpOnly → JS can't read it)
+   - No cookie → redirect to `/login`
+
+6. **API Proxy** (`/src/app/api/proxy/[...path]/route.ts`):
+   - Universal handler for backend communication
+   - Extracts `authToken` from cookies
+   - Forwards as `Authorization: Bearer <token>` header
+   - Frontend: `api.get('v1/super-admin/...')` → Proxy: `GET ${BACKEND_URL}/api/v1/super-admin/...`
+
+7. **Auth Store** (`/src/store/authStore.ts`):
+   - Persists user object to localStorage (Zustand persist middleware)
+   - Logout: `fetch('/api/auth/logout')` + clear state
+   - ⚠️ Imports non-existent `@/lib/logger` and `@/lib/sentry` (known issue)
+
+**Debugging Auth Issues**:
+- Check both: Zustand state (`useAuthStore`) AND cookie (`authToken` in DevTools → Application → Cookies)
+- User in store but no cookie = redirect loop
+- Cookie present but no user in store = lost session state (refresh page)
 
 ## Next.js 15 Breaking Changes
 
@@ -105,10 +128,17 @@ NEXT_PUBLIC_API_URL=https://mash-backend-api-production.up.railway.app
 ```
 Must be set in `.env.local` (dev) and Vercel dashboard (production). This is the ONLY env var used.
 
+**⚠️ EXCEPTION: Forgot Password Flow**
+- The forgot password feature uses `http://localhost:3000` hardcoded in all three step pages
+- This is intentional to test against local backend during development
+- All other features use the production `NEXT_PUBLIC_API_URL`
+- Location: `/src/app/forgot-password/forgot-pass/`, `/verify/`, `/reset/`
+
 ### Build Configuration Quirks
 - **ESLint disabled during builds**: Both `package.json` (`eslint.ignoreDuringBuilds: true`) and `next.config.ts` disable linting to prevent CI failures
-- **Runtime mode**: API routes use `dynamic = 'force-dynamic'` to prevent static generation
+- **Runtime mode**: All API routes MUST use `export const dynamic = 'force-dynamic'` to prevent static generation (causes cookie issues)
 - **Turbopack removed**: Build script uses standard webpack (Turbopack had stability issues)
+- **API Route Pattern**: All routes must use `export const runtime = 'nodejs'` for full Node.js API access
 
 ## Common Patterns
 
@@ -146,9 +176,13 @@ The `api` instance has `baseURL: '/api/proxy'` and `withCredentials: true` pre-c
 
 ### Adding New Backend-Connected API Routes
 1. Create in `/src/app/api/` (only if NOT using universal proxy)
-2. Must include: `export const dynamic = 'force-dynamic'`
+2. **MUST include both**:
+   ```typescript
+   export const runtime = 'nodejs'
+   export const dynamic = 'force-dynamic'
+   ```
 3. Forward to backend via `NEXT_PUBLIC_API_URL`
-4. Extract/forward cookies manually if needed
+4. Extract/forward cookies manually if needed (see `/api/proxy` for pattern)
 
 Most cases should use the existing `/api/proxy/[...path]` handler.
 
@@ -228,7 +262,7 @@ import { Button } from '@/components/ui/button'  // ✅
 ### Pre-deployment Checklist
 1. ✅ Environment var `NEXT_PUBLIC_API_URL` set in Vercel dashboard
 2. ✅ `vercel.json` exists with API route rewrites (already configured)
-3. ✅ Build command: `npm run build` (uses Turbopack)
+3. ✅ Build command: `npm run build` (uses webpack, NOT Turbopack)
 4. ✅ All dynamic routes use `await params` pattern
 
 ### Testing Deployment
@@ -247,6 +281,28 @@ Production URL: `https://mash-admin-dashboard-ashy.vercel.app`
 3. **Cookie debugging**: HttpOnly cookies won't show in `document.cookie` - this is expected
 4. **Dynamic params**: Remember to `await params` in Next.js 15 dynamic routes
 5. **Port conflicts**: Frontend runs on 3001 (not default 3000)
+
+## Critical Debugging Workflows
+
+### When Login Fails
+1. Check `/diagnostics` page for backend connectivity
+2. Verify `NEXT_PUBLIC_API_URL` in `.env.local` and Vercel dashboard
+3. Test hardcoded admin: `mash.mushroom.automation@gmail.com / PP@Namias99`
+4. Check browser DevTools → Network → `/api/auth/login` response
+5. Verify cookies set: Application → Cookies → `authToken` and `refreshToken`
+
+### When API Calls Fail
+1. Verify using `api` instance from `/src/lib/api.ts` (NOT raw fetch)
+2. Check proxy logs in terminal: `[PROXY] GET → https://...`
+3. Ensure route doesn't start with `/api/` (should be `v1/...`)
+4. Verify `authToken` cookie exists (middleware check)
+5. Test direct backend call: `/api/test-backend`
+
+### When Build Fails
+1. Check for `await params` in all dynamic routes (`/[id]/page.tsx`)
+2. Verify no TypeScript errors (though ESLint is disabled)
+3. Remove `.next/` folder and rebuild: `del .next /s /q && npm run build`
+4. Check for missing imports (logger, sentry - known issues)
 
 ## Known Limitations & Technical Debt
 

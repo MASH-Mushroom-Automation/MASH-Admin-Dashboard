@@ -17,6 +17,33 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+/**
+ * FORGOT PASSWORD - STEP 2: Verify Reset Code
+ * ============================================
+ * 
+ * API Endpoint: POST http://localhost:3000/api/v1/auth/verify-reset-code
+ * 
+ * Features:
+ * - Optional pre-validation step (recommended for better UX)
+ * - Max 5 verification attempts before code invalidation
+ * - Clear error messages for expired/invalid codes
+ * - Resend code functionality with 1-minute cooldown
+ * - Rate limiting: 3 resend requests per 5 minutes
+ * 
+ * Request Body:
+ * {
+ *   "email": "user@example.com",
+ *   "code": "123456"
+ * }
+ * 
+ * Response (Success):
+ * {
+ *   "success": true,
+ *   "message": "Code verified successfully",
+ *   "nextStep": "Reset your password with POST /auth/reset-password"
+ * }
+ */
+
 const otpSchema = z.object({
   otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
@@ -60,10 +87,14 @@ export default function VerifyOTPPage() {
 
   const onSubmit = async (data: OTPFormData) => {
     setIsLoading(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading("Verifying your code...");
+    
     try {
-      // Call the verify-reset-code endpoint (optional pre-validation)
+      // Call localhost backend for code verification (optional pre-validation)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/verify-reset-code`,
+        `http://localhost:3000/api/v1/auth/verify-reset-code`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,22 +102,49 @@ export default function VerifyOTPPage() {
         }
       );
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Invalid or expired code");
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        // Handle specific error cases
+        if (result.message?.includes("expired")) {
+          throw new Error("Code has expired. Please request a new one.");
+        }
+        if (result.message?.includes("invalid")) {
+          throw new Error("Invalid code. Please check and try again.");
+        }
+        if (result.message?.includes("attempts")) {
+          throw new Error("Too many failed attempts. Please request a new code.");
+        }
+        throw new Error(result.message || "Invalid or expired code");
       }
 
       // Store the verified code in sessionStorage for the reset page
       sessionStorage.setItem("resetCode", data.otp);
       
-      toast.success(
-        "Code verified successfully. Proceed to reset your password."
-      );
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Success toast
+      toast.success("Code Verified!", {
+        description: "You can now reset your password.",
+        duration: 3000,
+      });
+      
+      // Navigate to reset password page
       router.push("/forgot-password/reset");
+      
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Something went wrong"
-      );
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show error toast
+      toast.error("Verification Failed", {
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -94,10 +152,14 @@ export default function VerifyOTPPage() {
 
   const handleResendOTP = async () => {
     setResendLoading(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading("Sending new code...");
+    
     try {
-      // Use the correct password reset resend endpoint
+      // Use localhost backend for resending password reset code
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/resend-password-reset-code`,
+        `http://localhost:3000/api/v1/auth/resend-password-reset-code`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -105,17 +167,40 @@ export default function VerifyOTPPage() {
         }
       );
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to resend code");
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        // Handle rate limiting
+        if (response.status === 429 || result.message?.includes("wait")) {
+          throw new Error(result.message || "Please wait before requesting a new code.");
+        }
+        throw new Error(result.message || "Failed to resend code");
       }
 
-      toast.success("New code sent to your email.");
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Success toast
+      toast.success("New Code Sent!", {
+        description: `A new 6-digit code has been sent to ${email}.`,
+        duration: 5000,
+      });
+      
+      // Reset countdown timer
       setTimeLeft(60);
+      
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to resend code"
-      );
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show error toast
+      toast.error("Failed to Resend Code", {
+        description: error instanceof Error ? error.message : "Please try again later.",
+        duration: 5000,
+      });
     } finally {
       setResendLoading(false);
     }
