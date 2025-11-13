@@ -1,7 +1,10 @@
 // src/app/api/proxy/[...path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Log the backend URL on module load to help with debugging
+console.log("[PROXY] Backend URL configured as:", BACKEND_URL || "NOT SET");
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +12,18 @@ async function handler(
   req: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
+  // Check if BACKEND_URL is configured
+  if (!BACKEND_URL) {
+    console.error("[PROXY] NEXT_PUBLIC_API_URL is not configured in .env file");
+    return NextResponse.json(
+      {
+        error:
+          "Backend API URL not configured. Please set NEXT_PUBLIC_API_URL in .env file",
+      },
+      { status: 500 }
+    );
+  }
+
   const params = await context.params; // ← AWAIT
   const path = params.path.join("/");
   const search = req.nextUrl.search;
@@ -36,19 +51,33 @@ async function handler(
     // If URL parsing fails, continue and let fetch handle errors.
   }
 
-  const cookie = req.headers.get("cookie") || "";
-  const tokenMatch = cookie.match(/authToken=([^;]+)/);
-  const token = tokenMatch ? tokenMatch[1] : null;
-
-  console.log(`[PROXY] Cookie:`, cookie ? "YES" : "NO");
-  console.log(`[PROXY] Token extracted:`, token ? "YES" : "NO");
+  // Priority 1: Check if client already sent Authorization header (direct backend auth)
+  let token: string | null = null;
+  const authHeader = req.headers.get("authorization");
+  
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.substring(7); // Remove "Bearer " prefix
+    console.log(`[PROXY] Token from Authorization header: YES`);
+  } else {
+    // Priority 2: Fallback to cookie-based token (backward compatibility)
+    const cookie = req.headers.get("cookie") || "";
+    const tokenMatch = cookie.match(/authToken=([^;]+)/);
+    token = tokenMatch ? tokenMatch[1] : null;
+    console.log(`[PROXY] Cookie:`, cookie ? "YES" : "NO");
+    console.log(`[PROXY] Token from cookie:`, token ? "YES" : "NO");
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  if (cookie) headers["cookie"] = cookie;
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Always forward the token as Bearer token to backend
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    console.log(`[PROXY] Forwarding Bearer token to backend`);
+  } else {
+    console.warn(`[PROXY] ⚠️ No token found - request will likely fail with 401`);
+  }
 
   const body = ["GET", "HEAD"].includes(req.method)
     ? undefined
@@ -65,6 +94,14 @@ async function handler(
       json = JSON.parse(data) as Record<string, unknown>;
     } catch {
       json = { message: data };
+    }
+
+    // Log error responses for debugging
+    if (res.status >= 400) {
+      console.error(
+        `[PROXY] Error response from backend:`,
+        JSON.stringify(json, null, 2)
+      );
     }
 
     const response = NextResponse.json(json, { status: res.status });

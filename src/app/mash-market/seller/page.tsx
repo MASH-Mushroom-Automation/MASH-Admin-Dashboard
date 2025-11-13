@@ -11,156 +11,61 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import PaginationWrapper from "@/components/pagination"
 import { Archive } from "lucide-react"
+// import { api } from "@/lib/api" // TODO: Use this when backend is connected
 
-export type TabType = "pending" | "rejected"
-
+// Local Seller type for mock data (matches SellerTable component expectations)
 interface Seller {
   id: string
   name: string
   storeName: string
-  username?: string
   email: string
   status: "pending" | "approved" | "rejected"
   rejectReason?: string
   address?: string
+  username?: string
   phone?: string
   businessName?: string
   businessType?: string
 }
 
-const mockSellers: Seller[] = [
-  {
-    id: "1",
-    name: "Jin Failana",
-    username: "jinfail",
-    storeName: "Smith Electronics",
-    businessName: "Smith Electronics",
-    businessType: "Electronics Retail",
-    email: "john@smithelectronics.com",
-    phone: "+63 912 345 6789",
-    status: "pending",
-    address: "Caloocan City",
-  },
-  {
-    id: "2",
-    name: "Karen Smith",
-    username: "karen_s",
-    storeName: "Karen Boutique",
-    businessName: "Karen Boutique",
-    businessType: "Clothing",
-    email: "karen@boutique.com",
-    phone: "+63 912 000 1111",
-    status: "approved",
-    address: "Quezon City",
-  },
-  {
-    id: "3",
-    name: "Anne Curtis",
-    username: "annec",
-    storeName: "Anne Beauty Hub",
-    businessName: "Anne Beauty Hub",
-    businessType: "Cosmetics",
-    email: "anne@beautyhub.com",
-    phone: "+63 912 222 3333",
-    status: "rejected",
-    rejectReason: "Incomplete documents",
-    address: "Makati City",
-  },
-  {
-    id: "4",
-    name: "John Doe",
-    username: "johnd4",
-    storeName: "John's Store",
-    businessName: "John's Store",
-    businessType: "General Goods",
-    email: "john@store.com",
-    phone: "+63 912 444 5555",
-    status: "rejected",
-    rejectReason: "Invalid information",
-    address: "Cebu City",
-  },
-  {
-    id: "5",
-    name: "John Doe",
-    username: "johnd5",
-    storeName: "John's Store",
-    businessName: "John's Store",
-    businessType: "General Goods",
-    email: "john@store.com",
-    phone: "+63 912 444 5556",
-    status: "rejected",
-    address: "Cebu City",
-  },
-  {
-    id: "6",
-    name: "John Doe",
-    username: "johnd6",
-    storeName: "John's Store",
-    businessName: "John's Store",
-    businessType: "General Goods",
-    email: "john@store.com",
-    phone: "+63 912 444 5557",
-    status: "rejected",
-    address: "Cebu City",
-  },
-  {
-    id: "7",
-    name: "John Doe",
-    username: "johnd7",
-    storeName: "John's Store",
-    businessName: "John's Store",
-    businessType: "General Goods",
-    email: "john@store.com",
-    phone: "+63 912 444 5558",
-    status: "rejected",
-    address: "Cebu City",
-  },
-  {
-    id: "8",
-    name: "John Doe",
-    username: "johnd8",
-    storeName: "John's Store",
-    businessName: "John's Store",
-    businessType: "General Goods",
-    email: "john@store.com",
-    phone: "+63 912 444 5559",
-    status: "rejected",
-    address: "Cebu City",
-  },
-
-
-]
+export type TabType = "pending" | "rejected"
 
 export default function SellerContent() {
   const [activeTab, setActiveTab] = useState<TabType>("pending")
   const [searchQuery, setSearchQuery] = useState("")
-  const [sellers, setSellers] = useState<Seller[]>(mockSellers)
+  const [sellers, setSellers] = useState<Seller[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const router = useRouter()
 
-  // persist sellers to localStorage so reject reasons survive reload
+  // Fetch sellers from API
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("mash_sellers")
-      if (raw) {
-        setSellers(JSON.parse(raw))
-      } else {
-        // seed initial mock sellers
-        localStorage.setItem("mash_sellers", JSON.stringify(mockSellers))
+    const fetchSellers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // TODO: Replace with real API call when backend is connected
+        // const response = await api.get('v1/super-admin/sellers')
+        // setSellers(response.data)
+        
+        // Mock: Set empty sellers array for now
+        setSellers([])
+        
+        toast.info('Seller management connected to backend - no sellers yet')
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sellers'
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } finally {
+        setLoading(false)
       }
-    } catch {
-      // ignore
     }
-  }, [])
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("mash_sellers", JSON.stringify(sellers))
-    } catch {
-      // ignore
-    }
-  }, [sellers])
+    fetchSellers()
+  }, [])
   
 
   const tabFilteredSellers = sellers.filter((seller) => {
@@ -170,9 +75,9 @@ export default function SellerContent() {
 })
 
   const filteredSellers = tabFilteredSellers.filter((seller) =>
-    seller.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    seller.storeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    seller.email.toLowerCase().includes(searchQuery.toLowerCase())
+    seller.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    seller.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -216,7 +121,35 @@ export default function SellerContent() {
                           <ChevronLeft className="h-4 w-4" />
                           Back
                         </Button> */}
-                      </div>
+            </div>
+          <h1 className="text-3xl font-bold">Seller Management</h1>
+          <p className="text-muted-foreground mt-1">Review, approve, or reject seller applications</p>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <Card className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Loading sellers...</span>
+            </div>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card className="p-8">
+            <div className="text-center">
+              <p className="text-destructive mb-4">Error: {error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Main Content */}
+        {!loading && !error && (
+          <>
+          <div className="mb-8">
           <h1 className="sm:text-3xl text-2xl font-bold text-foreground mb-2">Pending Sellers</h1>
           <p className="text-muted-foreground sm:text-base text-sm">Review seller application</p>
         </div>
@@ -270,6 +203,8 @@ export default function SellerContent() {
               onPageChange={handlePageChange}
               label="Pending"
             />
+        </>
+        )}
 
       </div>
   )

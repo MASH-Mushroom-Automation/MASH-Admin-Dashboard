@@ -189,7 +189,7 @@ export function ProductDetailsModal({
                 Date Submitted
               </label>
               <p className="text-foreground mt-1">
-                {formatDate(product.submittedAt)}
+                {product.submittedAt ? formatDate(product.submittedAt) : 'N/A'}
               </p>
             </div>
 
