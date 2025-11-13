@@ -1,29 +1,43 @@
-import React from "react";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+"use client";
+
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 interface Props {
   children: React.ReactNode;
 }
 
 /**
- * Server-side layout that protects all /dashboard routes.
+ * Client-side layout that protects all /dashboard routes.
  *
- * This performs a simple presence check for the `authToken` cookie
- * and redirects to /login if missing. Keep this lightweight —
- * full token validation should happen in API handlers or with a
- * JWT verification routine if you need stronger guarantees.
+ * This checks authentication state from Zustand store (localStorage)
+ * and redirects to /login if not authenticated.
  */
-export default async function DashboardLayout({ children }: Props) {
-  // `cookies()` can be async in some Next versions/types, so await it to be safe.
-  const cookieStore = await cookies();
-  const token = cookieStore.get("authToken")?.value;
+export default function DashboardLayout({ children }: Props) {
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuthStore();
 
-  if (!token) {
-    // Redirect on the server before the client bundle loads.
-    // We intentionally only check presence here to avoid network calls
-    // during layout render. Add local JWT verification here if available.
-    redirect("/login");
+  useEffect(() => {
+    // Check if user is authenticated
+    if (!isAuthenticated || !user) {
+      console.log("🚫 Not authenticated - redirecting to login");
+      router.push("/login");
+    } else {
+      console.log("✅ User authenticated:", user.email);
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Show loading state while checking auth
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verifying authentication...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

@@ -23,31 +23,14 @@ export function LoginForm() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is stored but cookie might be missing
+    // If user is authenticated, redirect to dashboard
     const storedUser = useAuthStore.getState().user;
 
-    if (storedUser) {
-      // Verify the cookie exists by making a lightweight check
-      fetch("/api/auth/verify", { method: "GET", credentials: "include" })
-        .then((res) => {
-          if (res.ok) {
-            // Cookie is valid, redirect to dashboard
-            router.push("/dashboard");
-          } else {
-            // Cookie is missing/invalid, clear the stored user to prevent loop
-            console.log(
-              "Cookie missing but user in store - clearing auth state"
-            );
-            logout();
-          }
-        })
-        .catch(() => {
-          // Network error or invalid cookie - clear auth state
-          console.log("Auth verification failed - clearing auth state");
-          logout();
-        });
+    if (storedUser && isAuthenticated) {
+      console.log("User already authenticated, redirecting to dashboard");
+      router.push("/dashboard");
     }
-  }, [router, logout]);
+  }, [router, isAuthenticated]);
 
   const validateEmail = (email: string) => {
     if (!email.includes(".com")) {
