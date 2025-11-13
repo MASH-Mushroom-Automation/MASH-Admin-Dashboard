@@ -58,60 +58,77 @@ export const useAuthStore = create<AuthState>()(
         try {
           logger.info("Attempting login", { email });
           
-          const response = await fetch(`/api/auth/login`, {
+          // Call backend API directly (not through Next.js proxy)
+          const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://mash-backend-api-production.up.railway.app";
+          
+          const response = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              "Accept": "application/json",
             },
             body: JSON.stringify({ email, password }),
           });
 
-          if (!response.ok) {
-            const err = await response
-              .json()
-              .catch(() => ({ message: "Login failed" }));
-            throw new Error(err.message || "Invalid credentials");
-          }
-
+          // Parse response (handle both success and error cases)
           const result = await response.json();
 
-          if (!result.success || !result.user) {
-            throw new Error("Login failed: invalid response");
+          if (!response.ok) {
+            // Extract error message from backend response
+            const errorMessage = 
+              result.message || 
+              result.error?.message || 
+              result.data?.message ||
+              "Login failed";
+            
+            logger.error("Login failed", { 
+              status: response.status, 
+              message: errorMessage 
+            });
+            
+            set({
+              error: errorMessage,
+              user: null,
+              isAuthenticated: false,
+            });
+            
+            throw new Error(errorMessage);
+          }
+
+          // Backend returns: { success, statusCode, data: { accessToken, refreshToken, user } }
+          const data = result.data || result;
+          const { accessToken, refreshToken, user } = data;
+
+          if (!accessToken || !user) {
+            throw new Error("Invalid response from server");
           }
 
           // Store user in Zustand (persisted to localStorage)
           set({
-            user: result.user,
+            user: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+            },
             isAuthenticated: true,
             error: null,
           });
 
           // Store access token in MEMORY (not localStorage!) - XSS protection
-          if (result.accessToken && result.expiresIn) {
-            setAccessToken(result.accessToken, result.expiresIn);
-            logger.debug("Access token stored in memory", { 
-              expiresIn: result.expiresIn,
-              userId: result.user.id 
-            });
-          } else {
-            logger.warn("No access token in response - using refresh token only");
+          setAccessToken(accessToken, 3600); // 1 hour = 3600 seconds
+          logger.info("Access token stored in memory");
+
+          // Store refresh token in localStorage (for persistence)
+          // Note: In production, consider using HttpOnly cookies for refresh token
+          if (refreshToken) {
+            localStorage.setItem("refreshToken", refreshToken);
+            logger.info("Refresh token stored");
           }
 
-          logger.info("Login successful", { userId: result.user.id });
-          sentry.setUser({ id: result.user.id, email: result.user.email });
+          logger.info("Login successful", { userId: user.id });
+          sentry.setUser({ id: user.id, email: user.email });
           sentry.addBreadcrumb("User logged in", "auth");
-
-          // DEBUG: Refresh token is HttpOnly → JS cannot read it
-          try {
-            const cookie = document.cookie;
-            const hasRefresh = cookie.includes("refreshToken=");
-            logger.debug("Refresh token cookie check", { 
-              visible: hasRefresh,
-              expected: "HttpOnly - not visible to JS"
-            });
-          } catch (err) {
-            logger.warn("Cookie check failed", { error: String(err) });
-          }
         } catch (err: unknown) {
           const error = err as { message?: string };
           logger.error("Login failed", { error: err, email });

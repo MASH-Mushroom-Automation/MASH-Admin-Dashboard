@@ -8,6 +8,66 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
+ * Retry login request up to 3 times with exponential backoff
+ * Handles Railway cold start delays (503 errors) and network issues
+ */
+async function loginWithRetry(
+  url: string,
+  body: { email: string; password: string },
+  maxRetries = 3
+) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[login] Attempt ${attempt}/${maxRetries} - calling ${url}`);
+
+      const response = await axios.post(url, body, {
+        timeout: 30000, // 30 seconds (handles cold starts)
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log(`[login] Attempt ${attempt} succeeded`);
+      return response;
+    } catch (error) {
+      lastError = error;
+      const axiosError = error as {
+        response?: { status?: number };
+        code?: string;
+      };
+
+      // Retry on connection errors or 503 (service unavailable)
+      const shouldRetry =
+        axiosError.code === 'ECONNREFUSED' ||
+        axiosError.code === 'ETIMEDOUT' ||
+        axiosError.code === 'ENOTFOUND' ||
+        axiosError.code === 'ECONNRESET' ||
+        axiosError.response?.status === 503;
+
+      if (shouldRetry && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
+        console.log(
+          `[login] Attempt ${attempt} failed (${axiosError.code || axiosError.response?.status}), retrying in ${delay}ms...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Don't retry on authentication errors (401, 400)
+      console.log(
+        `[login] Attempt ${attempt} failed, not retrying (status: ${axiosError.response?.status}, code: ${axiosError.code})`
+      );
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Login endpoint - Authenticates user with production backend API
  * Returns access token in response body + refresh token in HttpOnly cookie
  * Access token stored in memory by client, refresh token stored in secure cookie
@@ -25,12 +85,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[login] Attempting authentication for: ${email}`);
+    console.log(`[login] Backend URL: ${BACKEND_URL}`);
 
-    // Call backend API directly (no hardcoded credentials)
-    const backendRes = await axios.post(
+    // Call backend API with retry logic (handles cold starts and network issues)
+    const backendRes = await loginWithRetry(
       `${BACKEND_URL}/api/v1/auth/login`,
-      { email, password },
-      { timeout: 10000 } // 10 second timeout
+      { email, password }
     );
 
     // Backend returns nested structure: { success, data: { accessToken, refreshToken, user } }
@@ -100,9 +160,11 @@ export async function POST(request: NextRequest) {
       "Login failed";
 
     console.error(`[login] Authentication failed (${statusCode}):`, {
+      url: `${BACKEND_URL}/api/v1/auth/login`,
       message: errorMessage,
       code: axiosError.code,
-      backend: backendData
+      backend: backendData,
+      timestamp: new Date().toISOString()
     });
 
     // Map backend errors to user-friendly responses
