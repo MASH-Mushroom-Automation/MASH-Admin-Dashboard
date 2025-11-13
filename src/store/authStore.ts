@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { logger } from "@/lib/logger";
 import { sentry } from "@/lib/sentry";
+import { setAccessToken, clearAccessToken } from "@/lib/tokenManager";
 
 interface User {
   id: string;
@@ -41,6 +42,9 @@ export const useAuthStore = create<AuthState>()(
         logger.info("User logged out");
         sentry.setUser(null);
         
+        // Clear in-memory access token
+        clearAccessToken();
+        
         // Call logout endpoint to clear HttpOnly cookies
         fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
         set({
@@ -75,24 +79,35 @@ export const useAuthStore = create<AuthState>()(
             throw new Error("Login failed: invalid response");
           }
 
-          // ONLY STORE USER — NO TOKENS!
+          // Store user in Zustand (persisted to localStorage)
           set({
             user: result.user,
             isAuthenticated: true,
             error: null,
           });
 
+          // Store access token in MEMORY (not localStorage!) - XSS protection
+          if (result.accessToken && result.expiresIn) {
+            setAccessToken(result.accessToken, result.expiresIn);
+            logger.debug("Access token stored in memory", { 
+              expiresIn: result.expiresIn,
+              userId: result.user.id 
+            });
+          } else {
+            logger.warn("No access token in response - using refresh token only");
+          }
+
           logger.info("Login successful", { userId: result.user.id });
           sentry.setUser({ id: result.user.id, email: result.user.email });
           sentry.addBreadcrumb("User logged in", "auth");
 
-          // DEBUG: Cookie is HttpOnly → JS cannot read it → expect "none"
+          // DEBUG: Refresh token is HttpOnly → JS cannot read it
           try {
             const cookie = document.cookie;
-            const hasAuth = cookie.includes("authToken=");
-            logger.debug("Auth cookie check", { 
-              visible: hasAuth,
-              expected: "HttpOnly - not visible"
+            const hasRefresh = cookie.includes("refreshToken=");
+            logger.debug("Refresh token cookie check", { 
+              visible: hasRefresh,
+              expected: "HttpOnly - not visible to JS"
             });
           } catch (err) {
             logger.warn("Cookie check failed", { error: String(err) });
