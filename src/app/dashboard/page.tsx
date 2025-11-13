@@ -25,46 +25,28 @@ export default function DashboardPage() {
   } = useDashboardStore();
 
   useEffect(() => {
-    // If no user in store, verify authentication and possibly restore from cookie
-    if (!user) {
-      fetch("/api/auth/verify", { method: "GET", credentials: "include" })
-        .then((res) => {
-          if (!res.ok) {
-            // Not authenticated - redirect to login
-            console.log(
-              "No user in store and cookie invalid - redirecting to login"
-            );
-            logout();
-            router.push("/login");
-          }
-        })
-        .catch(() => {
-          console.log("Auth verification failed - redirecting to login");
-          logout();
-          router.push("/login");
-        });
+    // Dashboard layout already handles auth check, just fetch data
+    if (user) {
+      console.log("✅ Dashboard loaded for user:", user.email);
+      fetchOverview();
+
+      // -------------------------------------------------
+      // SALES – keep the default 7 days
+      // -------------------------------------------------
+      fetchSales(7);
+
+      // -------------------------------------------------
+      // CHAMBERS – explicit page/limit + debug logs
+      // -------------------------------------------------
+      const page = 1;
+      const limit = 10;
+      console.log(`[Dashboard] fetching chambers → page=${page}, limit=${limit}`);
+      fetchChambers(page, limit);
+
+      fetchUsersStats();
+      fetchCards();
     }
-  }, [user, logout, router]);
-
-  useEffect(() => {
-    fetchOverview();
-
-    // -------------------------------------------------
-    // SALES – keep the default 7 days
-    // -------------------------------------------------
-    fetchSales(7);
-
-    // -------------------------------------------------
-    // CHAMBERS – explicit page/limit + debug logs
-    // -------------------------------------------------
-    const page = 1;
-    const limit = 10;
-    console.log(`[Dashboard] fetching chambers → page=${page}, limit=${limit}`);
-    fetchChambers(page, limit);
-
-    fetchUsersStats();
-    fetchCards();
-  }, [fetchOverview, fetchSales, fetchChambers, fetchUsersStats, fetchCards]);
+  }, [user, fetchOverview, fetchSales, fetchChambers, fetchUsersStats, fetchCards]);
   const isLoading = useDashboardLoading();
   return (
    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>

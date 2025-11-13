@@ -51,19 +51,33 @@ async function handler(
     // If URL parsing fails, continue and let fetch handle errors.
   }
 
-  const cookie = req.headers.get("cookie") || "";
-  const tokenMatch = cookie.match(/authToken=([^;]+)/);
-  const token = tokenMatch ? tokenMatch[1] : null;
-
-  console.log(`[PROXY] Cookie:`, cookie ? "YES" : "NO");
-  console.log(`[PROXY] Token extracted:`, token ? "YES" : "NO");
+  // Priority 1: Check if client already sent Authorization header (direct backend auth)
+  let token: string | null = null;
+  const authHeader = req.headers.get("authorization");
+  
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.substring(7); // Remove "Bearer " prefix
+    console.log(`[PROXY] Token from Authorization header: YES`);
+  } else {
+    // Priority 2: Fallback to cookie-based token (backward compatibility)
+    const cookie = req.headers.get("cookie") || "";
+    const tokenMatch = cookie.match(/authToken=([^;]+)/);
+    token = tokenMatch ? tokenMatch[1] : null;
+    console.log(`[PROXY] Cookie:`, cookie ? "YES" : "NO");
+    console.log(`[PROXY] Token from cookie:`, token ? "YES" : "NO");
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  if (cookie) headers["cookie"] = cookie;
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Always forward the token as Bearer token to backend
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    console.log(`[PROXY] Forwarding Bearer token to backend`);
+  } else {
+    console.warn(`[PROXY] ⚠️ No token found - request will likely fail with 401`);
+  }
 
   const body = ["GET", "HEAD"].includes(req.method)
     ? undefined
