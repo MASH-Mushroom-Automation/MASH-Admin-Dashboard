@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical, Archive, ArrowLeft } from "lucide-react";
+import { Archive, ArrowLeft } from "lucide-react";
 import { ActionsMenu } from "@/components/user-actions-menu"
 import {
   Table,
@@ -22,13 +16,15 @@ import {
 import { Button } from "@/components/ui/button";
 import CreateDeviceModal from "@/components/mash-grow/create-device-modal";
 import { toast } from "sonner";
+import PaginationWrapper from '@/components/pagination'
 
 type Device = {
   id: string;
   deviceId: string;
   model: string;
   location: string;
-  status: "Connected" | "Disconnected";
+  status: "Online" | "Offline";
+  type?: string;
   assigned?: boolean;
   archived?: boolean;
 };
@@ -39,72 +35,27 @@ const DEFAULT_DEVICES: Device[] = [
     deviceId: "MASH-A1-CALOOCAN-AC2523",
     model: "A1",
     location: "Caloocan",
-    status: "Connected",
+    status: "Online",
+    type: "Mushroom Chamber",
     assigned: true,
   },
-  {
-    id: "d2",
-    deviceId: "MASH-B2-MANILA-AC2524",
-    model: "B2",
-    location: "Manila",
-    status: "Disconnected",
-    assigned: false,
-  },
-  {
-    id: "d3",
-    deviceId: "MASH-C3-QUEZONCITY-AC2525",
-    model: "C3",
-    location: "Quezon City",
-    status: "Connected",
-    assigned: false,
-  },
-  {
-    id: "d4",
-    deviceId: "MASH-D4-MAKATI-AC2526",
-    model: "D4",
-    location: "Makati",
-    status: "Disconnected",
-    assigned: false,
-  },
-  {
-    id: "d5",
-    deviceId: "MASH-E5-PASIG-AC2527",
-    model: "E5",
-    location: "Pasig",
-    status: "Connected",
-    assigned: false,
-  },
+ 
   // archived mock device(s) for the archive view
   {
     id: "d6",
     deviceId: "MASH-F6-ARCHIVED-AC2528",
     model: "F6",
     location: "Makati",
-    status: "Disconnected",
-    assigned: false,
-    archived: true,
-  },
-  {
-    id: "d7",
-    deviceId: "MASH-G7-ARCHIVED-AC2529",
-    model: "G7",
-    location: "Pasig",
-    status: "Disconnected",
-    assigned: false,
-    archived: true,
-  },
-  {
-    id: "d8",
-    deviceId: "MASH-H8-ARCHIVED-AC2530",
-    model: "H8",
-    location: "Quezon City",
-    status: "Disconnected",
+    status: "Offline",
+    type: "Mushroom Chamber",
     assigned: false,
     archived: true,
   },
 ];
 
 export default function DevicesPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [devices, setDevices] = useState<Device[]>(() => {
     try {
       const raw = localStorage.getItem("mash_devices");
@@ -146,7 +97,14 @@ export default function DevicesPage() {
     try {
       localStorage.setItem("mash_devices", JSON.stringify(devices));
     } catch {}
+    // reset to page 1 when devices change
+    setCurrentPage(1);
   }, [devices]);
+
+  // ensure currentPage is within range when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showArchived]);
 
   const handleCreateSave = (device: Device) => {
     // if device exists update, otherwise prepend
@@ -157,6 +115,11 @@ export default function DevicesPage() {
     });
     toast.success("Device created");
   };
+
+  const filteredDevices = devices.filter((d) => (showArchived ? Boolean(d.archived) : !d.archived));
+  const totalItems = filteredDevices.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pagedDevices = filteredDevices.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="w-full px-4 py-8 overflow-x-hidden">
@@ -191,56 +154,62 @@ export default function DevicesPage() {
 
         <Card>
           <CardContent className="overflow-x-auto">
-            <Table>
+            <Table className="table-fixed w-full">
               <TableHeader>
                 <tr>
-                  <TableHead>Device ID</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-48">Device ID</TableHead>
+                  <TableHead className="w-20">Model</TableHead>
+                  <TableHead className="w-40">Type</TableHead>
+                  <TableHead className="w-32">Location</TableHead>
+                  <TableHead className="w-24">Status</TableHead>
+                  <TableHead className="w-28">Actions</TableHead>
                 </tr>
               </TableHeader>
               <TableBody>
-                {devices
-                  .filter((d) =>
-                    showArchived ? Boolean(d.archived) : !d.archived
-                  )
-                  .map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-mono">{d.deviceId}</TableCell>
-                      <TableCell>{d.model}</TableCell>
-                      <TableCell>{d.location}</TableCell>
-                      <TableCell>{d.status}</TableCell>
-                      <TableCell>
-                        <div className="flex">
-                          <ActionsMenu
-                            id={d.id}
-                            showView={false}
-                            showEdit={true}
-                            onEdit={() => {
-                              setEditDevice(d)
-                              setCreateOpen(true)
-                            }}
-                            onArchive={() => {
-                              if (!showArchived) {
-                                setArchivingDevice(d)
-                                setShowArchiveConfirm(true)
-                              } else {
-                                setDevices((prev: Device[]) => prev.map((p) => (p.id === d.id ? { ...p, archived: false } : p)))
-                                toast.success("Device restored")
-                              }
-                            }}
-                            ArchiveLabel={showArchived ? "Restore" : "Archive"}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                {pagedDevices.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-mono w-48 overflow-hidden truncate">{d.deviceId}</TableCell>
+                    <TableCell className="w-20">{d.model}</TableCell>
+                    <TableCell className="max-w-40 overflow-hidden truncate">
+                      <div className="truncate">{d.type}</div>
+                    </TableCell>
+                    <TableCell className="w-32 overflow-hidden truncate">{d.location}</TableCell>
+                    <TableCell className="w-24">{d.status}</TableCell>
+                    <TableCell>
+                      <div className="flex">
+                        <ActionsMenu
+                          id={d.id}
+                          showView={false}
+                          showEdit={true}
+                          onEdit={() => {
+                            setEditDevice(d)
+                            setCreateOpen(true)
+                          }}
+                          onArchive={() => {
+                            if (!showArchived) {
+                              setArchivingDevice(d)
+                              setShowArchiveConfirm(true)
+                            } else {
+                              setDevices((prev: Device[]) => prev.map((p) => (p.id === d.id ? { ...p, archived: false } : p)))
+                              toast.success("Device restored")
+                            }
+                          }}
+                          ArchiveLabel={showArchived ? "Restore" : "Archive"}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
+        <PaginationWrapper
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={(p) => setCurrentPage(p)}
+        />
       </div>
 
       <CreateDeviceModal
@@ -257,10 +226,7 @@ export default function DevicesPage() {
                 deviceId: editDevice.deviceId,
                 model: editDevice.model ?? "",
                 location: editDevice.location ?? "",
-                status:
-                  editDevice.status === "Connected"
-                    ? "Connected"
-                    : "Disconnected",
+                status: editDevice.status === "Online" ? "Online" : "Offline",
                 assigned: editDevice.assigned ?? false,
                 archived: editDevice.archived,
               }

@@ -49,7 +49,7 @@ export default function AssignDeviceModal({ open, onOpenChange, availableDevices
                       <div className="flex items-center justify-between w-full">
                         <span className="font-mono">{d.deviceId}</span>
                         {d.status && (
-                          <span className={`text-sm ${d.status === 'Connected' ? 'text-green-600' : 'text-red-600'}`}>{d.status}</span>
+                          <span className={`text-sm ${d.status === 'Online' ? 'text-green-600' : 'text-red-600'}`}>{d.status}</span>
                         )}
                       </div>
                     </SelectItem>
