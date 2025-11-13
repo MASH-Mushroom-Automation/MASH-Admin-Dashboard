@@ -13,8 +13,27 @@ import {
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
 import ECommerceSection from "./ecommerce-section";
+import { useDashboardStore } from "@/store/dashboardStore";
 
 export default function DashboardContent() {
+  const { overview } = useDashboardStore();
+
+  // Use fetched data from store, fallback to 0 if not available
+  const chambers = overview?.chambers || { active: 0, inactive: 0 };
+  const orders = overview?.orders || { completed: 0, pending: 0 };
+  const products = overview?.products || { pending: 0, approved: 0 };
+  const sellerApplications = overview?.sellerApplications || {
+    pending: 0,
+    approved: 0,
+  };
+
+  console.log("[DashboardContent] Rendering with data:", {
+    chambers,
+    orders,
+    products,
+    sellerApplications,
+  });
+
   return (
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
@@ -26,40 +45,40 @@ export default function DashboardContent() {
           Discover the latest updates in your business today.
         </p>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Using Real Data from API */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
           <StatCard
             title="Chambers"
-            primaryValue="5"
-            primaryLabel="Connected"
-            secondaryValue="5"
-            secondaryLabel="Disconnected  "
+            primaryValue={String(chambers.active)}
+            primaryLabel="Active"
+            secondaryValue={String(chambers.inactive)}
+            secondaryLabel="Inactive"
             icon={<Warehouse className="w-5 h-5" />}
             viewMorePath="/mash-grow/devices"
           />
           <StatCard
             title="Orders"
-            primaryValue="100"
+            primaryValue={String(orders.completed)}
             primaryLabel="Completed"
-            secondaryValue="20"
+            secondaryValue={String(orders.pending)}
             secondaryLabel="Pending"
             icon={<Users className="w-5 h-5" />}
             viewMorePath="/mash-market/order"
           />
           <StatCard
             title="Products"
-            primaryValue="30"
+            primaryValue={String(products.pending)}
             primaryLabel="Pending"
-            secondaryValue="10"
+            secondaryValue={String(products.approved)}
             secondaryLabel="Approved"
             icon={<Package className="w-5 h-5" />}
             viewMorePath="/mash-market/product"
           />
           <StatCard
-            title=" Seller Applications"
-            primaryValue="5"
+            title="Seller Applications"
+            primaryValue={String(sellerApplications.pending)}
             primaryLabel="Pending"
-            secondaryValue="2"
+            secondaryValue={String(sellerApplications.approved)}
             secondaryLabel="Approved"
             icon={<AlertCircle className="w-5 h-5" />}
             viewMorePath="/mash-market/seller"
@@ -68,7 +87,7 @@ export default function DashboardContent() {
       </div>
 
       <div className="space-y-6 pt-4">
-        <h1 className="sm:text-xl text-base font-bold text-foreground -mb-0">
+        <h1 className="sm:text-xl text-base font-bold text-foreground mb-0">
           Overview
         </h1>
         <p className="sm:text-base text-sm">
@@ -103,7 +122,7 @@ function StatCard({
   const router = useRouter();
 
   return (
-    <Card className="relative overflow-hidden border-1 border-primary/30 rounded-xl">
+    <Card className="relative overflow-hidden border border-primary/30 rounded-xl">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">

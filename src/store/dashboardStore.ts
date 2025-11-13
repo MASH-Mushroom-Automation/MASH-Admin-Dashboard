@@ -1,7 +1,27 @@
 // src/store/dashboardStore.ts
+/**
+ * Dashboard Store - Secure Token Management Implementation
+ *
+ * SECURITY ARCHITECTURE:
+ * ✅ Access Token: Stored in memory via tokenManager (XSS protection)
+ * ✅ Refresh Token: HttpOnly cookie (automatic, XSS protection)
+ * ✅ All API calls use `api` instance which automatically:
+ *    - Adds Authorization: Bearer {accessToken} header
+ *    - Includes credentials: "include" for refresh cookie
+ *    - Handles 401 errors with automatic token refresh + retry
+ *
+ * NO COOKIE PARSING: This store never reads document.cookie directly.
+ * Token management is handled by:
+ * - /src/lib/tokenManager.ts (in-memory access token)
+ * - /src/lib/api.ts (axios interceptors for automatic refresh)
+ *
+ * See SECURE_TOKEN_IMPLEMENTATION.md for complete documentation.
+ */
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { api } from "../lib/api";
+import { getAccessToken } from "../lib/tokenManager";
+import type { AxiosError } from "axios";
 
 // Define interfaces based on inferred data from components
 interface Overview {
@@ -41,64 +61,6 @@ interface CardsSummary {
   sellerApplications: { pending: number; approved: number };
 }
 
-// Helper function to check if using mock admin tokens
-function isMockAdminToken(): boolean {
-  if (typeof window === "undefined") return false;
-  const cookies = document.cookie;
-  const hasMockToken = cookies.includes("authToken=admin-access-");
-  if (hasMockToken) {
-    console.log("🎭 Detected mock admin token");
-  }
-  return hasMockToken;
-}
-
-// Mock data for hardcoded admin
-const MOCK_DASHBOARD_DATA = {
-  overview: {
-    chambers: { active: 12, inactive: 3 },
-    orders: { completed: 145, pending: 23 },
-    products: { pending: 8, approved: 56 },
-    sellerApplications: { pending: 5, approved: 34 },
-  },
-  sales: [
-    { day: "Mon", sales: 4500 },
-    { day: "Tue", sales: 5200 },
-    { day: "Wed", sales: 4800 },
-    { day: "Thu", sales: 6100 },
-    { day: "Fri", sales: 7300 },
-    { day: "Sat", sales: 8200 },
-    { day: "Sun", sales: 6800 },
-  ],
-  chambers: {
-    chambers: [
-      { id: "1", grower: "John's Farm", location: "Zone A", status: "Active" },
-      { id: "2", grower: "Green Valley", location: "Zone B", status: "Active" },
-      {
-        id: "3",
-        grower: "Mountain Grow",
-        location: "Zone C",
-        status: "Inactive",
-      },
-    ],
-    total: 3,
-    page: 1,
-    limit: 10,
-  },
-  usersStats: {
-    USER: 120,
-    BUYER: 85,
-    GROWER: 45,
-    ADMIN: 8,
-    SUPER_ADMIN: 2,
-  },
-  cards: {
-    chambers: { active: 12, inactive: 3 },
-    orders: { completed: 145, pending: 23 },
-    products: { pending: 8, approved: 56 },
-    sellerApplications: { pending: 5, approved: 34 },
-  },
-};
-
 interface DashboardState {
   overview: Overview | null;
   sales: DailySale[] | null;
@@ -118,7 +80,7 @@ interface DashboardState {
 }
 
 // lightweight user shape returned to UI
-interface UserItem {
+export interface UserItem {
   id: string;
   name: string;
   username?: string;
@@ -142,55 +104,107 @@ export const useDashboardStore = create<DashboardState>()(
     error: {},
 
     fetchOverview: async () => {
+      console.log("\n========================================");
+      console.log("[debug:fetchOverview] 🚀 STARTING fetchOverview");
+      console.log("========================================");
+
+      // Check token status
+      const token = getAccessToken();
+      console.log("[debug:fetchOverview] 🔐 Access token status:", {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : "NO TOKEN",
+      });
+
       set({
         loading: { ...get().loading, overview: true },
         error: { ...get().error, overview: null },
       });
 
       try {
-        console.log("📡 Fetching overview...");
+        console.log("[debug:fetchOverview] 📡 Preparing API call...");
+        console.log(
+          "[debug:fetchOverview] 📍 Endpoint: v1/super-admin/dashboard/overview"
+        );
+        console.log("[debug:fetchOverview] 🔧 Method: GET");
+        console.log(
+          "[debug:fetchOverview] 📦 Using api instance (automatic token injection)"
+        );
 
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for overview");
-          set({
-            overview: MOCK_DASHBOARD_DATA.overview,
-            loading: { ...get().loading, overview: false },
-          });
-          return;
-        }
-
-        // Log whether authToken cookie is present client-side
-        try {
-          const cookie = typeof document !== "undefined" ? document.cookie : "";
-          const tokenPair = cookie
-            .split(";")
-            .map((p) => p.trim())
-            .find((p) => p.startsWith("authToken="));
-          let tokenValue: string | undefined = undefined;
-          if (tokenPair) {
-            tokenValue = decodeURIComponent(tokenPair.split("=")[1] || "");
-          }
-          console.log(
-            "[dashboard] authToken present:",
-            !!tokenValue,
-            tokenValue
-              ? `${tokenValue.slice(0, 8)}...(${tokenValue.length})`
-              : "none"
-          );
-        } catch (e) {
-          console.warn("[dashboard] failed to parse cookie", e);
-        }
-
+        // ✅ api instance automatically:
+        // - Adds Authorization: Bearer {accessToken} header
+        // - Includes credentials: "include" for refresh cookie
+        // - Handles 401 with automatic token refresh and retry
+        console.log("[debug:fetchOverview] ⏳ Sending request to backend...");
         const res = await api.get(`v1/super-admin/dashboard/overview`);
+        console.log("[debug:fetchOverview] ✅ API call completed successfully");
 
-        // Some backend responses are wrapped: { success, statusCode, data: { ... } }
-        // Normalize to the inner data object if present.
+        // Log response details
+        console.log("[debug:fetchOverview] 📥 Response status:", res.status);
+        console.log("[debug:fetchOverview] 📥 Response headers:", res.headers);
+
+        // API Response structure: { success, statusCode, data: { cards: { chambers, orders, products, sellerApplications } } }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: any = res.data;
-        const data: Overview = payload && payload.data ? payload.data : payload;
+
+        console.log(
+          "[debug:fetchOverview] 📦 Full response payload:",
+          JSON.stringify(payload, null, 2)
+        );
+        console.log("[debug:fetchOverview] 🔍 Payload structure analysis:", {
+          hasSuccess: "success" in payload,
+          successValue: payload?.success,
+          hasStatusCode: "statusCode" in payload,
+          statusCode: payload?.statusCode,
+          hasData: "data" in payload,
+          dataType: typeof payload?.data,
+          hasDataCards: payload?.data?.cards !== undefined,
+        });
+
+        // Extract nested cards data
+        console.log("[debug:fetchOverview] 🔍 Starting data extraction...");
+        let data: Overview | null = null;
+        let dataPath = "UNKNOWN";
+
+        if (payload?.data?.cards) {
+          // Expected structure: { data: { cards: { chambers, orders, ... } } }
+          data = payload.data.cards;
+          dataPath = "payload.data.cards";
+          console.log(
+            "[debug:fetchOverview] ✅ Found data at payload.data.cards"
+          );
+          console.log(
+            "[debug:fetchOverview] 📊 Data content:",
+            JSON.stringify(data, null, 2)
+          );
+        } else if (payload?.data) {
+          // Fallback: data might be directly at payload.data
+          data = payload.data;
+          dataPath = "payload.data";
+          console.log(
+            "[debug:fetchOverview] ⚠️ Found data at payload.data (fallback path)"
+          );
+          console.log(
+            "[debug:fetchOverview] 📊 Data content:",
+            JSON.stringify(data, null, 2)
+          );
+        } else {
+          // Last resort: payload is the data
+          data = payload;
+          dataPath = "payload (root)";
+          console.log(
+            "[debug:fetchOverview] ⚠️ Using payload as data (last resort)"
+          );
+          console.log(
+            "[debug:fetchOverview] 📊 Data content:",
+            JSON.stringify(data, null, 2)
+          );
+        }
+
+        console.log("[debug:fetchOverview] 📍 Data extracted from:", dataPath);
 
         // Defensive normalization: ensure nested objects exist to avoid runtime errors
+        console.log("[debug:fetchOverview] 🔧 Normalizing data structure...");
         const normalized: Overview = {
           chambers: data?.chambers ?? { active: 0, inactive: 0 },
           orders: data?.orders ?? { completed: 0, pending: 0 },
@@ -201,94 +215,274 @@ export const useDashboardStore = create<DashboardState>()(
           },
         };
 
+        console.log(
+          "[debug:fetchOverview] ✅ Normalized data:",
+          JSON.stringify(normalized, null, 2)
+        );
+        console.log(
+          "[debug:fetchOverview] 🎯 DATA SOURCE: REAL API RESPONSE (NOT MOCK)"
+        );
+        console.log("[debug:fetchOverview] 💾 Setting state with real data...");
+
         set({
           overview: normalized,
           loading: { ...get().loading, overview: false },
         });
+
+        console.log(
+          "[debug:fetchOverview] ✅ State updated successfully with REAL API DATA"
+        );
+        console.log("========================================\n");
       } catch (err) {
-        console.error("Failed to fetch overview:", err);
+        console.error("\n❌❌❌ [debug:fetchOverview] ERROR CAUGHT ❌❌❌");
+        console.error("[debug:fetchOverview] Error object:", err);
+        console.error(
+          "[debug:fetchOverview] Error message:",
+          (err as Error).message
+        );
+        console.error(
+          "[debug:fetchOverview] Error stack:",
+          (err as Error).stack
+        );
+
+        // Check if it's an axios error with response
+        const axiosError = err as AxiosError;
+        if (axiosError.response) {
+          console.error("[debug:fetchOverview] 🔴 HTTP Error Response:");
+          console.error(
+            "[debug:fetchOverview]   Status:",
+            axiosError.response.status
+          );
+          console.error(
+            "[debug:fetchOverview]   Status Text:",
+            axiosError.response.statusText
+          );
+          console.error(
+            "[debug:fetchOverview]   Headers:",
+            axiosError.response.headers
+          );
+          console.error(
+            "[debug:fetchOverview]   Data:",
+            JSON.stringify(axiosError.response.data, null, 2)
+          );
+
+          if (axiosError.response.status === 401) {
+            console.error(
+              "[debug:fetchOverview] ⚠️ 401 Unauthorized - Token may be invalid or expired"
+            );
+            console.error(
+              "[debug:fetchOverview] ⚠️ Refresh attempt may have failed"
+            );
+          }
+        } else if (axiosError.request) {
+          console.error(
+            "[debug:fetchOverview] 🔴 Network Error - No response received"
+          );
+          console.error("[debug:fetchOverview]   Request:", axiosError.request);
+        } else {
+          console.error(
+            "[debug:fetchOverview] 🔴 Error setting up request:",
+            axiosError.message
+          );
+        }
+
+        // api interceptor already handled 401 with refresh attempt
+        // If we still get an error here, it means refresh failed or other error
+        const errorMessage =
+          (err as Error).message || "Failed to fetch overview";
+
+        console.error(
+          "[debug:fetchOverview] 💾 Setting error state:",
+          errorMessage
+        );
+        console.error(
+          "[debug:fetchOverview] 🎯 DATA SOURCE: ERROR - NO DATA SET"
+        );
+        console.error("========================================\n");
+
         set({
-          error: { ...get().error, overview: (err as Error).message },
+          error: { ...get().error, overview: errorMessage },
           loading: { ...get().loading, overview: false },
         });
       }
     },
 
     fetchSales: async (days: number = 7) => {
+      console.log("\n========================================");
+      console.log(`[debug:fetchSales] 🚀 STARTING fetchSales (days=${days})`);
+      console.log("========================================");
+
+      const token = getAccessToken();
+      console.log("[debug:fetchSales] 🔐 Token status:", {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+      });
+
       set({
         loading: { ...get().loading, sales: true },
         error: { ...get().error, sales: null },
       });
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for sales");
-          set({
-            sales: MOCK_DASHBOARD_DATA.sales,
-            loading: { ...get().loading, sales: false },
-          });
-          return;
-        }
+        console.log(`[debug:fetchSales] 📡 API call details:`);
+        console.log(
+          `[debug:fetchSales] 📍 Endpoint: v1/super-admin/dashboard/sales`
+        );
+        console.log(`[debug:fetchSales] 🔧 Method: GET`);
+        console.log(`[debug:fetchSales] 📋 Params: { days: ${days} }`);
+        console.log(`[debug:fetchSales] ⏳ Sending request...`);
 
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/sales`, {
           params: { days },
         });
 
+        console.log("[debug:fetchSales] ✅ API call completed");
+        console.log("[debug:fetchSales] 📥 Response status:", res.status);
+
         // API may return wrapped payload: { success, statusCode, data: { labels: [...], values: [...] } }
         const payload = res.data as Record<string, unknown>;
+        console.log(
+          "[debug:fetchSales] 📦 Response payload:",
+          JSON.stringify(payload, null, 2)
+        );
 
         let mapped: DailySale[] = [];
 
+        // Helper function to convert ISO date to readable format
+        const formatDate = (dateString: string): string => {
+          try {
+            const date = new Date(dateString);
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+              return dateString; // Return original if invalid
+            }
+
+            // For dates within last 7 days, show day name (Mon, Tue, etc.)
+            const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            const monthNames = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "May",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
+            ];
+
+            // Format: "Mon 13" or "Nov 13" depending on range
+            if (days <= 7) {
+              return `${dayNames[date.getDay()]} ${date.getDate()}`;
+            } else if (days <= 31) {
+              return `${monthNames[date.getMonth()]} ${date.getDate()}`;
+            } else {
+              return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            }
+          } catch {
+            return dateString; // Return original on error
+          }
+        };
+
         if (Array.isArray(payload)) {
           // legacy: array of { day, sales }
-          mapped = payload as DailySale[];
+          mapped = (payload as DailySale[]).map((item) => ({
+            day: formatDate(item.day),
+            sales: item.sales,
+          }));
         } else if (payload?.data && typeof payload.data === "object") {
           const data = payload.data as { labels?: string[]; values?: number[] };
           if (data.labels && data.values) {
             const labels: string[] = data.labels || [];
             const values: number[] = data.values || [];
             mapped = labels.map((lbl, idx) => ({
-              day: lbl,
+              day: formatDate(lbl),
               sales: Number(values[idx] ?? 0),
             }));
           } else if (Array.isArray(data)) {
             // sometimes data is already an array of objects
-            mapped = data as DailySale[];
+            mapped = (data as DailySale[]).map((item) => ({
+              day: formatDate(item.day),
+              sales: item.sales,
+            }));
           }
         }
 
+        console.log("[debug:fetchSales] 📊 Parsed sales data:", mapped);
+        console.log(
+          "[debug:fetchSales] 🎯 DATA SOURCE: REAL API RESPONSE (NOT MOCK)"
+        );
+        console.log("[debug:fetchSales] 💾 Setting state with real data...");
+
         set({ sales: mapped, loading: { ...get().loading, sales: false } });
+
+        console.log("[debug:fetchSales] ✅ State updated with REAL API DATA");
+        console.log("========================================\n");
       } catch (err) {
+        console.error("\n❌❌❌ [debug:fetchSales] ERROR CAUGHT ❌❌❌");
+        console.error("[debug:fetchSales] Error:", err);
+
+        const axiosError = err as AxiosError;
+        if (axiosError.response) {
+          console.error("[debug:fetchSales] HTTP Error:", {
+            status: axiosError.response.status,
+            data: axiosError.response.data,
+          });
+        }
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch sales data";
+
+        console.error(
+          "[debug:fetchSales] 💾 Setting error state:",
+          errorMessage
+        );
+        console.error("========================================\n");
+
         set({
-          error: { ...get().error, sales: (err as Error).message },
+          error: { ...get().error, sales: errorMessage },
           loading: { ...get().loading, sales: false },
         });
       }
     },
 
     fetchChambers: async (page: number = 1, limit: number = 10) => {
+      console.log("\n========================================");
+      console.log(
+        `[debug:fetchChambers] 🚀 STARTING fetchChambers (page=${page}, limit=${limit})`
+      );
+      console.log("========================================");
+
+      const token = getAccessToken();
+      console.log("[debug:fetchChambers] 🔐 Token status:", {
+        hasToken: !!token,
+      });
+
       set({
         loading: { ...get().loading, chambers: true },
         error: { ...get().error, chambers: null },
       });
 
-      console.log(
-        `[store] GET v1/super-admin/dashboard/chambers → page=${page}, limit=${limit}`
-      );
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for chambers");
-          set({
-            chambers: MOCK_DASHBOARD_DATA.chambers,
-            loading: { ...get().loading, chambers: false },
-          });
-          return;
-        }
+        console.log(`[debug:fetchChambers] 📡 API call details:`);
+        console.log(
+          `[debug:fetchChambers] 📍 Endpoint: v1/super-admin/dashboard/chambers`
+        );
+        console.log(
+          `[debug:fetchChambers] 📋 Params: { page: ${page}, limit: ${limit} }`
+        );
+        console.log(`[debug:fetchChambers] ⏳ Sending request...`);
 
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/chambers`, {
           params: { page, limit },
         });
+
+        console.log("[debug:fetchChambers] ✅ API call completed");
+        console.log("[debug:fetchChambers] 📥 Response status:", res.status);
 
         // The API response is wrapped. Example shape:
         // { success, statusCode, data: { data: [ ...items ], meta: { total, page, limit } } }
@@ -318,60 +512,159 @@ export const useDashboardStore = create<DashboardState>()(
           limit: meta.limit ?? limit,
         };
 
+        console.log(
+          "[debug:fetchChambers] 📊 Parsed chamber data:",
+          JSON.stringify(chamberRegistry, null, 2)
+        );
+        console.log(
+          "[debug:fetchChambers] 🎯 DATA SOURCE: REAL API RESPONSE (NOT MOCK)"
+        );
+        console.log("[debug:fetchChambers] 💾 Setting state with real data...");
+
         set({
           chambers: chamberRegistry,
           loading: { ...get().loading, chambers: false },
         });
+
+        console.log(
+          "[debug:fetchChambers] ✅ State updated with REAL API DATA"
+        );
+        console.log("========================================\n");
       } catch (err) {
+        console.error("\n❌❌❌ [debug:fetchChambers] ERROR CAUGHT ❌❌❌");
+        console.error("[debug:fetchChambers] Error:", err);
+
+        const axiosError = err as AxiosError;
+        if (axiosError.response) {
+          console.error("[debug:fetchChambers] HTTP Error:", {
+            status: axiosError.response.status,
+            data: axiosError.response.data,
+          });
+        }
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch chambers";
+        console.error(
+          "[debug:fetchChambers] 💾 Setting error state:",
+          errorMessage
+        );
+        console.error("========================================\n");
+
         set({
-          error: { ...get().error, chambers: (err as Error).message },
+          error: { ...get().error, chambers: errorMessage },
           loading: { ...get().loading, chambers: false },
         });
       }
     },
 
     fetchUsersStats: async () => {
+      console.log("\n========================================");
+      console.log("[debug:fetchUsersStats] 🚀 STARTING fetchUsersStats");
+      console.log("========================================");
+
+      const token = getAccessToken();
+      console.log("[debug:fetchUsersStats] 🔐 Token status:", {
+        hasToken: !!token,
+      });
+
       set({
         loading: { ...get().loading, usersStats: true },
         error: { ...get().error, usersStats: null },
       });
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for usersStats");
-          set({
-            usersStats: MOCK_DASHBOARD_DATA.usersStats,
-            loading: { ...get().loading, usersStats: false },
-          });
-          return;
-        }
+        console.log("[debug:fetchUsersStats] 📡 API call details:");
+        console.log(
+          "[debug:fetchUsersStats] 📍 Endpoint: v1/super-admin/dashboard/users-stats"
+        );
+        console.log("[debug:fetchUsersStats] ⏳ Sending request...");
 
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/users-stats`);
+
+        console.log("[debug:fetchUsersStats] ✅ API call completed");
+        console.log("[debug:fetchUsersStats] 📥 Response status:", res.status);
 
         // API returns: { success, statusCode, data: { USER: 1, BUYER: 5, ... } }
         const payload = res.data as Record<string, unknown>;
+        console.log(
+          "[debug:fetchUsersStats] 📦 Response payload:",
+          JSON.stringify(payload, null, 2)
+        );
+
         const data: UsersStats = (payload?.data as UsersStats) || {};
+        console.log("[debug:fetchUsersStats] 📊 Extracted user stats:", data);
+        console.log(
+          "[debug:fetchUsersStats] 🎯 DATA SOURCE: REAL API RESPONSE (NOT MOCK)"
+        );
 
         set({
           usersStats: data,
           loading: { ...get().loading, usersStats: false },
         });
+
+        console.log(
+          "[debug:fetchUsersStats] ✅ State updated with REAL API DATA"
+        );
+        console.log("========================================\n");
       } catch (err) {
+        console.error("\n❌❌❌ [debug:fetchUsersStats] ERROR CAUGHT ❌❌❌");
+        console.error("[debug:fetchUsersStats] Error:", err);
+
+        const axiosError = err as AxiosError;
+        if (axiosError.response) {
+          console.error("[debug:fetchUsersStats] HTTP Error:", {
+            status: axiosError.response.status,
+            data: axiosError.response.data,
+          });
+        }
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch user statistics";
+        console.error(
+          "[debug:fetchUsersStats] 💾 Setting error state:",
+          errorMessage
+        );
+        console.error("========================================\n");
+
         set({
-          error: { ...get().error, usersStats: (err as Error).message },
+          error: { ...get().error, usersStats: errorMessage },
           loading: { ...get().loading, usersStats: false },
         });
       }
     },
 
     fetchUsers: async (page: number = 1, limit: number = 50) => {
+      console.log("\n========================================");
+      console.log(
+        `[debug:fetchUsers] 🚀 STARTING fetchUsers (page=${page}, limit=${limit})`
+      );
+      console.log("========================================");
+
+      const token = getAccessToken();
+      console.log("[debug:fetchUsers] 🔐 Token status:", { hasToken: !!token });
+
       set({
         loading: { ...get().loading, users: true },
         error: { ...get().error, users: null },
       });
 
       try {
+        console.log(`[debug:fetchUsers] 📡 API call details:`);
+        console.log(`[debug:fetchUsers] 📍 Endpoint: v1/users`);
+        console.log(
+          `[debug:fetchUsers] 📋 Params: { page: ${page}, limit: ${limit} }`
+        );
+        console.log(`[debug:fetchUsers] ⏳ Sending request...`);
+
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/users`, { params: { page, limit } });
+
+        console.log("[debug:fetchUsers] ✅ API call completed");
+        console.log("[debug:fetchUsers] 📥 Response status:", res.status);
+        console.log(
+          "[debug:fetchUsers] 📦 Response payload:",
+          JSON.stringify(res.data, null, 2)
+        );
 
         // Normalize possible response shapes:
         // 1) { success, statusCode, data: { data: [...], meta: { total, page, limit } } }
@@ -418,38 +711,107 @@ export const useDashboardStore = create<DashboardState>()(
           region: u.region ?? u.location ?? undefined,
         }));
 
+        console.log(
+          "[debug:fetchUsers] 📊 Parsed users data:",
+          `${mapped.length} users`
+        );
+        console.log(
+          "[debug:fetchUsers] 🎯 DATA SOURCE: REAL API RESPONSE (NOT MOCK)"
+        );
+        console.log("[debug:fetchUsers] 💾 Setting state with real data...");
+
         set({ users: mapped, loading: { ...get().loading, users: false } });
+
+        console.log("[debug:fetchUsers] ✅ State updated with REAL API DATA");
+        console.log("========================================\n");
       } catch (err) {
-        console.error("Failed to fetch users:", err);
+        console.error("\n❌❌❌ [debug:fetchUsers] ERROR CAUGHT ❌❌❌");
+        console.error("[debug:fetchUsers] Error:", err);
+
+        const axiosError = err as AxiosError;
+        if (axiosError.response) {
+          console.error("[debug:fetchUsers] HTTP Error:", {
+            status: axiosError.response.status,
+            data: axiosError.response.data,
+          });
+        }
+
+        const errorMessage = (err as Error).message || "Failed to fetch users";
+        console.error(
+          "[debug:fetchUsers] 💾 Setting error state:",
+          errorMessage
+        );
+        console.error("========================================\n");
+
         set({
-          error: { ...get().error, users: (err as Error).message },
+          error: { ...get().error, users: errorMessage },
           loading: { ...get().loading, users: false },
         });
       }
     },
 
     fetchCards: async () => {
+      console.log("\n========================================");
+      console.log("[debug:fetchCards] 🚀 STARTING fetchCards");
+      console.log("========================================");
+
+      const token = getAccessToken();
+      console.log("[debug:fetchCards] 🔐 Token status:", { hasToken: !!token });
+
       set({
         loading: { ...get().loading, cards: true },
         error: { ...get().error, cards: null },
       });
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for cards");
-          set({
-            cards: MOCK_DASHBOARD_DATA.cards,
-            loading: { ...get().loading, cards: false },
+        console.log("[debug:fetchCards] 📡 API call details:");
+        console.log(
+          "[debug:fetchCards] 📍 Endpoint: v1/super-admin/dashboard/cards"
+        );
+        console.log("[debug:fetchCards] ⏳ Sending request...");
+
+        // ✅ api instance handles token automatically
+        const res = await api.get(`v1/super-admin/dashboard/cards`);
+
+        console.log("[debug:fetchCards] ✅ API call completed");
+        console.log("[debug:fetchCards] 📥 Response status:", res.status);
+        console.log(
+          "[debug:fetchCards] 📦 Response payload:",
+          JSON.stringify(res.data, null, 2)
+        );
+
+        const data: CardsSummary = res.data;
+        console.log("[debug:fetchCards] 📊 Parsed cards data:", data);
+        console.log(
+          "[debug:fetchCards] 🎯 DATA SOURCE: REAL API RESPONSE (NOT MOCK)"
+        );
+        console.log("[debug:fetchCards] 💾 Setting state with real data...");
+
+        set({ cards: data, loading: { ...get().loading, cards: false } });
+
+        console.log("[debug:fetchCards] ✅ State updated with REAL API DATA");
+        console.log("========================================\n");
+      } catch (err) {
+        console.error("\n❌❌❌ [debug:fetchCards] ERROR CAUGHT ❌❌❌");
+        console.error("[debug:fetchCards] Error:", err);
+
+        const axiosError = err as AxiosError;
+        if (axiosError.response) {
+          console.error("[debug:fetchCards] HTTP Error:", {
+            status: axiosError.response.status,
+            data: axiosError.response.data,
           });
-          return;
         }
 
-        const res = await api.get(`v1/super-admin/dashboard/cards`);
-        const data: CardsSummary = res.data;
-        set({ cards: data, loading: { ...get().loading, cards: false } });
-      } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch summary cards";
+        console.error(
+          "[debug:fetchCards] 💾 Setting error state:",
+          errorMessage
+        );
+        console.error("========================================\n");
+
         set({
-          error: { ...get().error, cards: (err as Error).message },
+          error: { ...get().error, cards: errorMessage },
           loading: { ...get().loading, cards: false },
         });
       }

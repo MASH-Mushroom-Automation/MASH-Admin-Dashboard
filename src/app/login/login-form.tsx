@@ -19,7 +19,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const { login, isAuthenticated, user, error, logout } = useAuthStore();
+  const { login, isAuthenticated, user, error } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -59,27 +59,27 @@ export function LoginForm() {
 
     try {
       setIsLoading(true);
-      
+
       // Show loading toast
       toast.loading("Signing in...", { id: "login-loading" });
-      
+
       await login(email, password);
-      
+
       // Dismiss loading toast
       toast.dismiss("login-loading");
-      
+
       // Show success toast
       toast.success("Login successful! Redirecting...", {
         duration: 2000,
       });
-      
+
       console.log("Login successful");
 
       // Clear form
       setEmail("");
       setPassword("");
       setRememberMe(false);
-      
+
       // Redirect to dashboard after brief delay
       setTimeout(() => {
         router.push("/dashboard");
@@ -87,11 +87,11 @@ export function LoginForm() {
     } catch (err: unknown) {
       // Dismiss loading toast
       toast.dismiss("login-loading");
-      
+
       // Show error toast with specific message
       if (err instanceof Error) {
         console.error("Login failed:", err.message);
-        
+
         // Show user-friendly error messages
         if (err.message.includes("verify")) {
           toast.error("Please verify your email before logging in", {
@@ -105,10 +105,16 @@ export function LoginForm() {
           toast.error("Too many login attempts. Please try again later", {
             duration: 5000,
           });
-        } else if (err.message.includes("connect") || err.message.includes("network")) {
-          toast.error("Unable to connect to server. Please check your internet connection", {
-            duration: 5000,
-          });
+        } else if (
+          err.message.includes("connect") ||
+          err.message.includes("network")
+        ) {
+          toast.error(
+            "Unable to connect to server. Please check your internet connection",
+            {
+              duration: 5000,
+            }
+          );
         } else {
           toast.error(err.message || "Login failed. Please try again", {
             duration: 4000,

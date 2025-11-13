@@ -105,7 +105,7 @@ export default function CreateDeviceModal({
             `^${prefix}-${modelCode}-${locationYear}-(\\d+)$`
           );
           const nums = parsed
-            .map((d: any) => {
+            .map((d: { deviceId?: string }) => {
               const m = String(d.deviceId || "").match(regex);
               return m ? parseInt(m[1], 10) : null;
             })
@@ -118,7 +118,7 @@ export default function CreateDeviceModal({
           }
         }
       }
-    } catch (e) {
+    } catch {
       nextDecimal = Date.now() % 10000;
     }
 

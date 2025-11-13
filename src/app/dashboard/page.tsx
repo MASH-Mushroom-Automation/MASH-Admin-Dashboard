@@ -2,55 +2,101 @@
 
 import React, { useEffect, useState } from "react";
 import Navbar from "@/components/navbar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
-import AppSidebar from "@/components/sidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import AppSidebar from "@/components/sidebar";
 import DashboardContent from "@/components/dashboard/dashboard-content";
 import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useDashboardLoading } from "@/hooks/useDashboardLoading";
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout } = useAuthStore();
-  const router = useRouter();
+  const [forceShowContent, setForceShowContent] = useState(false);
+  const { user } = useAuthStore();
 
+  // Subscribe to the entire store to ensure re-renders
   const {
     fetchOverview,
     fetchSales,
     fetchChambers,
     fetchUsersStats,
+    fetchUsers,
     fetchCards,
   } = useDashboardStore();
 
+  // Safety: Force show content after 5 seconds even if loading states are stuck
   useEffect(() => {
-    // Dashboard layout already handles auth check, just fetch data
-    if (user) {
-      console.log("✅ Dashboard loaded for user:", user.email);
-      fetchOverview();
+    const timer = setTimeout(() => {
+      console.log("[Dashboard] ⏰ 5 second timeout - forcing content display");
+      setForceShowContent(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
-      // -------------------------------------------------
-      // SALES – keep the default 7 days
-      // -------------------------------------------------
+  useEffect(() => {
+    // Wait for token restoration before fetching data
+    const fetchData = async () => {
+      if (!user) {
+        console.log("[Dashboard] ⏸️ Waiting for user authentication...");
+        return;
+      }
+
+      // Check if token is available
+      const { getAccessToken } = await import("@/lib/tokenManager");
+      const token = getAccessToken();
+
+      if (!token) {
+        console.log(
+          "[Dashboard] ⏸️ No access token yet - waiting for restoration..."
+        );
+        return;
+      }
+
+      console.log("✅ Dashboard loaded for user:", user.email);
+      console.log("✅ Access token available - fetching dashboard data...");
+
+      fetchOverview();
       fetchSales(7);
 
-      // -------------------------------------------------
-      // CHAMBERS – explicit page/limit + debug logs
-      // -------------------------------------------------
       const page = 1;
       const limit = 10;
-      console.log(`[Dashboard] fetching chambers → page=${page}, limit=${limit}`);
+      console.log(
+        `[Dashboard] fetching chambers → page=${page}, limit=${limit}`
+      );
       fetchChambers(page, limit);
 
       fetchUsersStats();
       fetchCards();
-    }
-  }, [user, fetchOverview, fetchSales, fetchChambers, fetchUsersStats, fetchCards]);
+
+      // Fetch users for chamber-inventory component user table
+      fetchUsers(1, 10);
+    };
+
+    // Small delay to ensure layout has finished token restoration
+    const timer = setTimeout(fetchData, 100);
+    return () => clearTimeout(timer);
+  }, [
+    user,
+    fetchOverview,
+    fetchSales,
+    fetchChambers,
+    fetchUsersStats,
+    fetchUsers,
+    fetchCards,
+  ]);
   const isLoading = useDashboardLoading();
+  const { loading } = useDashboardStore();
+
+  // Debug: Log loading states
+  useEffect(() => {
+    console.log("[Dashboard] Loading states:", loading);
+    console.log("[Dashboard] isLoading:", isLoading);
+  }, [loading, isLoading]);
+
   return (
-   <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
-  <div className="flex min-h-screen w-full bg-background overflow-hidden">
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+      <div className="flex min-h-screen w-full bg-background overflow-hidden">
         {/* Sidebar: responsive wrapper */}
         <div
           className={`fixed inset-y-0 left-0 z-40 bg-background transition-[left] duration-300 ease-in-out md:relative md:left-0
@@ -71,7 +117,11 @@ export default function DashboardPage() {
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
           <main className="flex-1 overflow-auto bg-muted/5">
-            {isLoading ? <DashboardSkeleton /> : <DashboardContent />}
+            {isLoading && !forceShowContent ? (
+              <DashboardSkeleton />
+            ) : (
+              <DashboardContent />
+            )}
           </main>
         </SidebarInset>
       </div>
