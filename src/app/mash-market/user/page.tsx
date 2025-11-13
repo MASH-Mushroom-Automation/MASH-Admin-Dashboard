@@ -66,8 +66,7 @@ export default function UsersManagement() {
         // const response = await api.get('v1/super-admin/users')
         // setUsers(response.data)
         
-        // Mock: Set empty users array for now
-        setUsers([])
+  // Mock: Use local mock users for preview
         
         toast.info('User management connected to backend - no users yet')
       } catch (err) {
@@ -352,28 +351,36 @@ export default function UsersManagement() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="px-6 py-4"><UserAvatar initials={user.avatar || 'U'} /></TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell className="whitespace-nowrap text-sm truncate">{user.username}</TableCell>
-                    <TableCell className="whitespace-nowrap truncate">{user.email}</TableCell>
-                    <TableCell className="whitespace-nowrap truncate">{user.phone}</TableCell>
-                    <TableCell className="whitespace-nowrap">{user.region || 'N/A'}</TableCell>
-                    <TableCell>{user.role}</TableCell>
-                    <TableCell>
-                      <ActionsMenu
-                        id={user.id}
-                        // navigate to the new detail page for this user
-                        viewUrl={`/mash-market/user/${user.id}`}
-                        onArchive={() => {
-                          setDeletingId(user.id)
-                          setShowArchiveConfirm(true)
-                        }}
-                      />
+                {paginatedUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                      There is no user yet
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  paginatedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="px-6 py-4"><UserAvatar initials={user.avatar || 'U'} /></TableCell>
+                      <TableCell>{user.name}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm truncate">{user.username}</TableCell>
+                      <TableCell className="whitespace-nowrap truncate">{user.email}</TableCell>
+                      <TableCell className="whitespace-nowrap truncate">{user.phone}</TableCell>
+                      <TableCell className="whitespace-nowrap">{user.region || 'N/A'}</TableCell>
+                      <TableCell>{user.role}</TableCell>
+                      <TableCell>
+                        <ActionsMenu
+                          id={user.id}
+                          // navigate to the new detail page for this user
+                          viewUrl={`/mash-market/user/${user.id}`}
+                          onArchive={() => {
+                            setDeletingId(user.id)
+                            setShowArchiveConfirm(true)
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

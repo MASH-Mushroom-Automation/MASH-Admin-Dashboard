@@ -1,9 +1,7 @@
-// components/ecommerce/seller-action-menu.tsx
 "use client"
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreVertical, Eye, Edit, Check, X, Trash2 } from "lucide-react"
+import { Eye, Edit, Check, X, Trash2, Archive } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { ComponentType, SVGProps } from "react"
 import type { TabType } from "@/app/mash-market/seller/page"
@@ -98,12 +96,12 @@ export function SellerActionMenu({
         return [
           ...baseItems,
           { label: "Edit", icon: Edit, action: () => console.log("Edit", seller.id) },
-          { label: "Archive", icon: Trash2, action: onArchive, destructive: true },
+          { label: "Archive", icon: Archive, action: onArchive, destructive: true },
         ]
       case "rejected":
         return [
           ...baseItems,
-          { label: "Archive", icon: Trash2, action: onArchive, destructive: true },
+          { label: "Archive", icon: Archive, action: onArchive, destructive: true },
         ]
       default:
         return baseItems
@@ -114,24 +112,22 @@ export function SellerActionMenu({
   const destructiveTextClass = "text-destructive"
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {menuItems.map((item) => (
-          <DropdownMenuItem
+    <div className="flex items-center gap-2">
+      {menuItems.map((item) => {
+        const Icon = item.icon
+        return (
+          <Button
             key={item.label}
+            variant="ghost"
+            size="icon"
+            className={item.destructive ? `h-8 w-8 text-destructive p-0` : `h-8 w-8 p-0`}
             onClick={item.action}
-            className={item.destructive ? destructiveTextClass : ""}
+            aria-label={item.label}
           >
-            <item.icon className="mr-2 h-4 w-4" />
-            {item.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <Icon className="h-4 w-4" />
+          </Button>
+        )
+      })}
+    </div>
   )
 }

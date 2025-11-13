@@ -149,10 +149,6 @@ export default function SellerContent() {
         {/* Main Content */}
         {!loading && !error && (
           <>
-          <div className="mb-8">
-          <h1 className="sm:text-3xl text-2xl font-bold text-foreground mb-2">Pending Sellers</h1>
-          <p className="text-muted-foreground sm:text-base text-sm">Review seller application</p>
-        </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="mb-6">

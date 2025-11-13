@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical, Archive, ArrowLeft } from "lucide-react"
+import { ActionsMenu } from "@/components/user-actions-menu"
 import ViewUserModal from "@/components/mash-grow/view-user-modal"
 import RegisterModal from "@/components/mash-grow/register-modal"
 import AssignDeviceModal from "@/components/mash-grow/assign-device-modal"
@@ -313,50 +314,36 @@ export default function RegisteredUsersPage() {
                     <TableCell className="font-mono">{u.deviceId}</TableCell>
                     <TableCell>{u.contactNumber}</TableCell>
                     <TableCell className="flex">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" aria-label="User actions">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {!showArchived ? (
-                            <>
-                              <DropdownMenuItem onSelect={() => handleView(u)}>View</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => openAssign(u)}>Assign Device</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => {
-                                // Map user shape to RegisterModal's expected initialData
-                                const selectedDevice = devices.find((d) => d.deviceId === u.deviceId)
-                                setEditUser({
-                                  id: u.id,
-                                  chamberName: u.name,
-                                  contactNumber: u.contactNumber,
-                                  address: u.address,
-                                  selectedDeviceId: selectedDevice?.id,
-                                })
-                                setRegisterOpen(true)
-                              }}>Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => {
-                                setArchivingUser(u)
-                                setShowArchiveConfirm(true)
-                              }}>Archive</DropdownMenuItem>
-                            </>
-                          ) : (
-                            <>
-                              <DropdownMenuItem onSelect={() => handleView(u)}>View</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => {
-                                // restore user
-                                setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, archived: false } : x)))
-                                // if user had a deviceId, attempt to reassign the device if it exists and is not assigned
-                                if (u.deviceId) {
-                                  setDevices((prev) => prev.map((d) => (d.deviceId === u.deviceId ? { ...d, assigned: true } : d)))
-                                }
-                                toast.success("User restored")
-                              }}>Restore</DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <ActionsMenu
+                        id={u.id}
+                        viewUrl={undefined}
+                        onView={() => handleView(u)}
+                        onEdit={() => {
+                          const selectedDevice = devices.find((d) => d.deviceId === u.deviceId)
+                          setEditUser({
+                            id: u.id,
+                            chamberName: u.name,
+                            contactNumber: u.contactNumber,
+                            address: u.address,
+                            selectedDeviceId: selectedDevice?.id,
+                          })
+                          setRegisterOpen(true)
+                        }}
+                        onArchive={() => {
+                          if (!showArchived) {
+                            setArchivingUser(u)
+                            setShowArchiveConfirm(true)
+                          } else {
+                            setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, archived: false } : x)))
+                            if (u.deviceId) {
+                              setDevices((prev) => prev.map((d) => (d.deviceId === u.deviceId ? { ...d, assigned: true } : d)))
+                            }
+                            toast.success("User restored")
+                          }
+                        }}
+                        ArchiveLabel={showArchived ? "Restore" : "Archive"}
+                      >
+                      </ActionsMenu>
                     </TableCell>
                   </TableRow>
                 ))}
