@@ -19,9 +19,7 @@
  */
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { api } from "../lib/api";
-import { getAccessToken } from "../lib/tokenManager";
-import type { AxiosError } from "axios";
+import { api } from "@/lib/api";
 
 // Define interfaces based on inferred data from components
 interface Overview {

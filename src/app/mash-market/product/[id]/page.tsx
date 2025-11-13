@@ -1,78 +1,37 @@
 "use client";
 
-import React, { useEffect, useRef, use } from "react";
+import React, { useRef, use, useState } from "react";
 import Link from "next/link";
-import { Product } from "@/app/mash-market/product/page";
+import { Product } from "@/store/ecommerceStore";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 // view-only page: no accept/reject handlers here
 
-// NOTE: using local mock data for now; replace with API fetch in production
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "White Oyster Mushroom",
-    seller: "Mushroom Farm",
-    price: 129.99,
-    category: "Fresh Mushroom",
-    subcategory: "Fresh",
-    unit: "per 250g",
-    stockQuantity: 120,
-    images: ["/wireless-headphones.png", "/reusable-water-bottle.png"],
-    image: "/wireless-headphones.png",
-    sellerInfo: {
-      sellerName: "Mushroom Farm",
-      businessName: "Mushroom Farm Co.",
-      contactNumber: "+63 912 345 6789",
-      businessAddress: "123 Farm Lane, Rizal, Philippines",
-    },
-    description:
-      "The White Oyster Mushroom grows in layered clusters with broad, fan-shaped caps and tender texture. It is prized in culinary use for its mild, savory taste and excellent ability to absorb seasonings, making it ideal for stir-fries, soups, and plant-based dishes. Beyond its culinary appeal, it is also valued for its fast growth, sustainability, and rich protein and antioxidant content.",
-    status: "pending",
-    submittedAt: "2025-10-28T10:30:00Z",
-  },
-  {
-    id: "2",
-    name: "White Mushroom",
-    seller: "The farm house",
-    price: 34.99,
-    category: "Fresh Mushroom",
-    subcategory: "Fresh",
-    unit: "per 250g",
-    stockQuantity: 250,
-    images: ["/organic-cotton-tshirt.png"],
-    image: "/organic-cotton-tshirt.png",
-    sellerInfo: {
-      sellerName: "The farm house",
-      businessName: "The Farm House Co.",
-      contactNumber: "+63 922 111 2222",
-      businessAddress: "45 Countryside Ave, Laguna, Philippines",
-    },
-    description:
-      "Fresh harvested white mushrooms, great for soups and stir fry.",
-    status: "approved",
-    submittedAt: "2025-10-27T14:15:00Z",
-  },
-];
+// TODO: Replace with API fetch to get product details by ID
+// const MOCK_PRODUCTS removed to avoid deployment errors
 
 export default function ProductDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  // TODO: Fetch product from API using id
   const { id } = use(params);
-  const product = MOCK_PRODUCTS.find((p) => p.id === id) ?? null;
+  // id will be used when API integration is complete
+  void id;
+  const [product] = useState<Product | null>(null); // Will be replaced with API call
   const descRef = useRef<HTMLTextAreaElement | null>(null);
 
   // auto-resize description textarea to fit content and avoid scrollbars
-  useEffect(() => {
-    const el = descRef.current;
-    if (!el) return;
-    // reset height to auto to correctly measure scrollHeight
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [product?.description]);
+  // Disabled until API integration provides product data
+  // useEffect(() => {
+  //   const el = descRef.current;
+  //   if (!el || !product) return;
+  //   // reset height to auto to correctly measure scrollHeight
+  //   el.style.height = "auto";
+  //   el.style.height = `${el.scrollHeight}px`;
+  // }, [product?.description]);
 
   if (!product) {
     return (
@@ -96,11 +55,13 @@ export default function ProductDetailPage({
 
   // View-only page: actions handled from pending-product detail page
 
-  const formatPricePHP = (price: number) =>
-    new Intl.NumberFormat("en-PH", {
+  const formatPricePHP = (price: string | number) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return new Intl.NumberFormat("en-PH", {
       style: "currency",
       currency: "PHP",
-    }).format(price);
+    }).format(numPrice);
+  };
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString();
 

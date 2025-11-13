@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { Product } from "@/app/mash-market/product/page";
+import type { Product } from "@/store/ecommerceStore";
 import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
@@ -21,20 +21,22 @@ export function ProductDetailsModal({
   onReject,
   showActions = false,
 }: ProductDetailsModalProps) {
-  const formatPricePHP = (price: number) =>
-    new Intl.NumberFormat("en-PH", {
+  const formatPricePHP = (price: string | number) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return new Intl.NumberFormat("en-PH", {
       style: "currency",
       currency: "PHP",
-    }).format(price);
+    }).format(numPrice);
+  };
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString();
   const [selectedImage, setSelectedImage] = useState(0);
   const images = useMemo(() => {
-    if (product.images && product.images.length > 0) return product.images
-    if (product.image) return [product.image]
-    return []
-  }, [product.images, product.image])
+    if (product.images && product.images.length > 0) return product.images;
+    if (product.image) return [product.image];
+    return [];
+  }, [product.images, product.image]);
 
   // Keyboard navigation for multiple images
   useEffect(() => {
@@ -74,7 +76,7 @@ export function ProductDetailsModal({
         <div className="p-6 space-y-6">
           {/* Product Images */}
           <div className="flex flex-col items-center gap-4">
-              <div className="relative flex items-center justify-center w-full">
+            <div className="relative flex items-center justify-center w-full">
               <Image
                 src={images[selectedImage] || "/placeholder.svg"}
                 alt={`${product.name} image ${selectedImage + 1}`}
@@ -117,7 +119,7 @@ export function ProductDetailsModal({
 
             {images.length > 1 && (
               <div className="flex items-center gap-2">
-                {images.map((img, idx) => (
+                {images.map((img: string, idx: number) => (
                   <button
                     key={img + idx}
                     onClick={() => setSelectedImage(idx)}
@@ -189,7 +191,7 @@ export function ProductDetailsModal({
                 Date Submitted
               </label>
               <p className="text-foreground mt-1">
-                {product.submittedAt ? formatDate(product.submittedAt) : 'N/A'}
+                {product.submittedAt ? formatDate(product.submittedAt) : "N/A"}
               </p>
             </div>
 

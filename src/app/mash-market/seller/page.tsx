@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
-import { useDashboardStore, type UserItem } from "@/store/dashboardStore";
+import { useDashboardStore } from "@/store/dashboardStore";
 import { useMemo } from "react";
 
 // Local Seller type for mock data (matches SellerTable component expectations)
@@ -97,13 +97,15 @@ export default function SellerContent() {
     router.push(`/mash-market/seller/${seller.id}`);
   };
 
-  const handleAccept = (id: string) => {
+  const handleAccept = (sellerId: string) => {
     // TODO: Implement API call to approve seller
+    void sellerId; // Will be used in API call
     toast.success("Seller approved (API integration pending)");
   };
 
-  const handleReject = (id: string, reason?: string) => {
+  const handleReject = (sellerId: string, reason?: string) => {
     // TODO: Implement API call to reject seller
+    void sellerId; // Will be used in API call
     toast.error(
       `Seller rejected${reason ? ` — ${reason}` : ""} (API integration pending)`
     );

@@ -27,10 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Archive } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useDashboardStore, type UserItem } from "@/store/dashboardStore";
-
-// Use UserItem type from dashboardStore
-type User = UserItem;
+import { useDashboardStore } from "@/store/dashboardStore";
 
 const ITEMS_PER_PAGE = 5;
 

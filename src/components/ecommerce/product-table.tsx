@@ -12,8 +12,6 @@ import {
 } from "@/components/ui/table";
 import { ActionsMenu } from "@/components/user-actions-menu";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import Image from "next/image";
-import { sanitizeImageUrl } from "@/lib/imageUtils";
 
 interface ProductTableProps {
   products: Product[];
@@ -31,32 +29,10 @@ export function ProductTable({
   viewBase = "/mash-market/product",
 }: ProductTableProps) {
   const [archiveProduct, setArchiveProduct] = useState<Product | null>(null);
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const hasAnyReason = products.some(
     (p) => p.rejectReason !== undefined && p.rejectReason !== null
   );
-
-  // Helper to get image URL with sanitization and fallback
-  const getImageUrl = (product: Product): string => {
-    // If image previously failed to load, return default image immediately
-    if (imageErrors.has(product.id)) {
-      return "/defaultImage.png";
-    }
-
-    // Get image from various possible fields
-    const imageInput =
-      product.image ||
-      product.imageUrl ||
-      (product.images && product.images[0]);
-
-    // Sanitize and validate the image URL
-    return sanitizeImageUrl(imageInput);
-  };
-
-  const handleImageError = (productId: string) => {
-    setImageErrors((prev) => new Set(prev).add(productId));
-  };
 
   // Handle price as both string and number (API returns string)
   const formatPrice = (price: number | string) => {
