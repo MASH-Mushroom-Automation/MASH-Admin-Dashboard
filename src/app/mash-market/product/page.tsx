@@ -76,7 +76,7 @@ export default function AdminProductsPage() {
         
         // Mock: Set empty products array for now
         setProducts([])
-        
+
         toast.info('Product management connected to backend - no products yet')
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products'
@@ -172,25 +172,6 @@ export default function AdminProductsPage() {
       {/* Main Content */}
       {!loading && !error && (
         <>
-
-      {/* Stats Section */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {[
-          { label: "Pending Review", count: pendingCount, color: "bg-yellow-100 dark:bg-yellow-900/30", icon: "⏳" },
-          { label: "Approved", count: approvedCount, color: "bg-green-100 dark:bg-green-900/30", icon: "✓" },
-          { label: "Rejected", count: rejectedCount, color: "bg-red-100 dark:bg-red-900/30", icon: "✕" },
-        ].map((stat, index) => (
-          <div key={index} className="bg-card border border-border rounded-lg p-6 flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-              <p className="text-3xl font-bold text-foreground">{stat.count}</p>
-            </div>
-            <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-              <span className="text-xl">{stat.icon}</span>
-            </div>
-          </div>
-        ))}
-      </div> */}
 
       {/* Search and Filter */}
       <div className="mb-2">

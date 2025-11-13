@@ -45,7 +45,7 @@ export function SellerTable({
 }) {
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string
-    action: "reject" | "Archive"
+    action: "reject" | "Archive" | "accept"
   } | null>(null)
 
   const filteredSellers = mockSellers
@@ -57,6 +57,8 @@ export function SellerTable({
       if (onReject) onReject(confirmAction.sellerId, reason)
     } else if (confirmAction.action === "Archive") {
       if (onArchive) onArchive(confirmAction.sellerId)
+    } else if (confirmAction.action === "accept") {
+      if (onAccept) onAccept(confirmAction.sellerId)
     }
 
     setConfirmAction(null)
@@ -128,12 +130,11 @@ export function SellerTable({
                   <SellerActionMenu
                     seller={seller}
                     activeTab={activeTab}
-                    mode={mode}
+                    // show pending actions when in pending tab
+                    mode={activeTab === "pending" ? "pending" : mode}
                     onReject={() => setConfirmAction({ sellerId: seller.id, action: "reject" })}
                     onArchive={() => setConfirmAction({ sellerId: seller.id, action: "Archive" })}
-                    onAccept={() => {
-                      if (onAccept) onAccept(seller.id)
-                    }}
+                    onAccept={() => setConfirmAction({ sellerId: seller.id, action: "accept" })}
                     onView={() => {
                       if (onView) onView(seller)
                     }}

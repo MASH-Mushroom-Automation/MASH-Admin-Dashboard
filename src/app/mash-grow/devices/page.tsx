@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Archive, ArrowLeft } from "lucide-react";
+import { ActionsMenu } from "@/components/user-actions-menu"
 import {
   Table,
   TableBody,
@@ -213,58 +214,25 @@ export default function DevicesPage() {
                       <TableCell>{d.status}</TableCell>
                       <TableCell>
                         <div className="flex">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                aria-label="Actions"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              {!showArchived ? (
-                                <>
-                                  <DropdownMenuItem
-                                    onSelect={() => {
-                                      // open edit
-                                      setEditDevice(d);
-                                      setCreateOpen(true);
-                                    }}
-                                  >
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onSelect={() => {
-                                      setArchivingDevice(d);
-                                      setShowArchiveConfirm(true);
-                                    }}
-                                  >
-                                    Archive
-                                  </DropdownMenuItem>
-                                </>
-                              ) : (
-                                <>
-                                  <DropdownMenuItem
-                                    onSelect={() => {
-                                      // restore archived device
-                                      setDevices((prev: Device[]) =>
-                                        prev.map((p) =>
-                                          p.id === d.id
-                                            ? { ...p, archived: false }
-                                            : p
-                                        )
-                                      );
-                                      toast.success("Device restored");
-                                    }}
-                                  >
-                                    Restore
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <ActionsMenu
+                            id={d.id}
+                            showView={false}
+                            showEdit={true}
+                            onEdit={() => {
+                              setEditDevice(d)
+                              setCreateOpen(true)
+                            }}
+                            onArchive={() => {
+                              if (!showArchived) {
+                                setArchivingDevice(d)
+                                setShowArchiveConfirm(true)
+                              } else {
+                                setDevices((prev: Device[]) => prev.map((p) => (p.id === d.id ? { ...p, archived: false } : p)))
+                                toast.success("Device restored")
+                              }
+                            }}
+                            ArchiveLabel={showArchived ? "Restore" : "Archive"}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
