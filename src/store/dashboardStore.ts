@@ -21,6 +21,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { api } from "../lib/api";
 import { getAccessToken } from "../lib/tokenManager";
+import type { AxiosError } from "axios";
 
 // Define interfaces based on inferred data from components
 interface Overview {
@@ -79,7 +80,7 @@ interface DashboardState {
 }
 
 // lightweight user shape returned to UI
-interface UserItem {
+export interface UserItem {
   id: string;
   name: string;
   username?: string;
@@ -245,7 +246,7 @@ export const useDashboardStore = create<DashboardState>()(
         );
 
         // Check if it's an axios error with response
-        const axiosError = err as any;
+        const axiosError = err as AxiosError;
         if (axiosError.response) {
           console.error("[debug:fetchOverview] 🔴 HTTP Error Response:");
           console.error(
@@ -424,7 +425,7 @@ export const useDashboardStore = create<DashboardState>()(
         console.error("\n❌❌❌ [debug:fetchSales] ERROR CAUGHT ❌❌❌");
         console.error("[debug:fetchSales] Error:", err);
 
-        const axiosError = err as any;
+        const axiosError = err as AxiosError;
         if (axiosError.response) {
           console.error("[debug:fetchSales] HTTP Error:", {
             status: axiosError.response.status,
@@ -533,7 +534,7 @@ export const useDashboardStore = create<DashboardState>()(
         console.error("\n❌❌❌ [debug:fetchChambers] ERROR CAUGHT ❌❌❌");
         console.error("[debug:fetchChambers] Error:", err);
 
-        const axiosError = err as any;
+        const axiosError = err as AxiosError;
         if (axiosError.response) {
           console.error("[debug:fetchChambers] HTTP Error:", {
             status: axiosError.response.status,
@@ -609,7 +610,7 @@ export const useDashboardStore = create<DashboardState>()(
         console.error("\n❌❌❌ [debug:fetchUsersStats] ERROR CAUGHT ❌❌❌");
         console.error("[debug:fetchUsersStats] Error:", err);
 
-        const axiosError = err as any;
+        const axiosError = err as AxiosError;
         if (axiosError.response) {
           console.error("[debug:fetchUsersStats] HTTP Error:", {
             status: axiosError.response.status,
@@ -727,7 +728,7 @@ export const useDashboardStore = create<DashboardState>()(
         console.error("\n❌❌❌ [debug:fetchUsers] ERROR CAUGHT ❌❌❌");
         console.error("[debug:fetchUsers] Error:", err);
 
-        const axiosError = err as any;
+        const axiosError = err as AxiosError;
         if (axiosError.response) {
           console.error("[debug:fetchUsers] HTTP Error:", {
             status: axiosError.response.status,
@@ -793,7 +794,7 @@ export const useDashboardStore = create<DashboardState>()(
         console.error("\n❌❌❌ [debug:fetchCards] ERROR CAUGHT ❌❌❌");
         console.error("[debug:fetchCards] Error:", err);
 
-        const axiosError = err as any;
+        const axiosError = err as AxiosError;
         if (axiosError.response) {
           console.error("[debug:fetchCards] HTTP Error:", {
             status: axiosError.response.status,

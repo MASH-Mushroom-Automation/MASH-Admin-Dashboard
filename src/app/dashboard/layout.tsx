@@ -21,7 +21,6 @@ export default function DashboardLayout({ children }: Props) {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
   const [isRestoringToken, setIsRestoringToken] = useState(true);
-  const [tokenRestored, setTokenRestored] = useState(false);
 
   useEffect(() => {
     const restoreToken = async () => {
@@ -38,7 +37,6 @@ export default function DashboardLayout({ children }: Props) {
       if (existingToken) {
         console.log("✅ Access token already in memory");
         setIsRestoringToken(false);
-        setTokenRestored(true);
         return;
       }
 
@@ -62,7 +60,6 @@ export default function DashboardLayout({ children }: Props) {
             refreshData.expiresIn || 3600
           );
           console.log("✅ Access token restored from refresh token");
-          setTokenRestored(true);
         } else {
           const errorData = await refreshResponse.json();
           console.error(

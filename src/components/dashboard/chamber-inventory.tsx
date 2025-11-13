@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useDashboardStore } from "@/store/dashboardStore";
+import type { UserItem } from "@/store/dashboardStore";
 
 export default function ChamberInventorySection() {
   const { usersStats, chambers, users, loading, error } = useDashboardStore();
@@ -61,19 +62,13 @@ export default function ChamberInventorySection() {
     GROWER: "#C6DABF",
   };
 
-  const pieData = allowedRoles.map((key) => ({
-    name: roleLabelMap[key] ?? key,
-    value: actualUsersStats?.[key] ?? 0,
-    color: colors[key] ?? "#888888",
-  }));
-
   // Use fetched data for table — show only the 5 most recent entries
   const registryAll = actualChambers?.chambers || [];
   const registry = registryAll.slice(0, 5);
 
   // Calculate user role distribution from actualUsers array
   const userRoleCount: Record<string, number> = {};
-  actualUsers.forEach((user: any) => {
+  actualUsers.forEach((user: UserItem) => {
     const role = user.role || "UNKNOWN";
     userRoleCount[role] = (userRoleCount[role] || 0) + 1;
   });
@@ -177,7 +172,7 @@ export default function ChamberInventorySection() {
                     </td>
                   </tr>
                 ) : (
-                  actualUsers.slice(0, 5).map((user: any) => (
+                  actualUsers.slice(0, 5).map((user: UserItem) => (
                     <tr
                       key={user.id}
                       className="border-b border-border hover:bg-secondary/50"

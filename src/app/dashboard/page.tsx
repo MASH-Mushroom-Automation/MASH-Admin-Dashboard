@@ -9,13 +9,11 @@ import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useDashboardLoading } from "@/hooks/useDashboardLoading";
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [forceShowContent, setForceShowContent] = useState(false);
-  const { user, logout } = useAuthStore();
-  const router = useRouter();
+  const { user } = useAuthStore();
 
   // Subscribe to the entire store to ensure re-renders
   const {
@@ -25,12 +23,6 @@ export default function DashboardPage() {
     fetchUsersStats,
     fetchUsers,
     fetchCards,
-    overview,
-    sales,
-    chambers,
-    usersStats,
-    users,
-    cards,
   } = useDashboardStore();
 
   // Safety: Force show content after 5 seconds even if loading states are stuck
