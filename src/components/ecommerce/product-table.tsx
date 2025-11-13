@@ -98,7 +98,8 @@ export function ProductTable({
             <TableRow key={product.id} className="hover:bg-muted/50">
               <TableCell>
                 <div className="flex items-center gap-3">
-                  {!imageErrors.has(product.id) &&
+                  {/* Image display - commented out temporarily */}
+                  {/* {!imageErrors.has(product.id) &&
                   getImageUrl(product) !== "/defaultImage.png" ? (
                     <Image
                       src={getImageUrl(product)}
@@ -113,7 +114,7 @@ export function ProductTable({
                     <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
                       No Image
                     </div>
-                  )}
+                  )} */}
                   <p className="font-medium truncate">
                     {product.name || "N/A"}
                   </p>
