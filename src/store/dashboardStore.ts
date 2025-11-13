@@ -1,7 +1,26 @@
 // src/store/dashboardStore.ts
+/**
+ * Dashboard Store - Secure Token Management Implementation
+ *
+ * SECURITY ARCHITECTURE:
+ * ✅ Access Token: Stored in memory via tokenManager (XSS protection)
+ * ✅ Refresh Token: HttpOnly cookie (automatic, XSS protection)
+ * ✅ All API calls use `api` instance which automatically:
+ *    - Adds Authorization: Bearer {accessToken} header
+ *    - Includes credentials: "include" for refresh cookie
+ *    - Handles 401 errors with automatic token refresh + retry
+ *
+ * NO COOKIE PARSING: This store never reads document.cookie directly.
+ * Token management is handled by:
+ * - /src/lib/tokenManager.ts (in-memory access token)
+ * - /src/lib/api.ts (axios interceptors for automatic refresh)
+ *
+ * See SECURE_TOKEN_IMPLEMENTATION.md for complete documentation.
+ */
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { api } from "../lib/api";
+import { getAccessToken } from "../lib/tokenManager";
 
 // Define interfaces based on inferred data from components
 interface Overview {
@@ -40,64 +59,6 @@ interface CardsSummary {
   products: { pending: number; approved: number };
   sellerApplications: { pending: number; approved: number };
 }
-
-// Helper function to check if using mock admin tokens
-function isMockAdminToken(): boolean {
-  if (typeof window === "undefined") return false;
-  const cookies = document.cookie;
-  const hasMockToken = cookies.includes("authToken=admin-access-");
-  if (hasMockToken) {
-    console.log("🎭 Detected mock admin token");
-  }
-  return hasMockToken;
-}
-
-// Mock data for hardcoded admin
-const MOCK_DASHBOARD_DATA = {
-  overview: {
-    chambers: { active: 12, inactive: 3 },
-    orders: { completed: 145, pending: 23 },
-    products: { pending: 8, approved: 56 },
-    sellerApplications: { pending: 5, approved: 34 },
-  },
-  sales: [
-    { day: "Mon", sales: 4500 },
-    { day: "Tue", sales: 5200 },
-    { day: "Wed", sales: 4800 },
-    { day: "Thu", sales: 6100 },
-    { day: "Fri", sales: 7300 },
-    { day: "Sat", sales: 8200 },
-    { day: "Sun", sales: 6800 },
-  ],
-  chambers: {
-    chambers: [
-      { id: "1", grower: "John's Farm", location: "Zone A", status: "Active" },
-      { id: "2", grower: "Green Valley", location: "Zone B", status: "Active" },
-      {
-        id: "3",
-        grower: "Mountain Grow",
-        location: "Zone C",
-        status: "Inactive",
-      },
-    ],
-    total: 3,
-    page: 1,
-    limit: 10,
-  },
-  usersStats: {
-    USER: 120,
-    BUYER: 85,
-    GROWER: 45,
-    ADMIN: 8,
-    SUPER_ADMIN: 2,
-  },
-  cards: {
-    chambers: { active: 12, inactive: 3 },
-    orders: { completed: 145, pending: 23 },
-    products: { pending: 8, approved: 56 },
-    sellerApplications: { pending: 5, approved: 34 },
-  },
-};
 
 interface DashboardState {
   overview: Overview | null;
@@ -148,47 +109,39 @@ export const useDashboardStore = create<DashboardState>()(
       });
 
       try {
-        console.log("📡 Fetching overview...");
+        console.log("📡 [fetchOverview] Starting request...");
 
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for overview");
-          set({
-            overview: MOCK_DASHBOARD_DATA.overview,
-            loading: { ...get().loading, overview: false },
-          });
-          return;
-        }
-
-        // Log whether authToken cookie is present client-side
-        try {
-          const cookie = typeof document !== "undefined" ? document.cookie : "";
-          const tokenPair = cookie
-            .split(";")
-            .map((p) => p.trim())
-            .find((p) => p.startsWith("authToken="));
-          let tokenValue: string | undefined = undefined;
-          if (tokenPair) {
-            tokenValue = decodeURIComponent(tokenPair.split("=")[1] || "");
-          }
-          console.log(
-            "[dashboard] authToken present:",
-            !!tokenValue,
-            tokenValue
-              ? `${tokenValue.slice(0, 8)}...(${tokenValue.length})`
-              : "none"
-          );
-        } catch (e) {
-          console.warn("[dashboard] failed to parse cookie", e);
-        }
-
+        // ✅ api instance automatically:
+        // - Adds Authorization: Bearer {accessToken} header
+        // - Includes credentials: "include" for refresh cookie
+        // - Handles 401 with automatic token refresh and retry
         const res = await api.get(`v1/super-admin/dashboard/overview`);
 
-        // Some backend responses are wrapped: { success, statusCode, data: { ... } }
-        // Normalize to the inner data object if present.
+        // API Response structure: { success, statusCode, data: { cards: { chambers, orders, products, sellerApplications } } }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: any = res.data;
-        const data: Overview = payload && payload.data ? payload.data : payload;
+
+        console.log("[fetchOverview] Full payload:", payload);
+
+        // Extract nested cards data
+        let data: Overview | null = null;
+
+        if (payload?.data?.cards) {
+          // Expected structure: { data: { cards: { chambers, orders, ... } } }
+          data = payload.data.cards;
+          console.log(
+            "[fetchOverview] ✅ Found data at payload.data.cards:",
+            data
+          );
+        } else if (payload?.data) {
+          // Fallback: data might be directly at payload.data
+          data = payload.data;
+          console.log("[fetchOverview] Found data at payload.data:", data);
+        } else {
+          // Last resort: payload is the data
+          data = payload;
+          console.log("[fetchOverview] Using payload as data:", data);
+        }
 
         // Defensive normalization: ensure nested objects exist to avoid runtime errors
         const normalized: Overview = {
@@ -201,14 +154,22 @@ export const useDashboardStore = create<DashboardState>()(
           },
         };
 
+        console.log("[fetchOverview] Normalized data:", normalized);
+
         set({
           overview: normalized,
           loading: { ...get().loading, overview: false },
         });
       } catch (err) {
-        console.error("Failed to fetch overview:", err);
+        console.error("[fetchOverview] Failed to fetch overview:", err);
+
+        // api interceptor already handled 401 with refresh attempt
+        // If we still get an error here, it means refresh failed or other error
+        const errorMessage =
+          (err as Error).message || "Failed to fetch overview";
+
         set({
-          error: { ...get().error, overview: (err as Error).message },
+          error: { ...get().error, overview: errorMessage },
           loading: { ...get().loading, overview: false },
         });
       }
@@ -220,16 +181,9 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, sales: null },
       });
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for sales");
-          set({
-            sales: MOCK_DASHBOARD_DATA.sales,
-            loading: { ...get().loading, sales: false },
-          });
-          return;
-        }
+        console.log(`📡 [fetchSales] Fetching ${days} days of sales data...`);
 
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/sales`, {
           params: { days },
         });
@@ -259,8 +213,13 @@ export const useDashboardStore = create<DashboardState>()(
 
         set({ sales: mapped, loading: { ...get().loading, sales: false } });
       } catch (err) {
+        console.error("[fetchSales] Failed to fetch sales data:", err);
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch sales data";
+
         set({
-          error: { ...get().error, sales: (err as Error).message },
+          error: { ...get().error, sales: errorMessage },
           loading: { ...get().loading, sales: false },
         });
       }
@@ -273,19 +232,10 @@ export const useDashboardStore = create<DashboardState>()(
       });
 
       console.log(
-        `[store] GET v1/super-admin/dashboard/chambers → page=${page}, limit=${limit}`
+        `📡 [fetchChambers] Fetching chambers → page=${page}, limit=${limit}`
       );
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for chambers");
-          set({
-            chambers: MOCK_DASHBOARD_DATA.chambers,
-            loading: { ...get().loading, chambers: false },
-          });
-          return;
-        }
-
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/chambers`, {
           params: { page, limit },
         });
@@ -323,8 +273,13 @@ export const useDashboardStore = create<DashboardState>()(
           loading: { ...get().loading, chambers: false },
         });
       } catch (err) {
+        console.error("[fetchChambers] Failed to fetch chambers:", err);
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch chambers";
+
         set({
-          error: { ...get().error, chambers: (err as Error).message },
+          error: { ...get().error, chambers: errorMessage },
           loading: { ...get().loading, chambers: false },
         });
       }
@@ -336,16 +291,9 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, usersStats: null },
       });
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for usersStats");
-          set({
-            usersStats: MOCK_DASHBOARD_DATA.usersStats,
-            loading: { ...get().loading, usersStats: false },
-          });
-          return;
-        }
+        console.log("📡 [fetchUsersStats] Fetching user statistics...");
 
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/users-stats`);
 
         // API returns: { success, statusCode, data: { USER: 1, BUYER: 5, ... } }
@@ -357,8 +305,16 @@ export const useDashboardStore = create<DashboardState>()(
           loading: { ...get().loading, usersStats: false },
         });
       } catch (err) {
+        console.error(
+          "[fetchUsersStats] Failed to fetch user statistics:",
+          err
+        );
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch user statistics";
+
         set({
-          error: { ...get().error, usersStats: (err as Error).message },
+          error: { ...get().error, usersStats: errorMessage },
           loading: { ...get().loading, usersStats: false },
         });
       }
@@ -371,6 +327,11 @@ export const useDashboardStore = create<DashboardState>()(
       });
 
       try {
+        console.log(
+          `📡 [fetchUsers] Fetching users → page=${page}, limit=${limit}`
+        );
+
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/users`, { params: { page, limit } });
 
         // Normalize possible response shapes:
@@ -420,9 +381,12 @@ export const useDashboardStore = create<DashboardState>()(
 
         set({ users: mapped, loading: { ...get().loading, users: false } });
       } catch (err) {
-        console.error("Failed to fetch users:", err);
+        console.error("[fetchUsers] Failed to fetch users:", err);
+
+        const errorMessage = (err as Error).message || "Failed to fetch users";
+
         set({
-          error: { ...get().error, users: (err as Error).message },
+          error: { ...get().error, users: errorMessage },
           loading: { ...get().loading, users: false },
         });
       }
@@ -434,22 +398,20 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, cards: null },
       });
       try {
-        // Check if using mock admin token
-        if (isMockAdminToken()) {
-          console.log("🎭 Using mock admin data for cards");
-          set({
-            cards: MOCK_DASHBOARD_DATA.cards,
-            loading: { ...get().loading, cards: false },
-          });
-          return;
-        }
+        console.log("📡 [fetchCards] Fetching summary cards...");
 
+        // ✅ api instance handles token automatically
         const res = await api.get(`v1/super-admin/dashboard/cards`);
         const data: CardsSummary = res.data;
         set({ cards: data, loading: { ...get().loading, cards: false } });
       } catch (err) {
+        console.error("[fetchCards] Failed to fetch summary cards:", err);
+
+        const errorMessage =
+          (err as Error).message || "Failed to fetch summary cards";
+
         set({
-          error: { ...get().error, cards: (err as Error).message },
+          error: { ...get().error, cards: errorMessage },
           loading: { ...get().loading, cards: false },
         });
       }

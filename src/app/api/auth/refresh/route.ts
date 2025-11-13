@@ -5,15 +5,15 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/auth/refresh
- * 
+ *
  * Refresh access token using refresh token from HttpOnly cookie
- * 
+ *
  * This endpoint:
  * 1. Extracts refresh token from HttpOnly cookie
  * 2. Sends it to backend to get new access + refresh tokens
  * 3. Sets new refresh token in HttpOnly cookie
  * 4. Returns new access token to frontend (stored in memory by tokenManager)
- * 
+ *
  * Security:
  * - Refresh token never exposed to JavaScript (XSS protection)
  * - Access token rotated on each refresh
@@ -26,9 +26,9 @@ export async function POST() {
 
     if (!refreshToken) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "No refresh token found" 
+        {
+          success: false,
+          message: "No refresh token found",
         },
         { status: 401 }
       );
@@ -47,14 +47,14 @@ export async function POST() {
     if (!response.ok) {
       // Refresh token expired or invalid - clear cookies
       const clearCookiesResponse = NextResponse.json(
-        { 
-          success: false, 
-          message: "Refresh token expired or invalid" 
+        {
+          success: false,
+          message: "Refresh token expired or invalid",
         },
         { status: 401 }
       );
 
-      clearCookiesResponse.cookies.set("authToken", "", { 
+      clearCookiesResponse.cookies.set("authToken", "", {
         maxAge: 0,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -62,7 +62,7 @@ export async function POST() {
         path: "/",
       });
 
-      clearCookiesResponse.cookies.set("refreshToken", "", { 
+      clearCookiesResponse.cookies.set("refreshToken", "", {
         maxAge: 0,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -74,28 +74,21 @@ export async function POST() {
     }
 
     const data = await response.json();
+    const backendData = data.data || data;
 
-    // Set new tokens in HttpOnly cookies
+    // Return access token in response body (frontend stores in memory)
     const successResponse = NextResponse.json({
       success: true,
       message: "Token refreshed successfully",
-      accessToken: data.accessToken,
-      expiresIn: data.expiresIn || 3600,
-      user: data.user,
+      accessToken: backendData.accessToken,
+      expiresIn: backendData.expiresIn || 3600, // 1 hour
+      user: backendData.user,
     });
 
-    // Set new access token cookie (for middleware)
-    successResponse.cookies.set("authToken", data.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: data.expiresIn || 3600, // 1 hour default
-      path: "/",
-    });
-
-    // Set new refresh token cookie (if backend provides one)
-    if (data.refreshToken) {
-      successResponse.cookies.set("refreshToken", data.refreshToken, {
+    // ✅ ONLY set refresh token in HttpOnly cookie (secure storage)
+    // ✅ Access token returned in response body (stored in memory by client)
+    if (backendData.refreshToken) {
+      successResponse.cookies.set("refreshToken", backendData.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -108,8 +101,8 @@ export async function POST() {
   } catch (error) {
     console.error("[API] Token refresh error:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Failed to refresh token",
         error: error instanceof Error ? error.message : "Unknown error",
       },
