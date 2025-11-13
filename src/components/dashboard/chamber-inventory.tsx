@@ -11,112 +11,40 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useDashboardStore } from "@/store/dashboardStore";
 
-// Fallback data when API fails
-const FALLBACK_USER_STATS: Record<string, number> = {
-  ADMIN: 12,
-  BUYER: 45,
-  GROWER: 28,
-};
-
-const FALLBACK_USERS = [
-  {
-    id: "USR-001",
-    name: "Manny Jacinto",
-    email: "john.doe@example.com",
-    phone: "+63 912 345 6789",
-    role: "BUYER",
-    status: "Active",
-    region: "Metro Manila",
-  },
-  {
-    id: "USR-002",
-    name: "Hiria Momo",
-    email: "jane.smith@example.com",
-    phone: "+63 923 456 7890",
-    role: "GROWER",
-    status: "Active",
-    region: "Quezon City",
-  },
-  {
-    id: "USR-003",
-    name: "Jeon Jungkook",
-    email: "bob.johnson@example.com",
-    phone: "+63 934 567 8901",
-    role: "BUYER",
-    status: "Active",
-    region: "Cebu",
-  },
-  {
-    id: "USR-004",
-    name: "Hannah Montana",
-    email: "alice.williams@example.com",
-    phone: "+63 945 678 9012",
-    role: "ADMIN",
-    status: "Active",
-    region: "Davao",
-  },
-  {
-    id: "USR-005",
-    name: "Saturo Gojo",
-    email: "charlie.brown@example.com",
-    phone: "+63 956 789 0123",
-    role: "GROWER",
-    status: "Inactive",
-    region: "Baguio",
-  },
-];
-
-const FALLBACK_CHAMBERS = {
-  chambers: [
-    {
-      id: "CH-001",
-      grower: "Manny Jacinto",
-      location: "Manila, Philippines",
-      status: "Active",
-    },
-    {
-      id: "CH-002",
-      grower: "Hiria Momo",
-      location: "Quezon City, Philippines",
-      status: "Active",
-    },
-    {
-      id: "CH-003",
-      grower: "Jeon Jungkook",
-      location: "Cebu, Philippines",
-      status: "Inactive",
-    },
-    {
-      id: "CH-004",
-      grower: "Hannah Montana",
-      location: "Davao, Philippines",
-      status: "Active",
-    },
-    {
-      id: "CH-005",
-      grower: "Saturo Gojo",
-      location: "Baguio, Philippines",
-      status: "Active",
-    },
-  ],
-  total: 5,
-  page: 1,
-  limit: 10,
-};
-
 export default function ChamberInventorySection() {
   const { usersStats, chambers, users, loading, error } = useDashboardStore();
 
-  if (loading.usersStats || loading.chambers) {
-    return <div>Loading...</div>;
+  // Show loading state while data is being fetched
+  if (loading.usersStats || loading.chambers || loading.users) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-pulse text-muted-foreground">
+          Loading chamber and user data...
+        </div>
+      </div>
+    );
   }
 
-  // Use fallback data if there's an error or no data
-  const actualUsersStats =
-    error.usersStats || !usersStats ? FALLBACK_USER_STATS : usersStats;
-  const actualChambers =
-    error.chambers || !chambers ? FALLBACK_CHAMBERS : chambers;
-  const actualUsers = error.users || !users ? FALLBACK_USERS : users;
+  // Use fetched data directly (no more fallback constants)
+  const actualUsersStats = usersStats || {};
+  const actualChambers = chambers || {
+    chambers: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+  };
+  const actualUsers = users || [];
+
+  console.log("[ChamberInventory] Using real data:", {
+    usersStats: actualUsersStats,
+    chambersCount: actualChambers.chambers?.length || 0,
+    usersCount: actualUsers.length,
+    hasErrors: {
+      usersStats: !!error.usersStats,
+      chambers: !!error.chambers,
+      users: !!error.users,
+    },
+  });
 
   // Use fetched data for pie chart — show only ADMIN, BUYER, GROWER
   const allowedRoles = ["ADMIN", "BUYER", "GROWER"];
@@ -145,7 +73,7 @@ export default function ChamberInventorySection() {
 
   // Calculate user role distribution from actualUsers array
   const userRoleCount: Record<string, number> = {};
-  actualUsers.forEach((user) => {
+  actualUsers.forEach((user: any) => {
     const role = user.role || "UNKNOWN";
     userRoleCount[role] = (userRoleCount[role] || 0) + 1;
   });
@@ -362,7 +290,7 @@ export default function ChamberInventorySection() {
                     </td>
                   </tr>
                 ) : (
-                  actualUsers.slice(0, 5).map((user) => (
+                  actualUsers.slice(0, 5).map((user: any) => (
                     <tr
                       key={user.id}
                       className="border-b border-border hover:bg-secondary/50"

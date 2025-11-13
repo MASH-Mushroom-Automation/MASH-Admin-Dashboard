@@ -24,7 +24,13 @@ export async function POST() {
     const cookieStore = await cookies();
     const refreshToken = cookieStore.get("refreshToken")?.value;
 
+    console.log(
+      "[refresh] Refresh token from cookie:",
+      refreshToken ? "YES" : "NO"
+    );
+
     if (!refreshToken) {
+      console.error("[refresh] ❌ No refresh token found in cookies");
       return NextResponse.json(
         {
           success: false,
@@ -36,6 +42,11 @@ export async function POST() {
 
     // Call backend refresh endpoint
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+    console.log(
+      "[refresh] Calling backend:",
+      `${backendUrl}/api/v1/auth/refresh-token`
+    );
+
     const response = await fetch(`${backendUrl}/api/v1/auth/refresh-token`, {
       method: "POST",
       headers: {
@@ -44,24 +55,26 @@ export async function POST() {
       },
     });
 
+    console.log("[refresh] Backend response status:", response.status);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[refresh] ❌ Backend rejected refresh token:", {
+        status: response.status,
+        error: errorText,
+      });
+
       // Refresh token expired or invalid - clear cookies
       const clearCookiesResponse = NextResponse.json(
         {
           success: false,
           message: "Refresh token expired or invalid",
+          details: errorText,
         },
         { status: 401 }
       );
 
-      clearCookiesResponse.cookies.set("authToken", "", {
-        maxAge: 0,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-      });
-
+      // Clear refresh token cookie (no authToken in new architecture)
       clearCookiesResponse.cookies.set("refreshToken", "", {
         maxAge: 0,
         httpOnly: true,
@@ -72,6 +85,8 @@ export async function POST() {
 
       return clearCookiesResponse;
     }
+
+    console.log("[refresh] ✅ Token refresh successful");
 
     const data = await response.json();
     const backendData = data.data || data;
