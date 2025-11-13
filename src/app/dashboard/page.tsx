@@ -23,11 +23,13 @@ export default function DashboardPage() {
     fetchSales,
     fetchChambers,
     fetchUsersStats,
+    fetchUsers,
     fetchCards,
     overview,
     sales,
     chambers,
     usersStats,
+    users,
     cards,
   } = useDashboardStore();
 
@@ -74,6 +76,9 @@ export default function DashboardPage() {
 
       fetchUsersStats();
       fetchCards();
+
+      // Fetch users for chamber-inventory component user table
+      fetchUsers(1, 10);
     };
 
     // Small delay to ensure layout has finished token restoration
@@ -85,6 +90,7 @@ export default function DashboardPage() {
     fetchSales,
     fetchChambers,
     fetchUsersStats,
+    fetchUsers,
     fetchCards,
   ]);
   const isLoading = useDashboardLoading();
