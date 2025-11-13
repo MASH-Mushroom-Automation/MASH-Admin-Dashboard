@@ -347,21 +347,66 @@ export const useDashboardStore = create<DashboardState>()(
 
         let mapped: DailySale[] = [];
 
+        // Helper function to convert ISO date to readable format
+        const formatDate = (dateString: string): string => {
+          try {
+            const date = new Date(dateString);
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+              return dateString; // Return original if invalid
+            }
+
+            // For dates within last 7 days, show day name (Mon, Tue, etc.)
+            const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            const monthNames = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "May",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
+            ];
+
+            // Format: "Mon 13" or "Nov 13" depending on range
+            if (days <= 7) {
+              return `${dayNames[date.getDay()]} ${date.getDate()}`;
+            } else if (days <= 31) {
+              return `${monthNames[date.getMonth()]} ${date.getDate()}`;
+            } else {
+              return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            }
+          } catch {
+            return dateString; // Return original on error
+          }
+        };
+
         if (Array.isArray(payload)) {
           // legacy: array of { day, sales }
-          mapped = payload as DailySale[];
+          mapped = (payload as DailySale[]).map((item) => ({
+            day: formatDate(item.day),
+            sales: item.sales,
+          }));
         } else if (payload?.data && typeof payload.data === "object") {
           const data = payload.data as { labels?: string[]; values?: number[] };
           if (data.labels && data.values) {
             const labels: string[] = data.labels || [];
             const values: number[] = data.values || [];
             mapped = labels.map((lbl, idx) => ({
-              day: lbl,
+              day: formatDate(lbl),
               sales: Number(values[idx] ?? 0),
             }));
           } else if (Array.isArray(data)) {
             // sometimes data is already an array of objects
-            mapped = data as DailySale[];
+            mapped = (data as DailySale[]).map((item) => ({
+              day: formatDate(item.day),
+              sales: item.sales,
+            }));
           }
         }
 
