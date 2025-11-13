@@ -92,18 +92,16 @@ export default function AppSidebar() {
               <SidebarMenu>
                 {/* Dashboard */}
                 <SidebarMenuItem>
-                  <Link href="/dashboard" legacyBehavior>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === "/dashboard"}
-                      tooltip="Dashboard"
-                    >
-                      <a>
-                        <LayoutDashboard />
-                        <span>Dashboard</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </Link>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/dashboard"}
+                    tooltip="Dashboard"
+                  >
+                    <Link href="/dashboard">
+                      <LayoutDashboard />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 {/* MashMarket */}
@@ -126,12 +124,9 @@ export default function AppSidebar() {
                     <SidebarMenuSub>
                       {mashMarketItems.map((item) => (
                         <SidebarMenuSubItem key={item.href}>
-                          {/* Use legacyBehavior + asChild to avoid nested anchors */}
-                          <Link href={item.href} legacyBehavior>
-                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                              <a>{item.label}</a>
-                            </SidebarMenuSubButton>
-                          </Link>
+                          <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                            <Link href={item.href}>{item.label}</Link>
+                          </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
                     </SidebarMenuSub>
@@ -158,11 +153,9 @@ export default function AppSidebar() {
                     <SidebarMenuSub>
                       {mashGrowItems.map((item) => (
                         <SidebarMenuSubItem key={item.href}>
-                          <Link href={item.href} legacyBehavior>
-                            <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                              <a>{item.label}</a>
-                            </SidebarMenuSubButton>
-                          </Link>
+                          <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                            <Link href={item.href}>{item.label}</Link>
+                          </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
                     </SidebarMenuSub>
@@ -195,11 +188,9 @@ export default function AppSidebar() {
 
     <DropdownMenuContent align="start" className="w-48 p-1">
       <DropdownMenuItem asChild>
-        <Link href="/settings" legacyBehavior>
-          <a className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-muted/5">
-            <Settings className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-sm">Settings</span>
-          </a>
+        <Link href="/settings" className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-muted/5">
+          <Settings className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span className="text-sm">Settings</span>
         </Link>
       </DropdownMenuItem>
 
