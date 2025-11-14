@@ -13,20 +13,23 @@ export default function ProductArchivePage() {
   return (
     <div className="w-full px-4 py-8 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Archived Products</h1>
-            <p className="text-muted-foreground mt-1">Products that were archived</p>
+          <div className="mb-6">
+            <div className="flex items-center justify-end mb-2">
+              <div className="shrink-0">
+                <Link href="/mash-market/product">
+                  <Button variant="ghost">Back</Button>
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold">Archived Products</h1>
+              <p className="text-muted-foreground mt-1">Products that were archived</p>
+            </div>
           </div>
-          <div>
-            <Link href="/mash-market/product">
-              <Button variant="ghost">Back</Button>
-            </Link>
-          </div>
-        </div>
 
         <Card>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-4">
             <Table>
               <TableHeader>
                 <tr>

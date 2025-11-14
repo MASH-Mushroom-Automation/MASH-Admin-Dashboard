@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import { Archive, ArrowLeft } from "lucide-react";
+import { Archive } from "lucide-react";
 import { ActionsMenu } from "@/components/user-actions-menu"
 import {
   Table,
@@ -15,12 +15,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import CreateDeviceModal from "@/components/mash-grow/create-device-modal";
+import ViewDeviceModal from "@/components/mash-grow/view-device-modal";
 import { toast } from "sonner";
 import PaginationWrapper from '@/components/pagination'
 
 type Device = {
   id: string;
   deviceId: string;
+  name?: string;
   model: string;
   location: string;
   status: "Online" | "Offline";
@@ -29,13 +31,29 @@ type Device = {
   archived?: boolean;
 };
 
+
+
+type UserLocal = {
+  id: string;
+  name?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  contactNumber?: string;
+  deviceId?: string;
+  selectedDeviceId?: string;
+  archived?: boolean;
+};
+
 const DEFAULT_DEVICES: Device[] = [
   {
     id: "d1",
     deviceId: "MASH-A1-CALOOCAN-AC2523",
+    name: "Chamber A",
     model: "A1",
     location: "Caloocan",
-    status: "Online",
+    status: "Offline",
     type: "Mushroom Chamber",
     assigned: true,
   },
@@ -56,24 +74,109 @@ const DEFAULT_DEVICES: Device[] = [
 export default function DevicesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-  const [devices, setDevices] = useState<Device[]>(() => {
-    try {
-      const raw = localStorage.getItem("mash_devices");
-      if (!raw || raw === "null") return DEFAULT_DEVICES;
-      try {
-        const parsed = JSON.parse(raw) as Device[];
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        return DEFAULT_DEVICES;
-      } catch {
-        return DEFAULT_DEVICES;
-      }
-    } catch {
-      return DEFAULT_DEVICES;
-    }
-  });
+  const [devices, setDevices] = useState<Device[]>(() => DEFAULT_DEVICES);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<Device | null>(null);
+  const [viewDevice, setViewDevice] = useState<Device | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [users, setUsers] = useState<UserLocal[]>(() => [
+    {
+      id: "1",
+      name: "Ana Santos",
+      firstName: "Ana",
+      lastName: "Santos",
+      email: "ana.santos@example.com",
+      phoneNumber: "+639171234567",
+      deviceId: "MASH-A1-CALOOCAN-AC2523",
+    },
+    {
+      id: "2",
+      name: "Rico Dela Cruz",
+      firstName: "Rico",
+      lastName: "Dela Cruz",
+      email: "rico.delacruz@example.com",
+      phoneNumber: "+639172345678",
+      deviceId: "MASH-B2-CAL25-AC2524",
+    },
+  ]);
+
+  // robust matcher to find user for a device (tries multiple heuristics)
+  const findUserForDevice = (parsedUsers: UserLocal[], device: Device): UserLocal | undefined => {
+    if (!Array.isArray(parsedUsers) || parsedUsers.length === 0) return undefined;
+    const norm = (s?: any) => (s || "").toString().toLowerCase().trim();
+    const strip = (s?: any) => norm((s || "").toString().replace(/[^a-z0-9]/gi, ""));
+
+    const dId = norm(device.id);
+    const dDeviceId = norm(device.deviceId);
+    const dDeviceIdStrip = strip(device.deviceId);
+
+    // try exact matches first
+    for (const u of parsedUsers) {
+      // check common fields
+      const fields = [u.deviceId, u.selectedDeviceId, (u as any).device, (u as any).assignedDeviceId, (u as any).device_id, (u as any).selected_device_id];
+      for (const f of fields) {
+        if (!f) continue;
+        // if f is an object, try its id/deviceId
+        if (typeof f === "object") {
+          const fid = norm((f as any).id || (f as any).deviceId || "");
+          if (fid && (fid === dId || fid === dDeviceId)) return u;
+        } else {
+          const fv = norm(f);
+          if (!fv) continue;
+          if (fv === dId || fv === dDeviceId) return u;
+        }
+      }
+    }
+
+    // try stripped comparisons
+    for (const u of parsedUsers) {
+      const ux = strip(u.deviceId) || strip(u.selectedDeviceId) || "";
+      if (!ux) continue;
+      if (ux === dDeviceIdStrip) return u;
+    }
+
+    // try substring matches (loose)
+    for (const u of parsedUsers) {
+      const udev = norm(u.deviceId || u.selectedDeviceId || "");
+      if (!udev) continue;
+      if (dDeviceId.includes(udev) || udev.includes(dDeviceId)) return u;
+    }
+
+    // try matching by last token (useful when IDs contain generated suffixes)
+    for (const u of parsedUsers) {
+      const uLast = lastToken(u.deviceId || u.selectedDeviceId || "");
+      const dLast = lastToken(device.deviceId || device.id || "");
+      if (!uLast || !dLast) continue;
+      if (uLast === dLast) return u;
+    }
+
+    // try matching by short suffix (last 4-8 chars) for generated decimals
+    const suffixMatch = (a?: string, b?: string) => {
+      if (!a || !b) return false;
+      const aa = a.replace(/[^a-z0-9]/gi, "").toLowerCase();
+      const bb = b.replace(/[^a-z0-9]/gi, "").toLowerCase();
+      const min = Math.min(8, Math.max(4, Math.floor(Math.min(aa.length, bb.length) / 2)));
+      if (min <= 0) return false;
+      return aa.endsWith(bb.slice(-min)) || bb.endsWith(aa.slice(-min));
+    };
+
+    
+    
+
+    for (const u of parsedUsers) {
+      if (suffixMatch(u.deviceId, device.deviceId) || suffixMatch(u.selectedDeviceId, device.deviceId)) return u;
+    }
+
+    return undefined;
+  };
+
+  // helper: extract last token (after final dash) and last N chars for fuzzy match
+  const lastToken = (s?: string) => {
+    if (!s) return "";
+    const parts = s.split("-");
+    return parts.length ? parts[parts.length - 1].toLowerCase() : s.toLowerCase();
+  };
   const [showArchived, setShowArchived] = useState(() => {
     try {
       const raw = localStorage.getItem("mash_devices_showArchived");
@@ -94,12 +197,33 @@ export default function DevicesPage() {
   const [archivingDevice, setArchivingDevice] = useState<Device | null>(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("mash_devices", JSON.stringify(devices));
-    } catch {}
     // reset to page 1 when devices change
     setCurrentPage(1);
   }, [devices]);
+
+  // Use mock users instead of reading from localStorage
+  useEffect(() => {
+    setUsers([
+      {
+        id: "1",
+        name: "CHAMBER A",
+        firstName: "Ana",
+        lastName: "Santos",
+        email: "ana.santos@example.com",
+        phoneNumber: "+639171234567",
+        deviceId: "MASH-A1-CALOOCAN-AC2523",
+      },
+      {
+        id: "2",
+        name: "Rico Dela Cruz",
+        firstName: "Rico",
+        lastName: "Dela Cruz",
+        email: "rico.delacruz@example.com",
+        phoneNumber: "+639172345678",
+        deviceId: "MASH-B2-CAL25-AC2524",
+      },
+    ]);
+  }, []);
 
   // ensure currentPage is within range when filters change
   useEffect(() => {
@@ -124,33 +248,38 @@ export default function DevicesPage() {
   return (
     <div className="w-full px-4 py-8 overflow-x-hidden">
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {showArchived ? "Devices Archive" : "Devices"}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {showArchived ? "Archived devices" : "List of registered devices"}
-            </p>
+        {showArchived ? (
+          <div className="mb-6">
+            <div className="flex items-center justify-start mb-2">
+              <div className="shrink-0">
+                <Button variant="ghost" size="sm" onClick={() => setShowArchived(false)} aria-label="Back to active">Back</Button>
+              </div>
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold">Devices Archive</h1>
+              <p className="text-muted-foreground mt-1">Archived devices</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!showArchived ? (
+        ) : (
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold">Devices</h1>
+              <p className="text-muted-foreground mt-1">List of registered devices</p>
+            </div>
+            <div className="flex items-center gap-2">
               <Button onClick={() => setCreateOpen(true)}>Create Device</Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowArchived((s) => !s)}
-              aria-label={showArchived ? "Back to active" : "View archived"}
-            >
-              {showArchived ? (
-                <ArrowLeft className="h-4 w-4" />
-              ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowArchived(true)}
+                aria-label="View archived"
+              >
                 <Archive className="h-4 w-4" />
-              )}
-            </Button>
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <Card>
           <CardContent className="overflow-x-auto">
@@ -158,7 +287,7 @@ export default function DevicesPage() {
               <TableHeader>
                 <tr>
                   <TableHead className="w-48">Device ID</TableHead>
-                  <TableHead className="w-20">Model</TableHead>
+                  <TableHead className="w-48">Name</TableHead>
                   <TableHead className="w-40">Type</TableHead>
                   <TableHead className="w-32">Location</TableHead>
                   <TableHead className="w-24">Status</TableHead>
@@ -169,9 +298,50 @@ export default function DevicesPage() {
                 {pagedDevices.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-mono w-48 overflow-hidden truncate">{d.deviceId}</TableCell>
-                    <TableCell className="w-20">{d.model}</TableCell>
-                    <TableCell className="max-w-40 overflow-hidden truncate">
-                      <div className="truncate">{d.type}</div>
+                    <TableCell className="w-48">
+                      {(() => {
+                        try {
+                          const parsed = users || [];
+                          if (!Array.isArray(parsed) || parsed.length === 0) {
+                            // fallback to device.name if available
+                            return d.name ? <div className="truncate">{d.name}</div> : <span className="text-muted-foreground">—</span>;
+                          }
+
+                          // primary: find user owner
+                          let u = findUserForDevice(parsed, d);
+                          // secondary: last-resort - search serialized user objects for a direct inclusion of device id/deviceId
+                          if (!u) {
+                            try {
+                              const needle1 = (d.deviceId || "").toString();
+                              const needle2 = (d.id || "").toString();
+                              for (const cand of parsed) {
+                                const s = JSON.stringify(cand || "");
+                                if (s.includes(needle1) || s.includes(needle2)) {
+                                  u = cand;
+                                  break;
+                                }
+                              }
+                            } catch {}
+                          }
+
+                          // display user name if found
+                          if (u) {
+                            const nameFromParts = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
+                            const displayName = u.name ? u.name : nameFromParts || u.email || "—";
+                            return <div className="truncate">{displayName}</div>;
+                          }
+
+                          // fallback to device.name if available
+                          if (d.name) return <div className="truncate">{d.name}</div>;
+
+                          return <span className="text-muted-foreground">—</span>;
+                        } catch {
+                          return <span className="text-muted-foreground">—</span>;
+                        }
+                      })()}
+                    </TableCell>
+                    <TableCell className="w-40 max-w-40 overflow-hidden">
+                      <div className="truncate">{d.type ?? (d.model ? 'Mushroom Chamber' : '—')}</div>
                     </TableCell>
                     <TableCell className="w-32 overflow-hidden truncate">{d.location}</TableCell>
                     <TableCell className="w-24">{d.status}</TableCell>
@@ -179,11 +349,17 @@ export default function DevicesPage() {
                       <div className="flex">
                         <ActionsMenu
                           id={d.id}
-                          showView={false}
+                          showView={true}
                           showEdit={true}
+                          onView={() => {
+                            setViewDevice(d)
+                            setViewOpen(true)
+                          }}
                           onEdit={() => {
-                            setEditDevice(d)
-                            setCreateOpen(true)
+                            // use in-memory devices (mock data) when opening edit modal
+                            const stateMatch = devices.find((x) => x.id === d.id || x.deviceId === d.deviceId);
+                            setEditDevice(stateMatch ?? d);
+                            setCreateOpen(true);
                           }}
                           onArchive={() => {
                             if (!showArchived) {
@@ -229,6 +405,52 @@ export default function DevicesPage() {
                 status: editDevice.status === "Online" ? "Online" : "Offline",
                 assigned: editDevice.assigned ?? false,
                 archived: editDevice.archived,
+              }
+            : undefined
+        }
+      />
+      {/* pass matched user name into the modal so it can display owner */}
+      <ViewDeviceModal
+        open={viewOpen}
+        onOpenChange={setViewOpen}
+        device={
+          viewDevice
+            ? {
+                ...viewDevice,
+                name: (() => {
+                  try {
+                    const parsed = users || [];
+                    if (!Array.isArray(parsed) || parsed.length === 0) {
+                      return viewDevice.name ?? undefined;
+                    }
+
+                    let u = findUserForDevice(parsed, viewDevice);
+
+                    if (!u) {
+                      // last-resort: search serialized user objects for device id or id
+                      try {
+                        const needle1 = (viewDevice.deviceId || "").toString();
+                        const needle2 = (viewDevice.id || "").toString();
+                        for (const cand of parsed) {
+                          const s = JSON.stringify(cand || "");
+                          if (s.includes(needle1) || s.includes(needle2)) {
+                            u = cand;
+                            break;
+                          }
+                        }
+                      } catch {}
+                    }
+
+                    if (u) {
+                      const nameFromParts = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
+                      return u.name ? u.name : nameFromParts || u.email;
+                    }
+
+                    return viewDevice.name ?? undefined;
+                  } catch {
+                    return viewDevice.name ?? undefined;
+                  }
+                })(),
               }
             : undefined
         }

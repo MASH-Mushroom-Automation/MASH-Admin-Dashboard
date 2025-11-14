@@ -256,7 +256,7 @@ export default function CreateDeviceModal({
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="MASH Chamber 001"
+                    placeholder="e.g., Chamber Controller 01"
                   />
                 </div>
 
@@ -280,7 +280,7 @@ export default function CreateDeviceModal({
                   <Input
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    placeholder="A1"
+                    placeholder="e.g., A1"
                   />
                 </div>
 
@@ -289,7 +289,7 @@ export default function CreateDeviceModal({
                   <Input
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Caloocan"
+                    placeholder="e.g., Caloocan"
                   />
                 </div>
 
@@ -298,7 +298,7 @@ export default function CreateDeviceModal({
                   <Input
                     value={firmware}
                     onChange={(e) => setFirmware(e.target.value)}
-                    placeholder="v1.0.0"
+                    placeholder="e.g., v1.0.0"
                   />
                 </div>
 
@@ -307,12 +307,12 @@ export default function CreateDeviceModal({
                   <Input
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Optional description"
+                    placeholder="Description"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-sm">Device ID (CD Key)</Label>
+                  <Label className="text-sm">Device ID</Label>
                   <div className="flex items-center gap-2 flex-nowrap">
                     <Input
                       value={seg1}
@@ -324,34 +324,43 @@ export default function CreateDeviceModal({
                     <Input
                       value={seg2}
                       onChange={(e) => {
-                        setSeg2(e.target.value.toUpperCase().slice(0, 4));
-                        setManualEdit(true);
+                        if (!editingId) {
+                          setSeg2(e.target.value.toUpperCase().slice(0, 4));
+                          setManualEdit(true);
+                        }
                       }}
                       className="w-20 text-center text-sm font-mono"
                       maxLength={4}
+                      readOnly={Boolean(editingId)}
                     />
                     <div className="text-lg font-mono">-</div>
                     <Input
                       value={seg3}
                       onChange={(e) => {
-                        setSeg3(e.target.value.toUpperCase().slice(0, 5));
-                        setManualEdit(true);
+                        if (!editingId) {
+                          setSeg3(e.target.value.toUpperCase().slice(0, 5));
+                          setManualEdit(true);
+                        }
                       }}
                       className="w-20 text-center text-sm font-mono"
                       maxLength={5}
+                      readOnly={Boolean(editingId)}
                     />
                     <div className="text-lg font-mono">-</div>
                     <Input
                       value={seg4}
                       onChange={(e) => {
-                        setSeg4(e.target.value.toUpperCase().slice(0, 6));
-                        setManualEdit(true);
+                        if (!editingId) {
+                          setSeg4(e.target.value.toUpperCase().slice(0, 6));
+                          setManualEdit(true);
+                        }
                       }}
                       className="w-24 text-center text-sm font-mono"
                       maxLength={6}
+                      readOnly={Boolean(editingId)}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Format: MASH - MODEL - LOCYY - UNIQUE (e.g. MASH - B1 - CAL25 - H3JSA4)</p>
+                  <p className="text-xs text-muted-foreground mt-1">{editingId ? "Device ID cannot be changed when editing" : "Format: MASH - MODEL - LOCYY - UNIQUE (e.g. MASH - B1 - CAL25 - H3JSA4)"}</p>
                 </div>
 
                 

@@ -13,20 +13,23 @@ export default function SellerArchivePage() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
+          <div className="flex items-center justify-end mb-2">
+            <div className="shrink-0">
+              <Link href="/mash-market/seller">
+                <Button variant="ghost">Back</Button>
+              </Link>
+            </div>
+          </div>
+
           <div>
             <h1 className="text-2xl font-bold">Archived Sellers</h1>
             <p className="text-muted-foreground mt-1">Sellers that were archived</p>
           </div>
-          <div>
-            <Link href="/mash-market/seller">
-              <Button variant="ghost">Back</Button>
-            </Link>
-          </div>
         </div>
 
         <Card>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-4">
             <Table>
               <TableHeader>
                 <tr>
