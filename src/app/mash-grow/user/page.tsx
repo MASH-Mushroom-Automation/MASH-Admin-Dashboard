@@ -35,7 +35,7 @@ export default function RegisterChamber() {
   const [ArchiveUserId, setArchiveUserId] = useState<string | null>(null)
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
   // mock devices
-  const [devices, setDevices] = useState<{ id: string; deviceId: string; status: "Connected" | "Disconnected"; assigned?: boolean }[]>([])
+  const [devices, setDevices] = useState<{ id: string; deviceId: string; status: "Online" | "Offline"; assigned?: boolean }[]>([])
 
   // hydrate from localStorage on mount
   useEffect(() => {
@@ -44,8 +44,8 @@ export default function RegisterChamber() {
       const rawDevices = localStorage.getItem("mash_devices")
       setUsers(rawUsers ? JSON.parse(rawUsers) : [])
       setDevices(rawDevices ? JSON.parse(rawDevices) : [
-        { id: "d1", deviceId: "MASH-A1-CAL25-AC2523", status: "Connected", assigned: false },
-        { id: "d2", deviceId: "MASH-B2-CAL25-AC2524", status: "Disconnected", assigned: false },
+        { id: "d1", deviceId: "MASH-A1-CAL25-AC2523", status: "Online", assigned: false },
+        { id: "d2", deviceId: "MASH-B2-CAL25-AC2524", status: "Offline", assigned: false },
       ])
     } catch {
       setUsers([])
@@ -88,9 +88,9 @@ export default function RegisterChamber() {
     if (!updating) return
     toast(`Pinging ${deviceId}...`)
     await new Promise((r) => setTimeout(r, 800))
-    const isConnected = Math.random() > 0.4
-    setDevices((prev) => prev.map((d) => (d.id === updating.id ? { ...d, status: isConnected ? "Connected" : "Disconnected" } : d)))
-    toast.success(isConnected ? "Device is connected" : "Device is disconnected")
+    const isOnline = Math.random() > 0.4
+    setDevices((prev) => prev.map((d) => (d.id === updating.id ? { ...d, status: isOnline ? "Online" : "Offline" } : d)))
+    toast.success(isOnline ? "Device is Online" : "Device is Offline")
   }
 
   // handle onSave from RegisterModal which may include selectedDeviceId
@@ -151,7 +151,7 @@ export default function RegisterChamber() {
             <div className="text-xs text-muted-foreground">Chamber Device ID</div>
             <div className="font-mono text-sm">{devices[0]?.deviceId ?? '—'}</div>
             <div className="mt-2 flex items-center gap-2">
-              <div className={`text-sm ${devices[0]?.status === 'Connected' ? 'text-green-600' : 'text-red-600'}`}>{devices[0]?.status ?? 'Unknown'}</div>
+              <div className={`text-sm ${devices[0]?.status === 'Online' ? 'text-green-600' : 'text-red-600'}`}>{devices[0]?.status ?? 'Unknown'}</div>
               <Button size="sm" variant="ghost" onClick={() => devices[0] && handlePingDevice(devices[0].deviceId)}>
                 Check Ping
               </Button>

@@ -3,6 +3,7 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -36,13 +37,6 @@ function generateUniqueDecimal(): string {
   return result;
 }
 
-function generateLocationYear(address: string): string {
-  if (!address.trim()) return "";
-  const location = address.substring(0, 3).toUpperCase();
-  const year = new Date().getFullYear().toString().slice(-2);
-  return `${location}${year}`;
-}
-
 interface RegisterData {
   chamberName: string;
   contactNumber: string;
@@ -63,6 +57,17 @@ interface RegisterModalProps {
     RegisterData & { id?: string; selectedDeviceId?: string }
   >;
 }
+// initialData may include user fields when editing an existing registration
+type RegisterInitialData = Partial<{
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  contactNumber: string;
+  model: string;
+  selectedDeviceId: string;
+}>;
 export default function RegisterModal({
   open,
   onOpenChange,
@@ -72,16 +77,18 @@ export default function RegisterModal({
 }: RegisterModalProps) {
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   type FormState = {
-    chamberName: string;
-    contactNumber: string;
-    address: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
     model: string;
   };
 
   const [formData, setFormData] = useState<FormState>({
-    chamberName: "",
-    contactNumber: "",
-    address: "",
+    email: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
     model: "",
   });
 
@@ -91,19 +98,47 @@ export default function RegisterModal({
     undefined
   );
 
-  const locationYear = generateLocationYear(formData.address);
+  type UserLocal = {
+    id: string
+    name?: string
+    email?: string
+    firstName?: string
+    lastName?: string
+    contactNumber?: string
+    phoneNumber?: string
+    address?: string
+    deviceId?: string
+    archived?: boolean
+  }
+  const [users, setUsers] = useState<UserLocal[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mash_users")
+      if (!raw) return setUsers([])
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) setUsers(parsed.filter((u) => !u.archived))
+      else setUsers([])
+    } catch {
+      setUsers([])
+    }
+  }, [open])
+
+  const locationYear = "";
   const deviceId = `MASH-${formData.model || "---"}-${
     locationYear || "---"
   }-${uniqueDecimal}`;
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.chamberName.trim())
-      newErrors.chamberName = "Chamber Name is required";
-    if (!formData.contactNumber.trim())
-      newErrors.contactNumber = "Contact Number is required";
-    if (!formData.address.trim()) newErrors.address = "Address is required";
+      // If an existing user is selected, skip requiring user info inputs (they're read-only)
+      if (!selectedUserId) {
+        if (!formData.email.trim()) newErrors.email = "Email is required";
+        if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+        if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+        if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+      }
     // If the user selected an existing device, model is not required (device already exists).
     if (!selectedDeviceId && !formData.model.trim())
       newErrors.model = "Model is required";
@@ -115,9 +150,28 @@ export default function RegisterModal({
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const key = name as keyof FormState;
+    let newValue = value;
+    // For phone number, strip out non-numeric characters but allow a single leading +
+    if (name === "phoneNumber") {
+      newValue = newValue.replace(/[^\d+]/g, "");
+      // remove any + that is not the first character
+      const firstPlus = newValue.indexOf("+");
+      if (firstPlus > 0) {
+        newValue = newValue.replace(/\+/g, "");
+      } else if (firstPlus === 0) {
+        // keep only the first +
+        newValue = "+" + newValue.slice(1).replace(/\+/g, "");
+      }
+    }
+    // For names, allow letters, spaces, hyphens and apostrophes only
+    else if (name === "firstName" || name === "lastName") {
+      // Allow common Latin letters (including accents), spaces, hyphens and apostrophes
+      newValue = newValue.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g, "");
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [key]: value,
+      [key]: newValue,
     }));
     if (errors[name]) {
       setErrors((prev) => ({
@@ -130,9 +184,13 @@ export default function RegisterModal({
   // Define a concrete payload type for saving
   type RegistrationPayload = {
     id?: string;
-    chamberName: string;
+    chamberName: string; // kept for compatibility, derived from first+last
     contactNumber: string;
     address: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
     model?: string;
     locationYear: string;
     uniqueDecimal: string;
@@ -152,9 +210,13 @@ export default function RegisterModal({
 
       const registrationData: RegistrationPayload = {
         id: editingId,
-        chamberName: formData.chamberName,
-        contactNumber: formData.contactNumber,
-        address: formData.address,
+        chamberName: `${formData.firstName} ${formData.lastName}`,
+        contactNumber: formData.phoneNumber,
+        address: "",
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
         model: formData.model || undefined,
         locationYear,
         uniqueDecimal,
@@ -164,6 +226,7 @@ export default function RegisterModal({
 
       console.log("Chamber and Device registered:", registrationData);
       onSave?.(registrationData);
+      toast.success("User registered");
       handleCancel();
     }
   };
@@ -171,120 +234,190 @@ export default function RegisterModal({
   // populate when opening for edit
   useEffect(() => {
     if (open && initialData) {
-      setEditingId(initialData.id);
+      const init = initialData as RegisterInitialData;
+      setEditingId(initialData.id as string | undefined);
       setFormData((prev) => ({
         ...prev,
-        chamberName: initialData.chamberName ?? "",
-        contactNumber: initialData.contactNumber ?? "",
-        address: initialData.address ?? "",
-        model: initialData.model ?? "",
+        email: init.email ?? "",
+        firstName: init.firstName ?? "",
+        lastName: init.lastName ?? "",
+        phoneNumber: init.phoneNumber ?? init.contactNumber ?? "",
+        model: init.model ?? "",
       }));
-      setSelectedDeviceId(initialData.selectedDeviceId);
+      setSelectedDeviceId(init.selectedDeviceId);
+      // if initialData contains an id, try to set selectedUserId so UI reflects chosen user
+      if (initialData.id) setSelectedUserId(String(initialData.id));
     }
     if (!open) {
       setEditingId(undefined);
     }
   }, [open, initialData]);
 
+  // when a user is chosen from the select, populate form fields and selected device
+  const handleSelectUser = (id?: string) => {
+    if (!id) {
+      setSelectedUserId(undefined)
+      setEditingId(undefined)
+      setFormData({ email: "", firstName: "", lastName: "", phoneNumber: "", model: "" })
+      setSelectedDeviceId(undefined)
+      return
+    }
+    const u = users.find((x) => x.id === id)
+    if (!u) return
+    setSelectedUserId(id)
+    // treat this as editing existing record
+    setEditingId(u.id)
+    setFormData({ email: u.email ?? "", firstName: u.firstName ?? "", lastName: u.lastName ?? "", phoneNumber: u.phoneNumber ?? u.contactNumber ?? "", model: "" })
+    // try to map deviceId string to availableDevices id
+    const match = availableDevices?.find((d) => d.deviceId === u.deviceId)
+    setSelectedDeviceId(match?.id)
+  }
+
   const handleCancel = () => {
-    setFormData({
-      chamberName: "",
-      contactNumber: "",
-      address: "",
-      model: "",
-    });
+    setFormData({ email: "", firstName: "", lastName: "", phoneNumber: "", model: "" });
+    setSelectedUserId(undefined)
+    setSelectedDeviceId(undefined)
+    setEditingId(undefined)
     setErrors({});
     onOpenChange(false);
   };
+
+  // lightweight validity check (does not set errors) used to disable Save button
+  const isFormValid = () => {
+    if (!selectedUserId) {
+      if (!formData.email.trim()) return false
+      if (!formData.firstName.trim()) return false
+      if (!formData.lastName.trim()) return false
+      if (!formData.phoneNumber.trim()) return false
+    }
+
+    if (!selectedDeviceId && !formData.model.trim()) return false
+
+    return true
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Register Chamber & Device</DialogTitle>
+          <DialogTitle>Register Chamber</DialogTitle>
           <DialogDescription>
             Enter chamber information and device registration details
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Chamber Information Section */}
-          <Card>
+          {/* Select existing user (optional) */}
+          <div>
+            <Label className="text-foreground font-medium">Select existing user</Label>
+            <div className="mt-2">
+              <Select
+                value={selectedUserId ?? "new"}
+                onValueChange={(v) => handleSelectUser(v === "new" ? undefined : v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      selectedUserId
+                        ? users.find((u) => u.id === selectedUserId)?.name ?? ""
+                        : "-- New registration --"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">-- New registration --</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name ?? u.email ?? `User ${u.id}`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* If an existing user is selected, show read-only details */}
+          {selectedUserId && (
+            (() => {
+              const u = users.find((x) => x.id === selectedUserId)
+              if (!u) return null
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Selected User</CardTitle>
+                    <CardDescription>Existing user details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Email</div>
+                      <div className="font-medium">{u.email ?? '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">First name</div>
+                      <div className="font-medium">{u.firstName ?? '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Last name</div>
+                      <div className="font-medium">{u.lastName ?? '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Phone</div>
+                      <div>{u.phoneNumber ?? u.contactNumber ?? '—'}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })()
+          )}
+          {/* User Information Section (hidden when an existing user is selected) */}
+          {!selectedUserId && (
+            <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Chamber Information</CardTitle>
-              <CardDescription>Enter the chamber details</CardDescription>
+              <CardTitle>User Information</CardTitle>
+              <CardDescription>Enter contact details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label
-                  htmlFor="chamberName"
-                  className="text-foreground font-medium"
-                >
-                  Name
+                <Label htmlFor="email" className="text-foreground font-medium">
+                  Email
                 </Label>
                 <Input
-                  id="chamberName"
-                  name="chamberName"
-                  placeholder="Enter chamber name"
-                  value={formData.chamberName}
+                  id="email"
+                  name="email"
+                  placeholder="user@example.com"
+                  value={formData.email}
                   onChange={handleInputChange}
-                  className={errors.chamberName ? "border-destructive" : ""}
+                  className={errors.email ? "border-destructive" : ""}
                 />
-                {errors.chamberName && (
-                  <p className="text-sm text-destructive">
-                    {errors.chamberName}
-                  </p>
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label
-                  htmlFor="contactNumber"
-                  className="text-foreground font-medium"
-                >
-                  Contact Number
-                </Label>
-                <Input
-                  id="contactNumber"
-                  name="contactNumber"
-                  placeholder="Enter contact number"
-                  value={formData.contactNumber}
-                  onChange={handleInputChange}
-                  className={errors.contactNumber ? "border-destructive" : ""}
-                />
-                {errors.contactNumber && (
-                  <p className="text-sm text-destructive">
-                    {errors.contactNumber}
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-foreground font-medium">First name</Label>
+                  <Input id="firstName" name="firstName" placeholder="First" value={formData.firstName} onChange={handleInputChange} inputMode="text" className={errors.firstName ? "border-destructive" : ""} />
+                  {errors.firstName && <p className="text-sm text-destructive">{errors.firstName}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-foreground font-medium">Last name</Label>
+                  <Input id="lastName" name="lastName" placeholder="Last" value={formData.lastName} onChange={handleInputChange} inputMode="text" className={errors.lastName ? "border-destructive" : ""} />
+                  {errors.lastName && <p className="text-sm text-destructive">{errors.lastName}</p>}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label
-                  htmlFor="address"
-                  className="text-foreground font-medium"
-                >
-                  Address
-                </Label>
-                <Input
-                  id="address"
-                  name="address"
-                  placeholder="Enter address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  className={errors.address ? "border-destructive" : ""}
-                />
-                {errors.address && (
-                  <p className="text-sm text-destructive">{errors.address}</p>
-                )}
+                <Label htmlFor="phoneNumber" className="text-foreground font-medium">Phone number</Label>
+                <Input id="phoneNumber" name="phoneNumber" placeholder="e.g. +63917..." value={formData.phoneNumber} onChange={handleInputChange} inputMode="tel" className={errors.phoneNumber ? "border-destructive" : ""} />
+                {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber}</p>}
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          )}
 
           {/* Device Registration Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Device Registration</CardTitle>
+              <CardTitle>Device Registration</CardTitle>
               <CardDescription>
                 Device ID will be auto-generated
               </CardDescription>
@@ -326,7 +459,7 @@ export default function RegisterModal({
                       )}
                     </SelectContent>
                   </Select>
-                  <div className="mt-2">
+                  <div className="mt-2 space-y-2">
                     <Label className="text-foreground font-medium">
                       Device ID
                     </Label>
@@ -414,6 +547,7 @@ export default function RegisterModal({
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={handleSave}
+            disabled={!isFormValid()}
           >
             Save
           </Button>

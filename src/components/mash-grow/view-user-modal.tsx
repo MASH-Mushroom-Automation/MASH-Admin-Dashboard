@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 interface ViewUserModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  user?: { id: string; name: string; chamberNumber?: string; address?: string; contactNumber?: string; deviceId?: string }
+  user?: { id: string; name: string; chamberNumber?: string; address?: string; contactNumber?: string; deviceId?: string; email?: string; firstName?: string; lastName?: string; phoneNumber?: string }
 }
 
 export default function ViewUserModal({ open, onOpenChange, user }: ViewUserModalProps) {
@@ -14,7 +14,7 @@ export default function ViewUserModal({ open, onOpenChange, user }: ViewUserModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[70vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>User Details</DialogTitle>
           <DialogDescription>Complete registration details</DialogDescription>
@@ -22,24 +22,35 @@ export default function ViewUserModal({ open, onOpenChange, user }: ViewUserModa
 
         <div className="space-y-3">
           <div>
-            <div className="text-sm text-muted-foreground">Name</div>
-            <div className="font-medium">{user.name}</div>
+            <div className="text-sm text-muted-foreground">Email</div>
+            <div className="font-medium">{user.email ?? '—'}</div>
           </div>
+          <div>
+            <div className="text-sm text-muted-foreground">First name</div>
+            <div className="font-medium">{user.firstName ?? '—'}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Last name</div>
+            <div className="font-medium">{user.lastName ?? '—'}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Phone number</div>
+            <div>{user.phoneNumber ?? user.contactNumber ?? '—'}</div>
+          </div>
+
           <div>
             <div className="text-sm text-muted-foreground">Chamber</div>
             <div className="font-mono">{user.chamberNumber ?? '—'}</div>
           </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Device ID</div>
-            <div className="font-mono">{user.deviceId ?? '—'}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Contact</div>
-            <div>{user.contactNumber ?? '—'}</div>
-          </div>
+
           <div>
             <div className="text-sm text-muted-foreground">Address</div>
             <div className="truncate">{user.address ?? '—'}</div>
+          </div>
+
+          <div>
+            <div className="text-sm text-muted-foreground">Device</div>
+            <div className="font-mono">{user.deviceId ?? '—'}</div>
           </div>
         </div>
 

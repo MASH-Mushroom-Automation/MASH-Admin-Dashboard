@@ -24,6 +24,10 @@ type User = {
   id: string;
   chamberNumber: string;
   name: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
   address?: string;
   contactNumber?: string;
   deviceId?: string;
@@ -33,6 +37,7 @@ type User = {
 type Device = {
   id: string;
   deviceId: string;
+  name?: string;
   model?: string;
   location?: string;
   status?: string;
@@ -47,6 +52,10 @@ type RegisterInitialData = {
   contactNumber?: string;
   deviceId?: string;
   selectedDeviceId?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
 };
 
 type RegisterData = Partial<RegisterInitialData> & {
@@ -59,25 +68,25 @@ const DEFAULT_USERS: User[] = [
     id: "1",
     chamberNumber: "CH001",
     name: "Ana Santos",
+    firstName: "Ana",
+    lastName: "Santos",
+    email: "ana.santos@example.com",
     address: "Blk 2 Lot 5, Caloocan",
     contactNumber: "+639171234567",
+    phoneNumber: "+639171234567",
     deviceId: "MASH-A1-CAL25-AC2523",
   },
   {
     id: "2",
     chamberNumber: "CH002",
-    name: "Rico Dela Cruz",
+    name: "Chamber A",
+    firstName: "Rico",
+    lastName: "Dela Cruz",
+    email: "rico.delacruz@example.com",
     address: "123 Rizal St, Manila",
     contactNumber: "+639172345678",
+    phoneNumber: "+639172345678",
     deviceId: "MASH-B2-CAL25-AC2524",
-  },
-  {
-    id: "3",
-    chamberNumber: "CH003",
-    name: "Liza Mercado",
-    address: "Unit 4, Quezon City",
-    contactNumber: "+639173456789",
-    deviceId: undefined,
   },
   // archived mock user for archive view
   {
@@ -95,6 +104,7 @@ const MOCK_DEVICES: Device[] = [
   {
     id: "mock-1",
     deviceId: "MASH-AX1-CALOOCAN-AC2523",
+    name: "Chamber A",
     model: "AX1",
     location: "Caloocan",
     status: "Disconnected",
@@ -123,6 +133,7 @@ export default function RegisteredUsersPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editUser, setEditUser] = useState<RegisterInitialData | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(() => {
     try {
       const raw = localStorage.getItem("mash_users_showArchived");
@@ -141,7 +152,6 @@ export default function RegisteredUsersPage() {
   }, [showArchived]);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [archivingUser, setArchivingUser] = useState<User | null>(null);
-  const [viewOpen, setViewOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [userToAssign, setUserToAssign] = useState<User | null>(null);
@@ -233,7 +243,6 @@ export default function RegisteredUsersPage() {
       return;
     }
 
-    // unassign user's previous device if present
     setDevices((prev) => {
       const next = prev.map((d) => ({ ...d }));
       const prevDevice = next.find((d) => d.deviceId === userToAssign.deviceId);
@@ -258,6 +267,7 @@ export default function RegisteredUsersPage() {
     toast.success("Device assigned");
   };
 
+
   const handleRegisterSave = (data: RegisterData) => {
     // If editing (id present), update existing entry
     if (data?.id) {
@@ -266,7 +276,12 @@ export default function RegisteredUsersPage() {
           u.id === String(data.id)
             ? {
                 ...u,
-                name: data.chamberName || data.name || u.name,
+                // prefer explicit chamberName, fall back to combined first/last or existing name
+                name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name) || u.name,
+                email: data.email ?? u.email,
+                firstName: data.firstName ?? u.firstName,
+                lastName: data.lastName ?? u.lastName,
+                phoneNumber: data.phoneNumber ?? u.phoneNumber ?? data.contactNumber ?? u.phoneNumber,
                 address: data.address || u.address,
                 contactNumber: data.contactNumber || u.contactNumber,
                 deviceId: data.deviceId || u.deviceId,
@@ -279,9 +294,13 @@ export default function RegisteredUsersPage() {
       const newUser = {
         id: String(users.length + 1),
         chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
-        name: data.chamberName || data.name || "",
+        name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name) || "",
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber ?? data.contactNumber,
         address: data.address || "",
-        contactNumber: data.contactNumber || "",
+        contactNumber: data.contactNumber || data.phoneNumber || "",
         // support selected device coming from either real devices or mockDevices
         deviceId:
           data.deviceId ||
@@ -310,39 +329,42 @@ export default function RegisteredUsersPage() {
 
   return (
     <div className="w-full px-4 py-8 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {showArchived ? "Archive Users" : "Registered Users"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {showArchived ? "Archived users" : "Users registered with devices"}
-          </p>
-        </div>
+      {showArchived ? (
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex items-center justify-start">
+            <div className="shrink-0">
+              <Button variant="ghost" size="sm" onClick={() => setShowArchived(false)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-3">
-          {!showArchived ? (
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => setRegisterOpen(true)}
-            >
-              Register User
-            </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowArchived((s) => !s)}
-            aria-label={showArchived ? "Back to active" : "View archived"}
-          >
-            {showArchived ? (
-              <ArrowLeft className="h-4 w-4" />
-            ) : (
-              <Archive className="h-4 w-4" />
-            )}
-          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Archive Users</h1>
+            <p className="text-muted-foreground mt-1">Archived users</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl font-bold">Registered Users</h1>
+            <p className="text-muted-foreground mt-1">Users registered with devices</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setRegisterOpen(true)}>Register User</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchived(true)}
+              aria-label="View archived"
+            >
+              <Archive className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <div className="overflow-x-auto">
@@ -370,7 +392,6 @@ export default function RegisteredUsersPage() {
                     <TableCell className="flex">
                       <ActionsMenu
                         id={u.id}
-                        viewUrl={undefined}
                         onView={() => handleView(u)}
                         onEdit={() => {
                           const selectedDevice = devices.find(
@@ -382,6 +403,10 @@ export default function RegisteredUsersPage() {
                             contactNumber: u.contactNumber,
                             address: u.address,
                             selectedDeviceId: selectedDevice?.id,
+                            email: u.email,
+                            firstName: u.firstName,
+                            lastName: u.lastName,
+                            phoneNumber: u.phoneNumber,
                           });
                           setRegisterOpen(true);
                         }}
@@ -483,3 +508,4 @@ export default function RegisteredUsersPage() {
     </div>
   );
 }
+
