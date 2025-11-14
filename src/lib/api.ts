@@ -20,7 +20,10 @@ api.interceptors.request.use(
     }
 
     // Debug log in development
-    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    if (
+      typeof window !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
       try {
         const cookie = document.cookie;
         const hasToken = cookie.includes("authToken=");
@@ -34,16 +37,21 @@ api.interceptors.request.use(
           token ? "present" : "none"
         );
       } catch {
-        console.log("api ->", config.method, config.url, "(cookie check failed)");
+        console.log(
+          "api ->",
+          config.method,
+          config.url,
+          "(cookie check failed)"
+        );
       }
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle token refresh
+// Response interceptor - handle 401 errors with automatic token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -54,17 +62,30 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Attempt to refresh token via API route
+        console.log("[API] Token expired, attempting refresh...");
+
+        // Call refresh endpoint (uses HttpOnly refresh cookie automatically)
         const refreshResponse = await fetch("/api/auth/refresh", {
           method: "POST",
-          credentials: "include", // Include HttpOnly cookies
+          credentials: "include", // ← CRITICAL: Sends HttpOnly refresh cookie
         });
 
         if (refreshResponse.ok) {
-          // Token manager will be updated by authStore after refresh
-          await refreshResponse.json();
-          
-          // Retry the original request
+          const refreshData = await refreshResponse.json();
+
+          // Update in-memory access token
+          const { setAccessToken } = await import("./tokenManager");
+          setAccessToken(
+            refreshData.accessToken,
+            refreshData.expiresIn || 3600
+          );
+
+          console.log("[API] Token refreshed successfully, retrying request");
+
+          // Update Authorization header with new token
+          originalRequest.headers.Authorization = `Bearer ${refreshData.accessToken}`;
+
+          // Retry the original request with new token
           return api(originalRequest);
         }
       } catch (refreshError) {
@@ -72,10 +93,13 @@ api.interceptors.response.use(
       }
 
       // Refresh failed - clear tokens and redirect to login
+      console.log("[API] Refresh failed, redirecting to login");
       clearAccessToken();
-      
+
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        // Clear user state from authStore
+        const { useAuthStore } = await import("@/store/authStore");
+        useAuthStore.getState().logout();
       }
     }
 

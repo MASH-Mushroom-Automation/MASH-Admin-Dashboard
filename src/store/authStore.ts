@@ -41,10 +41,10 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         logger.info("User logged out");
         sentry.setUser(null);
-        
+
         // Clear in-memory access token
         clearAccessToken();
-        
+
         // Call logout endpoint to clear HttpOnly cookies
         fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
         set({
@@ -57,16 +57,15 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         try {
           logger.info("Attempting login", { email });
-          
-          // Call backend API directly (not through Next.js proxy)
-          const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://mash-backend-api-production.up.railway.app";
-          
-          const response = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+
+          // Call Next.js API route (handles token storage in HttpOnly cookies)
+          const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Accept": "application/json",
+              Accept: "application/json",
             },
+            credentials: "include", // ← CRITICAL: Send/receive cookies
             body: JSON.stringify({ email, password }),
           });
 
@@ -74,30 +73,29 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json();
 
           if (!response.ok) {
-            // Extract error message from backend response
-            const errorMessage = 
-              result.message || 
-              result.error?.message || 
+            // Extract error message from API response
+            const errorMessage =
+              result.message ||
+              result.error?.message ||
               result.data?.message ||
               "Login failed";
-            
-            logger.error("Login failed", { 
-              status: response.status, 
-              message: errorMessage 
+
+            logger.error("Login failed", {
+              status: response.status,
+              message: errorMessage,
             });
-            
+
             set({
               error: errorMessage,
               user: null,
               isAuthenticated: false,
             });
-            
+
             throw new Error(errorMessage);
           }
 
-          // Backend returns: { success, statusCode, data: { accessToken, refreshToken, user } }
-          const data = result.data || result;
-          const { accessToken, refreshToken, user } = data;
+          // API returns: { success, user, accessToken, expiresIn }
+          const { accessToken, expiresIn, user } = result;
 
           if (!accessToken || !user) {
             throw new Error("Invalid response from server");
@@ -115,16 +113,12 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
 
-          // Store access token in MEMORY (not localStorage!) - XSS protection
-          setAccessToken(accessToken, 3600); // 1 hour = 3600 seconds
-          logger.info("Access token stored in memory");
+          // Store access token in MEMORY only (XSS protection)
+          setAccessToken(accessToken, expiresIn || 3600);
+          logger.info("Access token stored in memory", { expiresIn });
 
-          // Store refresh token in localStorage (for persistence)
-          // Note: In production, consider using HttpOnly cookies for refresh token
-          if (refreshToken) {
-            localStorage.setItem("refreshToken", refreshToken);
-            logger.info("Refresh token stored");
-          }
+          // ✅ Refresh token automatically stored in HttpOnly cookie by backend
+          // ✅ No localStorage usage - eliminates XSS vulnerability
 
           logger.info("Login successful", { userId: user.id });
           sentry.setUser({ id: user.id, email: user.email });
@@ -145,7 +139,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ error: null });
           logger.info("Forgot password request", { email });
-          
+
           const response = await fetch(`/api/auth/forgot-password`, {
             method: "POST",
             headers: {

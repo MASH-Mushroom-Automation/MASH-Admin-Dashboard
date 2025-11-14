@@ -10,113 +10,42 @@ import {
 } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useDashboardStore } from "@/store/dashboardStore";
-
-// Fallback data when API fails
-const FALLBACK_USER_STATS: Record<string, number> = {
-  ADMIN: 12,
-  BUYER: 45,
-  GROWER: 28,
-};
-
-const FALLBACK_USERS = [
-  {
-    id: "USR-001",
-    name: "Manny Jacinto",
-    email: "john.doe@example.com",
-    phone: "+63 912 345 6789",
-    role: "BUYER",
-    status: "Active",
-    region: "Metro Manila",
-  },
-  {
-    id: "USR-002",
-    name: "Hiria Momo",
-    email: "jane.smith@example.com",
-    phone: "+63 923 456 7890",
-    role: "GROWER",
-    status: "Active",
-    region: "Quezon City",
-  },
-  {
-    id: "USR-003",
-    name: "Jeon Jungkook",
-    email: "bob.johnson@example.com",
-    phone: "+63 934 567 8901",
-    role: "BUYER",
-    status: "Active",
-    region: "Cebu",
-  },
-  {
-    id: "USR-004",
-    name: "Hannah Montana",
-    email: "alice.williams@example.com",
-    phone: "+63 945 678 9012",
-    role: "ADMIN",
-    status: "Active",
-    region: "Davao",
-  },
-  {
-    id: "USR-005",
-    name: "Saturo Gojo",
-    email: "charlie.brown@example.com",
-    phone: "+63 956 789 0123",
-    role: "GROWER",
-    status: "Inactive",
-    region: "Baguio",
-  },
-];
-
-const FALLBACK_CHAMBERS = {
-  chambers: [
-    {
-      id: "CH-001",
-      grower: "Manny Jacinto",
-      location: "Manila, Philippines",
-      status: "Active",
-    },
-    {
-      id: "CH-002",
-      grower: "Hiria Momo",
-      location: "Quezon City, Philippines",
-      status: "Active",
-    },
-    {
-      id: "CH-003",
-      grower: "Jeon Jungkook",
-      location: "Cebu, Philippines",
-      status: "Inactive",
-    },
-    {
-      id: "CH-004",
-      grower: "Hannah Montana",
-      location: "Davao, Philippines",
-      status: "Active",
-    },
-    {
-      id: "CH-005",
-      grower: "Saturo Gojo",
-      location: "Baguio, Philippines",
-      status: "Active",
-    },
-  ],
-  total: 5,
-  page: 1,
-  limit: 10,
-};
+import type { UserItem } from "@/store/dashboardStore";
 
 export default function ChamberInventorySection() {
   const { usersStats, chambers, users, loading, error } = useDashboardStore();
 
-  if (loading.usersStats || loading.chambers) {
-    return <div>Loading...</div>;
+  // Show loading state while data is being fetched
+  if (loading.usersStats || loading.chambers || loading.users) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-pulse text-muted-foreground">
+          Loading chamber and user data...
+        </div>
+      </div>
+    );
   }
 
-  // Use fallback data if there's an error or no data
-  const actualUsersStats =
-    error.usersStats || !usersStats ? FALLBACK_USER_STATS : usersStats;
-  const actualChambers =
-    error.chambers || !chambers ? FALLBACK_CHAMBERS : chambers;
-  const actualUsers = error.users || !users ? FALLBACK_USERS : users;
+  // Use fetched data directly (no more fallback constants)
+  const actualUsersStats = usersStats || {};
+  const actualChambers = chambers || {
+    chambers: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+  };
+  const actualUsers = users || [];
+
+  console.log("[ChamberInventory] Using real data:", {
+    usersStats: actualUsersStats,
+    chambersCount: actualChambers.chambers?.length || 0,
+    usersCount: actualUsers.length,
+    hasErrors: {
+      usersStats: !!error.usersStats,
+      chambers: !!error.chambers,
+      users: !!error.users,
+    },
+  });
 
   // Use fetched data for pie chart — show only ADMIN, BUYER, GROWER
   const allowedRoles = ["ADMIN", "BUYER", "GROWER"];
@@ -139,7 +68,7 @@ export default function ChamberInventorySection() {
 
   // Calculate user role distribution from actualUsers array
   const userRoleCount: Record<string, number> = {};
-  actualUsers.forEach((user) => {
+  actualUsers.forEach((user: UserItem) => {
     const role = user.role || "UNKNOWN";
     userRoleCount[role] = (userRoleCount[role] || 0) + 1;
   });
@@ -166,116 +95,6 @@ export default function ChamberInventorySection() {
 
   return (
     <div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Overview Card */}
-        {/* <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Users</CardTitle>
-            <CardDescription>Overview of all user roles</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-x-7 flex justify-center text-center">
-                {pieData.map((item) => (
-                  <div key={item.name} className="text-sm">
-                    <span className="font-medium flex justify-center items-center">
-                      {item.value}
-                    </span>
-                    <span className="text-muted-foreground">{item.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card> */}
-
-        {/* Chamber Registry Table */}
-        {/* <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Chamber Registry</CardTitle>
-            <CardDescription>
-              List of registered chambers — showing 5 most recent
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    Chamber ID
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    Grower Name
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    Location
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {registry.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="py-6 text-center text-muted-foreground"
-                    >
-                      No chambers found.
-                    </td>
-                  </tr>
-                ) : (
-                  registry.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-border hover:bg-secondary/50"
-                    >
-                      <td className="py-3 px-4 text-foreground">{row.id}</td>
-                      <td className="py-3 px-4 text-foreground">
-                        {row.grower}
-                      </td>
-                      <td className="py-3 px-4 text-foreground">
-                        {row.location}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            row.status === "Active"
-                              ? "text-green-700"
-                              : "text-red-700"
-                          }`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card> */}
-      </div>
-
       {/* Second Row - Users Distribution Pie Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         <Card className="col-span-1">
@@ -332,16 +151,13 @@ export default function ChamberInventorySection() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    User ID
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
                     Name
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    Role
+                    Email
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">
-                    Status
+                    Role
                   </th>
                 </tr>
               </thead>
@@ -356,27 +172,18 @@ export default function ChamberInventorySection() {
                     </td>
                   </tr>
                 ) : (
-                  actualUsers.slice(0, 5).map((user) => (
+                  actualUsers.slice(0, 5).map((user: UserItem) => (
                     <tr
                       key={user.id}
                       className="border-b border-border hover:bg-secondary/50"
                     >
-                      <td className="py-3 px-4 text-foreground">{user.id}</td>
                       <td className="py-3 px-4 text-foreground">{user.name}</td>
+                      <td className="py-3 px-4 text-foreground">
+                        {user.email}
+                      </td>
                       <td className="py-3 px-4 text-foreground">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-secondary">
                           {roleLabelMap[user.role || ""] || user.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            user.status === "Active"
-                              ? "text-green-700"
-                              : "text-red-700"
-                          }`}
-                        >
-                          {user.status}
                         </span>
                       </td>
                     </tr>

@@ -31,65 +31,38 @@ import { useDashboardStore } from "../../store/dashboardStore";
 type ChartPoint = {
   day: string;
   sales: number;
-}
-
-const weeklyData = [
-  { label: "Mon", sales: 2400 },
-  { label: "Tue", sales: 1398 },
-  { label: "Wed", sales: 9800 },
-  { label: "Thu", sales: 3908 },
-  { label: "Fri", sales: 0 },
-  { label: "Sat", sales: 0 },
-  { label: "Sun", sales: 0 },
-];
-
-// Helper to produce data for different periods. For now we simulate monthly/yearly data.
-function getDataForPeriod(period: string) {
-  switch (period) {
-    case "daily":
-      // return only today (last day of weeklyData)
-      return [
-        {
-          day: weeklyData[weeklyData.length - 1].label,
-          sales: weeklyData[weeklyData.length - 1].sales,
-        },
-      ];
-    case "weekly":
-      return weeklyData.map((d) => ({ day: d.label, sales: d.sales }));
-    case "monthly":
-      // aggregate into 4 weeks (weeks 1-4)
-      const month = [
-        { day: "Week 1", sales: 2400 + 1398 + 9800 },
-        { day: "Week 2", sales: 3908 + 4800 + 3800 },
-        { day: "Week 3", sales: 4300 + 2400 + 1398 },
-        { day: "Week 4", sales: 9800 + 3908 + 4800 },
-      ];
-      return month;
-    case "yearly":
-      // simulate 12 months
-      return [
-        { day: "Jan", sales: 34000 },
-        { day: "Feb", sales: 28000 },
-        { day: "Mar", sales: 39000 },
-        { day: "Apr", sales: 45000 },
-        { day: "May", sales: 38000 },
-        { day: "Jun", sales: 42000 },
-        { day: "Jul", sales: 47000 },
-        { day: "Aug", sales: 43000 },
-        { day: "Sep", sales: 41000 },
-        { day: "Oct", sales: 48000 },
-        { day: "Nov", sales: 50000 },
-        { day: "Dec", sales: 52000 },
-      ];
-    default:
-      return weeklyData.map((d) => ({ day: d.label, sales: d.sales }));
-  }
-}
+};
 
 export default function ECommerceSection() {
   const [period, setPeriod] = useState<string>("weekly");
+  const { sales, fetchSales } = useDashboardStore();
 
-  const displayData = useMemo<ChartPoint[]>(() => getDataForPeriod(period), [period]);
+  // Fetch sales data when period changes
+  React.useEffect(() => {
+    const daysMap: Record<string, number> = {
+      daily: 1,
+      weekly: 7,
+      monthly: 30,
+      yearly: 365,
+    };
+    const days = daysMap[period] || 7;
+    console.log(
+      `[ECommerceSection] Fetching sales for period: ${period} (${days} days)`
+    );
+    fetchSales(days);
+  }, [period, fetchSales]);
+
+  // Use real data from store, or empty array as fallback
+  const displayData = useMemo<ChartPoint[]>(() => {
+    if (!sales || sales.length === 0) {
+      console.log(
+        "[ECommerceSection] No sales data available, showing empty chart"
+      );
+      return [];
+    }
+    console.log("[ECommerceSection] Using real sales data:", sales);
+    return sales;
+  }, [sales]);
 
   const totalSales = useMemo(
     () =>
@@ -102,8 +75,6 @@ export default function ECommerceSection() {
 
   const todaySales = displayData[displayData.length - 1]?.sales ?? 0;
 
-  const { sales } = useDashboardStore();
-
   // Summary numbers should not be affected by the chart filter — keep summary fixed (monthly)
 
   const titleMap: Record<string, string> = {
@@ -115,7 +86,7 @@ export default function ECommerceSection() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* ---------- Sales Summary (visible for all periods) ---------- */}
-  <Card className="border shadow-sm">
+      <Card className="border shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle>Sales Summary</CardTitle>
           <CardDescription>Today&apos;s performance</CardDescription>

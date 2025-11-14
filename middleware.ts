@@ -2,21 +2,25 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Middleware to protect dashboard routes
- * Checks for refresh token in HttpOnly cookie
- * Access tokens are in memory (not accessible to middleware)
+ * Checks for refresh token in HttpOnly cookie (not access token)
+ * Access tokens are stored in memory only (not accessible to middleware)
  */
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  console.log(`[middleware] Checking auth for: ${pathname}`);
 
-  // For direct backend authentication, we rely on client-side state
-  // The middleware will let the request through and client will handle redirects
-  // This prevents issues with SSR and client-side localStorage
-  
-  // Protect only the /dashboard routes - but allow first render
-  // Client-side auth check will redirect if needed
+  // Only protect /dashboard routes
   if (pathname.startsWith("/dashboard")) {
-    console.log("✅ Allowing dashboard access - client will verify auth");
+    // Check for refresh token (long-lived, HttpOnly)
+    const refreshToken = request.cookies.get("refreshToken")?.value;
+
+    if (!refreshToken) {
+      console.log(
+        `[middleware] ❌ No refresh token found, redirecting to /login`
+      );
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    console.log(`[middleware] ✅ Refresh token present, allowing access`);
   }
 
   return NextResponse.next();
