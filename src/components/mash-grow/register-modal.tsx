@@ -3,6 +3,7 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -36,13 +37,6 @@ function generateUniqueDecimal(): string {
   return result;
 }
 
-function generateLocationYear(address: string): string {
-  if (!address.trim()) return "";
-  const location = address.substring(0, 3).toUpperCase();
-  const year = new Date().getFullYear().toString().slice(-2);
-  return `${location}${year}`;
-}
-
 interface RegisterData {
   chamberName: string;
   contactNumber: string;
@@ -63,6 +57,17 @@ interface RegisterModalProps {
     RegisterData & { id?: string; selectedDeviceId?: string }
   >;
 }
+// initialData may include user fields when editing an existing registration
+type RegisterInitialData = Partial<{
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  contactNumber: string;
+  model: string;
+  selectedDeviceId: string;
+}>;
 export default function RegisterModal({
   open,
   onOpenChange,
@@ -221,6 +226,7 @@ export default function RegisterModal({
 
       console.log("Chamber and Device registered:", registrationData);
       onSave?.(registrationData);
+      toast.success("User registered");
       handleCancel();
     }
   };
@@ -228,18 +234,19 @@ export default function RegisterModal({
   // populate when opening for edit
   useEffect(() => {
     if (open && initialData) {
-      setEditingId(initialData.id);
+      const init = initialData as RegisterInitialData;
+      setEditingId(initialData.id as string | undefined);
       setFormData((prev) => ({
         ...prev,
-        email: (initialData as any).email ?? "",
-        firstName: (initialData as any).firstName ?? "",
-        lastName: (initialData as any).lastName ?? "",
-        phoneNumber: (initialData as any).phoneNumber ?? initialData.contactNumber ?? "",
-        model: initialData.model ?? "",
+        email: init.email ?? "",
+        firstName: init.firstName ?? "",
+        lastName: init.lastName ?? "",
+        phoneNumber: init.phoneNumber ?? init.contactNumber ?? "",
+        model: init.model ?? "",
       }));
-      setSelectedDeviceId(initialData.selectedDeviceId);
+      setSelectedDeviceId(init.selectedDeviceId);
       // if initialData contains an id, try to set selectedUserId so UI reflects chosen user
-      if (initialData.id) setSelectedUserId(String(initialData.id))
+      if (initialData.id) setSelectedUserId(String(initialData.id));
     }
     if (!open) {
       setEditingId(undefined);

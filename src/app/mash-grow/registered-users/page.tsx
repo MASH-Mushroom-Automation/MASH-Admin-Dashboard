@@ -5,13 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ConfirmationPopover } from "@/components/confirmation-popover"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { MoreVertical, Archive, ArrowLeft } from "lucide-react"
+import { Archive } from "lucide-react"
 import { ActionsMenu } from "@/components/user-actions-menu"
 import ViewUserModal from "@/components/mash-grow/view-user-modal"
 import RegisterModal from "@/components/mash-grow/register-modal"
@@ -36,6 +30,7 @@ type User = {
 type Device = {
   id: string
   deviceId: string
+  name?: string
   model?: string
   location?: string
   status?: string
@@ -150,12 +145,7 @@ export default function RegisteredUsersPage() {
     setViewOpen(true)
   }
 
-  const openAssign = (u: User) => {
-    setUserToAssign(u)
-    setAssignOpen(true)
-  }
  
-
   const handleAssignSave = (selectedDeviceId: string | undefined) => {
     if (!userToAssign) return
     if (!selectedDeviceId) return
@@ -182,39 +172,6 @@ export default function RegisteredUsersPage() {
     toast.success("Device assigned")
   }
 
-  const handleAssignFromView = (selectedDeviceId: string | undefined) => {
-    if (!selectedUser) return
-
-    // if clearing selection, unassign previous device
-    if (!selectedDeviceId) {
-      // unassign previous device
-      setDevices((prev) => prev.map((d) => (d.deviceId === selectedUser.deviceId ? { ...d, assigned: false } : d)))
-      setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? { ...u, deviceId: undefined } : u)))
-      toast.success("Device unassigned")
-      setSelectedUser(null)
-      return
-    }
-
-    const isReal = devices.find((d) => d.id === selectedDeviceId)
-    if (!isReal) {
-      toast.error("Selected device is a mock device and cannot be assigned.")
-      return
-    }
-
-    // unassign any device previously held by this user
-    setDevices((prev) => {
-      const next = prev.map((d) => ({ ...d }))
-      const prevDevice = next.find((d) => d.deviceId === selectedUser.deviceId)
-      if (prevDevice) prevDevice.assigned = false
-      const newDevice = next.find((d) => d.id === selectedDeviceId)
-      if (newDevice) newDevice.assigned = true
-      return next
-    })
-
-    setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? { ...u, deviceId: devices.find((d) => d.id === selectedDeviceId)?.deviceId } : u)))
-    toast.success("Device assigned")
-    setSelectedUser(null)
-  }
 
   const handleRegisterSave = (data: RegisterData) => {
     // If editing (id present), update existing entry

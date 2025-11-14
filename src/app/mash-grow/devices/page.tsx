@@ -104,8 +104,8 @@ export default function DevicesPage() {
   // robust matcher to find user for a device (tries multiple heuristics)
   const findUserForDevice = (parsedUsers: UserLocal[], device: Device): UserLocal | undefined => {
     if (!Array.isArray(parsedUsers) || parsedUsers.length === 0) return undefined;
-    const norm = (s?: any) => (s || "").toString().toLowerCase().trim();
-    const strip = (s?: any) => norm((s || "").toString().replace(/[^a-z0-9]/gi, ""));
+    const norm = (s?: unknown) => String(s ?? "").toLowerCase().trim();
+    const strip = (s?: unknown) => norm(String(s ?? "").replace(/[^a-z0-9]/gi, ""));
 
     const dId = norm(device.id);
     const dDeviceId = norm(device.deviceId);
@@ -114,12 +114,14 @@ export default function DevicesPage() {
     // try exact matches first
     for (const u of parsedUsers) {
       // check common fields
-      const fields = [u.deviceId, u.selectedDeviceId, (u as any).device, (u as any).assignedDeviceId, (u as any).device_id, (u as any).selected_device_id];
+      const uRec = u as unknown as Record<string, unknown>;
+      const fields: unknown[] = [u.deviceId, u.selectedDeviceId, uRec["device"], uRec["assignedDeviceId"], uRec["device_id"], uRec["selected_device_id"]];
       for (const f of fields) {
-        if (!f) continue;
+        if (f === undefined || f === null) continue;
         // if f is an object, try its id/deviceId
         if (typeof f === "object") {
-          const fid = norm((f as any).id || (f as any).deviceId || "");
+          const fRec = f as Record<string, unknown>;
+          const fid = norm(fRec["id"] ?? fRec["deviceId"] ?? "");
           if (fid && (fid === dId || fid === dDeviceId)) return u;
         } else {
           const fv = norm(f);

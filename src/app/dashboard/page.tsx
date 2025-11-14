@@ -9,12 +9,10 @@ import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useDashboardLoading } from "@/hooks/useDashboardLoading";
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout } = useAuthStore();
-  const router = useRouter();
+  const { user } = useAuthStore();
 
   const {
     fetchOverview,

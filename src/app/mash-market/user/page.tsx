@@ -51,7 +51,7 @@ export default function UsersManagement() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   
   // API State
-  const [users, setUsers] = useState<User[]>([])
+  const [users] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

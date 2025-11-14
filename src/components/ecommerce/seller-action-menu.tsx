@@ -109,7 +109,6 @@ export function SellerActionMenu({
   }
 
   const menuItems = getMenuItems()
-  const destructiveTextClass = "text-destructive"
 
   return (
     <div className="flex items-center gap-2">

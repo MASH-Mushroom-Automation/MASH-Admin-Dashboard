@@ -133,12 +133,6 @@ export default function ChamberInventorySection() {
     GROWER: "#C6DABF",
   };
 
-  const pieData = allowedRoles.map((key) => ({
-    name: roleLabelMap[key] ?? key,
-    value: actualUsersStats?.[key] ?? 0,
-    color: colors[key] ?? "#888888",
-  }));
-
   // Use fetched data for table — show only the 5 most recent entries
   const registryAll = actualChambers?.chambers || [];
   const registry = registryAll.slice(0, 5);
