@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import { Archive } from "lucide-react";
-import { ActionsMenu } from "@/components/user-actions-menu"
+import { Archive, ArrowLeft } from "lucide-react";
+import { ActionsMenu } from "@/components/user-actions-menu";
 import {
   Table,
   TableBody,
@@ -297,6 +297,7 @@ export default function DevicesPage() {
                 </tr>
               </TableHeader>
               <TableBody>
+<<<<<<< HEAD
                 {pagedDevices.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-mono w-48 overflow-hidden truncate">{d.deviceId}</TableCell>
@@ -322,6 +323,41 @@ export default function DevicesPage() {
                                   u = cand;
                                   break;
                                 }
+=======
+                {devices
+                  .filter((d) =>
+                    showArchived ? Boolean(d.archived) : !d.archived
+                  )
+                  .map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="font-mono">{d.deviceId}</TableCell>
+                      <TableCell>{d.model}</TableCell>
+                      <TableCell>{d.location}</TableCell>
+                      <TableCell>{d.status}</TableCell>
+                      <TableCell>
+                        <div className="flex">
+                          <ActionsMenu
+                            id={d.id}
+                            showView={false}
+                            showEdit={true}
+                            onEdit={() => {
+                              setEditDevice(d);
+                              setCreateOpen(true);
+                            }}
+                            onArchive={() => {
+                              if (!showArchived) {
+                                setArchivingDevice(d);
+                                setShowArchiveConfirm(true);
+                              } else {
+                                setDevices((prev: Device[]) =>
+                                  prev.map((p) =>
+                                    p.id === d.id
+                                      ? { ...p, archived: false }
+                                      : p
+                                  )
+                                );
+                                toast.success("Device restored");
+>>>>>>> origin/main
                               }
                             } catch {}
                           }
