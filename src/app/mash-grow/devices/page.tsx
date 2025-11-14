@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import { Archive, ArrowLeft } from "lucide-react";
+import { Archive } from "lucide-react";
 import { ActionsMenu } from "@/components/user-actions-menu";
 import {
   Table,
