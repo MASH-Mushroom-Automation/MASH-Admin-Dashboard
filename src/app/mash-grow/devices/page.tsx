@@ -3,14 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical, Archive, ArrowLeft } from "lucide-react";
-import { ActionsMenu } from "@/components/user-actions-menu"
+import { Archive, ArrowLeft } from "lucide-react";
+import { ActionsMenu } from "@/components/user-actions-menu";
 import {
   Table,
   TableBody,
@@ -219,16 +213,22 @@ export default function DevicesPage() {
                             showView={false}
                             showEdit={true}
                             onEdit={() => {
-                              setEditDevice(d)
-                              setCreateOpen(true)
+                              setEditDevice(d);
+                              setCreateOpen(true);
                             }}
                             onArchive={() => {
                               if (!showArchived) {
-                                setArchivingDevice(d)
-                                setShowArchiveConfirm(true)
+                                setArchivingDevice(d);
+                                setShowArchiveConfirm(true);
                               } else {
-                                setDevices((prev: Device[]) => prev.map((p) => (p.id === d.id ? { ...p, archived: false } : p)))
-                                toast.success("Device restored")
+                                setDevices((prev: Device[]) =>
+                                  prev.map((p) =>
+                                    p.id === d.id
+                                      ? { ...p, archived: false }
+                                      : p
+                                  )
+                                );
+                                toast.success("Device restored");
                               }
                             }}
                             ArchiveLabel={showArchived ? "Restore" : "Archive"}

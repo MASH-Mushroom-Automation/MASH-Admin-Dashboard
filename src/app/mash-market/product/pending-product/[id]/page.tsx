@@ -3,7 +3,7 @@
 import { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Product } from "@/app/mash-market/product/page";
+import { Product } from "@/store/ecommerceStore";
 import { Button } from "@/components/ui/button";
 import ProductRejectReasonModal from "@/components/ecommerce/product-reject-reason-modal";
 import { Card } from "@/components/ui/card";
@@ -12,38 +12,21 @@ import StatusBadge from "@/components/status-badge";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 
-// Use same mock data as pending-product list; replace with API fetch in future
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "White Oyster Mushroom",
-    seller: "Mushroom Farm",
-    price: 129.99,
-    category: "Fresh Mushroom",
-    description: "High-quality oyster mushrooms grown locally.",
-    status: "pending",
-    submittedAt: "2025-10-28T10:30:00Z",
-  },
-  {
-    id: "2",
-    name: "White Mushroom",
-    seller: "The farm house",
-    price: 34.99,
-    category: "Fresh Mushroom",
-    description: "Fresh harvested white mushrooms.",
-    status: "pending",
-    submittedAt: "2025-10-27T14:15:00Z",
-  },
-];
+// TODO: Replace with API fetch to get pending product details by ID
+// MOCK_PRODUCTS removed to avoid deployment errors
 
 export default function PendingProductDetail({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  // TODO: Fetch product from API using id
   const { id } = use(params);
+  // id will be used when API integration is complete
+  void id;
   const router = useRouter();
-  const product = MOCK_PRODUCTS.find((p) => p.id === id) ?? null;
+  // TODO: Fetch product from API using id
+  const [product] = useState<Product | null>(null); // Will be replaced with API call
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
@@ -78,11 +61,14 @@ export default function PendingProductDetail({
   const handleReject = async (reason?: string) => {
     setLoading(true);
     try {
+      // TODO: Replace with API call to reject product
       const raw = localStorage.getItem("mash_products");
       type StoredProduct = Product & { rejectReason?: string };
-      const parsed = raw ? (JSON.parse(raw) as StoredProduct[]) : MOCK_PRODUCTS as StoredProduct[];
+      const parsed = raw ? (JSON.parse(raw) as StoredProduct[]) : [];
       const list = parsed.map((p) =>
-        p.id === product.id ? { ...p, status: "rejected", rejectReason: reason } : p
+        p.id === product?.id
+          ? { ...p, status: "rejected", rejectReason: reason }
+          : p
       );
       localStorage.setItem("mash_products", JSON.stringify(list));
       await new Promise((r) => setTimeout(r, 300));
@@ -97,11 +83,13 @@ export default function PendingProductDetail({
     }
   };
 
-  const formatPricePHP = (price: number) =>
-    new Intl.NumberFormat("en-PH", {
+  const formatPricePHP = (price: string | number) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return new Intl.NumberFormat("en-PH", {
       style: "currency",
       currency: "PHP",
-    }).format(price);
+    }).format(numPrice);
+  };
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString();
 
@@ -167,11 +155,7 @@ export default function PendingProductDetail({
                 Status
               </label>
               <div className="mt-2">
-                {product.status ? (
-                  <StatusBadge status={product.status} />
-                ) : (
-                  "-"
-                )}
+                {product.status ? <StatusBadge status={product.status} /> : "-"}
               </div>
             </div>
           </div>
