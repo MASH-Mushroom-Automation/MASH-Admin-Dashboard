@@ -328,78 +328,43 @@ export default function RegisteredUsersPage() {
   };
 
   return (
-<<<<<<< HEAD
-      <div className="w-full px-4 py-8 overflow-x-hidden">
-        {showArchived ? (
-          <div className="flex flex-col gap-4 mb-4">
-            <div className="flex items-center justify-start">
-              <div className="shrink-0">
-                <Button variant="ghost" size="sm" onClick={() => setShowArchived(false)}>Back</Button>
-              </div>
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold">Archive Users</h1>
-              <p className="text-muted-foreground mt-1">Archived users</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-2xl font-bold">Registered Users</h1>
-              <p className="text-muted-foreground mt-1">Users registered with devices</p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setRegisterOpen(true)}>Register User</Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowArchived(true)}
-                aria-label="View archived"
-              >
-                <Archive className="h-4 w-4" />
+    <div className="w-full px-4 py-8 overflow-x-hidden">
+      {showArchived ? (
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex items-center justify-start">
+            <div className="shrink-0">
+              <Button variant="ghost" size="sm" onClick={() => setShowArchived(false)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
               </Button>
             </div>
           </div>
-        )}
-        
-=======
-    <div className="w-full px-4 py-8 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {showArchived ? "Archive Users" : "Registered Users"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {showArchived ? "Archived users" : "Users registered with devices"}
-          </p>
-        </div>
->>>>>>> origin/main
 
-        <div className="flex items-center gap-3">
-          {!showArchived ? (
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => setRegisterOpen(true)}
-            >
-              Register User
-            </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowArchived((s) => !s)}
-            aria-label={showArchived ? "Back to active" : "View archived"}
-          >
-            {showArchived ? (
-              <ArrowLeft className="h-4 w-4" />
-            ) : (
-              <Archive className="h-4 w-4" />
-            )}
-          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Archive Users</h1>
+            <p className="text-muted-foreground mt-1">Archived users</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl font-bold">Registered Users</h1>
+            <p className="text-muted-foreground mt-1">Users registered with devices</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setRegisterOpen(true)}>Register User</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchived(true)}
+              aria-label="View archived"
+            >
+              <Archive className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <div className="overflow-x-auto">
@@ -438,17 +403,12 @@ export default function RegisteredUsersPage() {
                             contactNumber: u.contactNumber,
                             address: u.address,
                             selectedDeviceId: selectedDevice?.id,
-<<<<<<< HEAD
                             email: u.email,
                             firstName: u.firstName,
                             lastName: u.lastName,
                             phoneNumber: u.phoneNumber,
-                          })
-                          setRegisterOpen(true)
-=======
                           });
                           setRegisterOpen(true);
->>>>>>> origin/main
                         }}
                         onArchive={() => {
                           if (!showArchived) {
