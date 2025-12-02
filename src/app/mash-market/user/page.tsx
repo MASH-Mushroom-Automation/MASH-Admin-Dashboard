@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Archive } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useDashboardStore } from "@/store/dashboardStore";
+import { useUserManagementStore } from "@/store/userManagementStore";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -50,7 +50,7 @@ export default function UsersManagement() {
     loading: storeLoading,
     error: storeError,
     fetchUsers,
-  } = useDashboardStore();
+  } = useUserManagementStore();
 
   // Filter to only show users with "user" role (case-insensitive)
   const users = useMemo(() => {

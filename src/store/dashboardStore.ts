@@ -64,8 +64,6 @@ interface DashboardState {
   sales: DailySale[] | null;
   chambers: ChamberRegistry | null;
   usersStats: UsersStats | null;
-  // list of users for admin pages
-  users: UserItem[] | null;
   cards: CardsSummary | null;
   loading: { [key: string]: boolean };
   error: { [key: string]: string | null };
@@ -73,21 +71,7 @@ interface DashboardState {
   fetchSales: (days: number) => Promise<void>;
   fetchChambers: (page: number, limit: number) => Promise<void>;
   fetchUsersStats: () => Promise<void>;
-  fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchCards: () => Promise<void>;
-}
-
-// lightweight user shape returned to UI
-export interface UserItem {
-  id: string;
-  name: string;
-  username?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
-  status?: string;
-  avatar?: string;
-  region?: string;
 }
 
 export const useDashboardStore = create<DashboardState>()(
@@ -96,7 +80,6 @@ export const useDashboardStore = create<DashboardState>()(
     sales: null,
     chambers: null,
     usersStats: null,
-    users: null,
     cards: null,
     loading: {},
     error: {},
@@ -312,135 +295,6 @@ export const useDashboardStore = create<DashboardState>()(
         set({
           error: { ...get().error, usersStats: errorMessage },
           loading: { ...get().loading, usersStats: false },
-        });
-      }
-    },
-
-    fetchUsers: async (page: number = 1, limit: number = 50) => {
-      console.log("[dashboardStore] fetchUsers called with:", { page, limit });
-
-      // Note: refreshToken is HttpOnly cookie (not readable by JS - this is correct for security)
-      // The API will send it automatically with credentials: "include"
-      if (typeof window !== "undefined") {
-        console.log(
-          "[dashboardStore] 🔐 Fetching users (refreshToken sent automatically via HttpOnly cookie)"
-        );
-      }
-
-      set({
-        loading: { ...get().loading, users: true },
-        error: { ...get().error, users: null },
-      });
-
-      try {
-        console.log("[dashboardStore] Fetching users from API: v1/users");
-        const res = await api.get(`v1/users`, { params: { page, limit } });
-        console.log("[dashboardStore] API response received:", res.data);
-
-        // Normalize possible response shapes:
-        // 1) { success, statusCode, data: { data: [...], meta: { total, page, limit } } }
-        // 2) { success, statusCode, data: [...] }
-        // 3) Array of users or plain object
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const payload: any = res.data;
-        console.log(
-          "[dashboardStore] Payload type:",
-          Array.isArray(payload) ? "array" : typeof payload
-        );
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let items: any[] = [];
-
-        if (Array.isArray(payload)) {
-          console.log(
-            "[dashboardStore] Payload is array, length:",
-            payload.length
-          );
-          items = payload;
-        } else if (payload?.data) {
-          if (Array.isArray(payload.data)) {
-            console.log(
-              "[dashboardStore] payload.data is array, length:",
-              payload.data.length
-            );
-            items = payload.data;
-          } else if (Array.isArray(payload.data?.data)) {
-            console.log(
-              "[dashboardStore] payload.data.data is array, length:",
-              payload.data.data.length
-            );
-            items = payload.data.data;
-          }
-        } else if (typeof payload === "object") {
-          // try to detect common wrapper
-          items = payload.items || payload.users || [];
-          console.log(
-            "[dashboardStore] Extracted items from object wrapper, length:",
-            items.length
-          );
-        }
-
-        console.log("[dashboardStore] Raw items before mapping:", items);
-
-        // Log first user's raw data to see available fields
-        if (items.length > 0) {
-          console.log("[dashboardStore] Sample raw user object:", items[0]);
-          console.log(
-            "[dashboardStore] Available keys in raw user:",
-            Object.keys(items[0])
-          );
-        }
-
-        const mapped: UserItem[] = (items || []).map((u) => {
-          // Try multiple possible role field names
-          const roleValue =
-            u.role ?? u.userRole ?? u.type ?? u.accountType ?? undefined;
-
-          console.log(`[dashboardStore] Mapping user ${u.id}:`, {
-            rawRole: u.role,
-            rawUserRole: u.userRole,
-            rawType: u.type,
-            rawAccountType: u.accountType,
-            finalRole: roleValue,
-          });
-
-          return {
-            id: String(u.id ?? u.userId ?? u._id ?? ""),
-            name: String(
-              u.name ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`
-            ).trim(),
-            username: u.username ?? u.userName ?? undefined,
-            email: u.email ?? undefined,
-            phone: u.phone ?? u.mobile ?? undefined,
-            role: roleValue,
-            status: u.status ?? undefined,
-            avatar:
-              u.avatar ??
-              (u.name
-                ? String(u.name)
-                    .split(" ")
-                    .map((s: string) => s[0])
-                    .join("")
-                    .slice(0, 2)
-                : undefined),
-            region: u.region ?? u.location ?? undefined,
-          };
-        });
-
-        console.log("[dashboardStore] Mapped users:", mapped);
-        console.log("[dashboardStore] Total users fetched:", mapped.length);
-
-        set({ users: mapped, loading: { ...get().loading, users: false } });
-      } catch (err) {
-        const errorMessage = (err as Error).message || "Failed to fetch users";
-        console.error("[dashboardStore] fetchUsers error:", {
-          message: errorMessage,
-          error: err,
-        });
-
-        set({
-          error: { ...get().error, users: errorMessage },
-          loading: { ...get().loading, users: false },
         });
       }
     },

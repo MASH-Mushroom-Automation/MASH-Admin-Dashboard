@@ -7,6 +7,7 @@ import AppSidebar from "@/components/sidebar";
 import DashboardContent from "@/components/dashboard/dashboard-content";
 import DashboardSkeleton from "@/components/dashboard/dashboar-skeleton";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { useUserManagementStore } from "@/store/userManagementStore";
 import { useDashboardLoading } from "@/hooks/useDashboardLoading";
 import { useAuthStore } from "@/store/authStore";
 
@@ -21,9 +22,10 @@ export default function DashboardPage() {
     fetchSales,
     fetchChambers,
     fetchUsersStats,
-    fetchUsers,
     fetchCards,
   } = useDashboardStore();
+
+  const { fetchUsers } = useUserManagementStore();
 
   // Safety: Force show content after 5 seconds even if loading states are stuck
   useEffect(() => {
@@ -82,8 +84,8 @@ export default function DashboardPage() {
     fetchSales,
     fetchChambers,
     fetchUsersStats,
-    fetchUsers,
     fetchCards,
+    fetchUsers,
   ]);
   const isLoading = useDashboardLoading();
   const { loading } = useDashboardStore();

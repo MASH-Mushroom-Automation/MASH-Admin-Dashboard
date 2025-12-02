@@ -10,10 +10,27 @@ import {
 } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useDashboardStore } from "@/store/dashboardStore";
-import type { UserItem } from "@/store/dashboardStore";
+import {
+  useUserManagementStore,
+  type UserItem,
+} from "@/store/userManagementStore";
 
 export default function ChamberInventorySection() {
-  const { usersStats, chambers, users, loading, error } = useDashboardStore();
+  const {
+    usersStats,
+    chambers,
+    loading: dashboardLoading,
+    error: dashboardError,
+  } = useDashboardStore();
+  const {
+    users,
+    loading: userLoading,
+    error: userError,
+  } = useUserManagementStore();
+
+  // Combine loading and error states
+  const loading = { ...dashboardLoading, ...userLoading };
+  const error = { ...dashboardError, ...userError };
 
   // Show loading state while data is being fetched
   if (loading.usersStats || loading.chambers || loading.users) {

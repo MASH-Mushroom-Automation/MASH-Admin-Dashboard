@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
-import { useDashboardStore } from "@/store/dashboardStore";
+import { useUserManagementStore } from "@/store/userManagementStore";
 import { useMemo } from "react";
 
 // Local Seller type for mock data (matches SellerTable component expectations)
@@ -44,7 +44,7 @@ export default function SellerContent() {
     loading: storeLoading,
     error: storeError,
     fetchUsers,
-  } = useDashboardStore();
+  } = useUserManagementStore();
 
   // Filter users to only show ADMIN role (these are sellers in the system)
   const sellers = useMemo(() => {
