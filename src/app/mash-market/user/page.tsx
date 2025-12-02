@@ -414,7 +414,11 @@ export default function UsersManagement() {
                           <TableCell className="whitespace-nowrap">
                             {user.region || "N/A"}
                           </TableCell>
-                          <TableCell>{user.role || "N/A"}</TableCell>
+                          <TableCell>
+                            {user.role?.toLowerCase() === "user"
+                              ? "Buyer"
+                              : user.role || "N/A"}
+                          </TableCell>
                           <TableCell>
                             <ActionsMenu
                               id={user.id}
