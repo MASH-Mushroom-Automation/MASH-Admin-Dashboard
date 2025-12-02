@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, use, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import RejectReasonModal from "@/components/ecommerce/reject-reason-modal";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
+import { useUserManagementStore } from "@/store/userManagementStore";
 
 interface Seller {
   id: string;
@@ -106,13 +107,110 @@ export default function SellerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
+  const { id: username } = use(params); // This is the username from URL path
+  const searchParams = useSearchParams();
+  const sellerId = searchParams.get("id"); // This is the actual ID from query param
   const router = useRouter();
-  const seller = mockSellers.find((s) => s.id === id) ?? null;
+
+  const {
+    selectedUser,
+    loading: storeLoading,
+    error: storeError,
+    fetchUserById,
+    clearSelectedUser,
+  } = useUserManagementStore();
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
-  if (!seller) {
+  // Fetch seller (user with ADMIN role) data when component mounts using the actual ID
+  useEffect(() => {
+    if (sellerId) {
+      console.log(
+        "[SellerDetailPage] Fetching seller with ID:",
+        sellerId,
+        "| Username in URL:",
+        username
+      );
+      fetchUserById(sellerId);
+    } else {
+      console.warn("[SellerDetailPage] No seller ID provided in query params");
+    }
+
+    // Cleanup: clear selected user when leaving page
+    return () => {
+      clearSelectedUser();
+    };
+  }, [sellerId, username, fetchUserById, clearSelectedUser]);
+
+  // Loading state
+  if (storeLoading.selectedUser) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-4xl">
+          <Card className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">
+                Loading seller details...
+              </span>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // No ID provided in query params
+  if (!sellerId) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-4xl">
+          <Card className="p-6">
+            <h2 className="text-lg font-medium text-destructive">
+              Invalid URL
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Seller ID is missing from the URL. Please navigate from the seller
+              list.
+            </p>
+            <div className="mt-4">
+              <Button onClick={() => router.push("/mash-market/seller")}>
+                Back to sellers
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (storeError.selectedUser && !storeLoading.selectedUser) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-4xl">
+          <Card className="p-6">
+            <h2 className="text-lg font-medium text-destructive">Error</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              {storeError.selectedUser}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Button onClick={() => fetchUserById(sellerId)}>Retry</Button>
+              <Button
+                variant="ghost"
+                onClick={() => router.push("/mash-market/seller")}
+              >
+                Back to sellers
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Seller not found state
+  if (!selectedUser && !storeLoading.selectedUser) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -132,6 +230,27 @@ export default function SellerDetailPage({
     );
   }
 
+  // Map user data to seller format
+  const seller: Seller = {
+    id: selectedUser!.id,
+    name: selectedUser!.name,
+    username: selectedUser!.username,
+    email: selectedUser!.email || "",
+    phone: selectedUser!.phone,
+    status:
+      (selectedUser!.status?.toLowerCase() as
+        | "pending"
+        | "approved"
+        | "rejected") || "pending",
+    city: selectedUser!.region,
+    region: selectedUser!.region,
+    // Additional fields would come from backend API
+    storeName: selectedUser!.username,
+    businessName: selectedUser!.name,
+    businessType: "company",
+    completeAddress: selectedUser!.region,
+  };
+
   const handleAccept = async () => {
     setLoading(true);
     // Placeholder: call API to accept seller
@@ -148,8 +267,14 @@ export default function SellerDetailPage({
       // read persisted sellers
       const raw = localStorage.getItem("mash_sellers");
       type MarketSeller = Seller & { rejectReason?: string };
-      const parsed = raw ? (JSON.parse(raw) as MarketSeller[]) : (mockSellers as MarketSeller[]);
-      const list = parsed.map((s) => (s.id === seller.id ? { ...s, status: "rejected", rejectReason: reason } : s));
+      const parsed = raw
+        ? (JSON.parse(raw) as MarketSeller[])
+        : (mockSellers as MarketSeller[]);
+      const list = parsed.map((s) =>
+        s.id === seller.id
+          ? { ...s, status: "rejected", rejectReason: reason }
+          : s
+      );
       localStorage.setItem("mash_sellers", JSON.stringify(list));
       await new Promise((r) => setTimeout(r, 300));
       toast.error(`Seller rejected${reason ? ` — ${reason}` : ""}`);

@@ -93,8 +93,11 @@ export default function SellerContent() {
   const paginatedSellers = filteredSellers.slice(startIndex, endIndex);
 
   const handleView = (seller: Seller) => {
-    // Navigate to seller detail page instead of opening modal
-    router.push(`/mash-market/seller/${seller.id}`);
+    // Navigate to seller detail page
+    // URL shows username for better UX, but ID is passed via query
+    router.push(
+      `/mash-market/seller/${seller.username || seller.id}?id=${seller.id}`
+    );
   };
 
   const handleAccept = (sellerId: string) => {

@@ -47,6 +47,7 @@ interface UserManagementState {
   error: { [key: string]: string | null };
   fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchUserById: (id: string) => Promise<void>;
+  fetchUserByUsername: (username: string) => Promise<void>;
   clearSelectedUser: () => void;
 }
 
@@ -289,6 +290,75 @@ export const useUserManagementStore = create<UserManagementState>()(
         const errorMessage =
           (err as Error).message || "Failed to fetch user details";
         console.error("[userManagementStore] fetchUserById error:", {
+          message: errorMessage,
+          error: err,
+        });
+
+        set({
+          error: { ...get().error, selectedUser: errorMessage },
+          loading: { ...get().loading, selectedUser: false },
+        });
+      }
+    },
+
+    fetchUserByUsername: async (username: string) => {
+      console.log(
+        "[userManagementStore] fetchUserByUsername called with username:",
+        username
+      );
+
+      if (!username) {
+        console.error("[userManagementStore] Invalid username provided");
+        set({
+          error: { ...get().error, selectedUser: "Invalid username" },
+        });
+        return;
+      }
+
+      set({
+        loading: { ...get().loading, selectedUser: true },
+        error: { ...get().error, selectedUser: null },
+      });
+
+      try {
+        // First, check if we have the user in the cached users list
+        const cachedUser = get().users?.find(
+          (u) => u.username?.toLowerCase() === username.toLowerCase()
+        );
+
+        if (cachedUser) {
+          console.log(
+            "[userManagementStore] Found user in cache, fetching full details by ID:",
+            cachedUser.id
+          );
+          // Fetch full details using the ID
+          await get().fetchUserById(cachedUser.id);
+          return;
+        }
+
+        // If not in cache, fetch all users first to find the ID
+        console.log(
+          "[userManagementStore] User not in cache, fetching all users to find username"
+        );
+        await get().fetchUsers(1, 100); // Fetch more users to increase chance of finding
+
+        const foundUser = get().users?.find(
+          (u) => u.username?.toLowerCase() === username.toLowerCase()
+        );
+
+        if (foundUser) {
+          console.log(
+            "[userManagementStore] Found user after fetch, getting details by ID:",
+            foundUser.id
+          );
+          await get().fetchUserById(foundUser.id);
+        } else {
+          throw new Error(`User with username "${username}" not found`);
+        }
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch user by username";
+        console.error("[userManagementStore] fetchUserByUsername error:", {
           message: errorMessage,
           error: err,
         });

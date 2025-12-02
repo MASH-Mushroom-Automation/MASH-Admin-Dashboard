@@ -423,7 +423,10 @@ export default function UsersManagement() {
                             <ActionsMenu
                               id={user.id}
                               // navigate to the new detail page for this user
-                              viewUrl={`/mash-market/user/${user.id}`}
+                              // URL shows username for better UX, but ID is passed via query
+                              viewUrl={`/mash-market/user/${
+                                user.username || user.id
+                              }?id=${user.id}`}
                               onArchive={() => {
                                 setDeletingId(user.id);
                                 setShowArchiveConfirm(true);
