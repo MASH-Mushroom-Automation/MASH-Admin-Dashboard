@@ -14,6 +14,8 @@ export const dynamic = "force-dynamic";
 async function loginWithRetry(
   url: string,
   body: { email: string; password: string },
+  csrfToken: string | null = null,
+  cookieHeader: string | null = null,
   maxRetries = 3
 ) {
   let lastError;
@@ -22,12 +24,25 @@ async function loginWithRetry(
     try {
       console.log(`[login] Attempt ${attempt}/${maxRetries} - calling ${url}`);
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+
+      // Add CSRF token if present
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
+
+      // Add cookies if present (includes CSRF cookie)
+      if (cookieHeader) {
+        headers["Cookie"] = cookieHeader;
+      }
+
       const response = await axios.post(url, body, {
         timeout: 30000, // 30 seconds (handles cold starts)
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers,
+        withCredentials: true, // Send cookies for CSRF protection
       });
 
       console.log(`[login] Attempt ${attempt} succeeded`);
@@ -41,16 +56,18 @@ async function loginWithRetry(
 
       // Retry on connection errors or 503 (service unavailable)
       const shouldRetry =
-        axiosError.code === 'ECONNREFUSED' ||
-        axiosError.code === 'ETIMEDOUT' ||
-        axiosError.code === 'ENOTFOUND' ||
-        axiosError.code === 'ECONNRESET' ||
+        axiosError.code === "ECONNREFUSED" ||
+        axiosError.code === "ETIMEDOUT" ||
+        axiosError.code === "ENOTFOUND" ||
+        axiosError.code === "ECONNRESET" ||
         axiosError.response?.status === 503;
 
       if (shouldRetry && attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
         console.log(
-          `[login] Attempt ${attempt} failed (${axiosError.code || axiosError.response?.status}), retrying in ${delay}ms...`
+          `[login] Attempt ${attempt} failed (${
+            axiosError.code || axiosError.response?.status
+          }), retrying in ${delay}ms...`
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
@@ -87,10 +104,24 @@ export async function POST(request: NextRequest) {
     console.log(`[login] Attempting authentication for: ${email}`);
     console.log(`[login] Backend URL: ${BACKEND_URL}`);
 
+    // Get CSRF token from request header
+    const csrfToken = request.headers.get("x-csrf-token");
+    console.log(`[login] CSRF token present:`, csrfToken ? "YES" : "NO");
+
+    // Get cookies from request (includes CSRF cookie)
+    const cookieHeader = request.headers.get("cookie");
+
+    // Remove trailing slash from BACKEND_URL
+    const baseUrl = BACKEND_URL.endsWith("/")
+      ? BACKEND_URL.slice(0, -1)
+      : BACKEND_URL;
+
     // Call backend API with retry logic (handles cold starts and network issues)
     const backendRes = await loginWithRetry(
-      `${BACKEND_URL}/api/v1/auth/login`,
-      { email, password }
+      `${baseUrl}/api/v1/auth/login`,
+      { email, password },
+      csrfToken,
+      cookieHeader
     );
 
     // Backend returns nested structure: { success, data: { accessToken, refreshToken, user } }
@@ -98,7 +129,10 @@ export async function POST(request: NextRequest) {
     const { accessToken, refreshToken, user } = backendData;
 
     if (!accessToken || !refreshToken || !user) {
-      console.error("[login] Invalid backend response structure:", backendRes.data);
+      console.error(
+        "[login] Invalid backend response structure:",
+        backendRes.data
+      );
       return NextResponse.json(
         {
           success: false,
@@ -115,8 +149,8 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       user,
-      accessToken,      // ← Client stores in memory via tokenManager
-      expiresIn: 3600   // ← 1 hour (matches backend token expiry)
+      accessToken, // ← Client stores in memory via tokenManager
+      expiresIn: 3600, // ← 1 hour (matches backend token expiry)
     });
 
     // Set ONLY refresh token in HttpOnly cookie (secure storage)
@@ -136,15 +170,15 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error: unknown) {
     const axiosError = error as {
-      response?: { 
-        data?: { 
-          message?: string; 
+      response?: {
+        data?: {
+          message?: string;
           statusCode?: number;
           action?: string;
           error?: { message?: string };
-        }; 
+        };
         status?: number;
-        headers?: { 'retry-after'?: string };
+        headers?: { "retry-after"?: string };
       };
       message?: string;
       code?: string;
@@ -153,10 +187,10 @@ export async function POST(request: NextRequest) {
     // Enhanced error handling with specific scenarios
     const statusCode = axiosError.response?.status || 500;
     const backendData = axiosError.response?.data;
-    const errorMessage = 
-      backendData?.error?.message || 
-      backendData?.message || 
-      axiosError.message || 
+    const errorMessage =
+      backendData?.error?.message ||
+      backendData?.message ||
+      axiosError.message ||
       "Login failed";
 
     console.error(`[login] Authentication failed (${statusCode}):`, {
@@ -164,44 +198,52 @@ export async function POST(request: NextRequest) {
       message: errorMessage,
       code: axiosError.code,
       backend: backendData,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Map backend errors to user-friendly responses
-    let response: { 
-      success: false; 
-      message: string; 
-      action?: string; 
-      retryAfter?: number 
+    let response: {
+      success: false;
+      message: string;
+      action?: string;
+      retryAfter?: number;
     };
 
     switch (statusCode) {
       case 401:
-        if (errorMessage.toLowerCase().includes("not verified") || errorMessage.toLowerCase().includes("verify")) {
+        if (
+          errorMessage.toLowerCase().includes("not verified") ||
+          errorMessage.toLowerCase().includes("verify")
+        ) {
           response = {
             success: false,
-            message: "Please verify your email before logging in. Check your inbox for the verification link.",
+            message:
+              "Please verify your email before logging in. Check your inbox for the verification link.",
             action: "resend-verification",
           };
         } else if (errorMessage.toLowerCase().includes("inactive")) {
           response = {
             success: false,
-            message: "Your account has been deactivated. Please contact support for assistance.",
+            message:
+              "Your account has been deactivated. Please contact support for assistance.",
             action: "contact-support",
           };
         } else {
           response = {
             success: false,
-            message: "Invalid email or password. Please check your credentials and try again.",
+            message:
+              "Invalid email or password. Please check your credentials and try again.",
           };
         }
         break;
 
       case 429:
-        const retryAfter = axiosError.response?.headers?.['retry-after'];
+        const retryAfter = axiosError.response?.headers?.["retry-after"];
         response = {
           success: false,
-          message: `Too many login attempts. Please try again in ${retryAfter || 60} seconds.`,
+          message: `Too many login attempts. Please try again in ${
+            retryAfter || 60
+          } seconds.`,
           retryAfter: retryAfter ? parseInt(retryAfter) : 60,
         };
         break;
@@ -209,7 +251,9 @@ export async function POST(request: NextRequest) {
       case 400:
         response = {
           success: false,
-          message: errorMessage || "Invalid login request. Please check your credentials.",
+          message:
+            errorMessage ||
+            "Invalid login request. Please check your credentials.",
         };
         break;
 
@@ -218,14 +262,16 @@ export async function POST(request: NextRequest) {
       case 503:
         response = {
           success: false,
-          message: "Unable to connect to authentication server. Please try again later.",
+          message:
+            "Unable to connect to authentication server. Please try again later.",
         };
         break;
 
       default:
         response = {
           success: false,
-          message: errorMessage || "An unexpected error occurred. Please try again.",
+          message:
+            errorMessage || "An unexpected error occurred. Please try again.",
         };
     }
 

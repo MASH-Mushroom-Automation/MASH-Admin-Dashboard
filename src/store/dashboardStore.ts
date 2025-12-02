@@ -317,13 +317,36 @@ export const useDashboardStore = create<DashboardState>()(
     },
 
     fetchUsers: async (page: number = 1, limit: number = 50) => {
+      console.log("[dashboardStore] fetchUsers called with:", { page, limit });
+
+      // Check if user is authenticated before making API call
+      if (typeof window !== "undefined") {
+        const cookie = document.cookie;
+        const hasRefreshToken = cookie.includes("refreshToken=");
+        console.log("[dashboardStore] 🔐 Authentication check:", {
+          refreshToken: hasRefreshToken ? "✓ present" : "✗ MISSING",
+          warning: !hasRefreshToken
+            ? "⚠️ User not logged in - API call will fail with 401"
+            : null,
+        });
+
+        if (!hasRefreshToken) {
+          // eslint-disable-next-line no-console
+          console.error(
+            "[dashboardStore] ❌ Cannot fetch users - no refresh token. User needs to log in."
+          );
+        }
+      }
+
       set({
         loading: { ...get().loading, users: true },
         error: { ...get().error, users: null },
       });
 
       try {
+        console.log("[dashboardStore] Fetching users from API: v1/users");
         const res = await api.get(`v1/users`, { params: { page, limit } });
+        console.log("[dashboardStore] API response received:", res.data);
 
         // Normalize possible response shapes:
         // 1) { success, statusCode, data: { data: [...], meta: { total, page, limit } } }
@@ -331,48 +354,100 @@ export const useDashboardStore = create<DashboardState>()(
         // 3) Array of users or plain object
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: any = res.data;
+        console.log(
+          "[dashboardStore] Payload type:",
+          Array.isArray(payload) ? "array" : typeof payload
+        );
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let items: any[] = [];
 
         if (Array.isArray(payload)) {
+          console.log(
+            "[dashboardStore] Payload is array, length:",
+            payload.length
+          );
           items = payload;
         } else if (payload?.data) {
           if (Array.isArray(payload.data)) {
+            console.log(
+              "[dashboardStore] payload.data is array, length:",
+              payload.data.length
+            );
             items = payload.data;
           } else if (Array.isArray(payload.data?.data)) {
+            console.log(
+              "[dashboardStore] payload.data.data is array, length:",
+              payload.data.data.length
+            );
             items = payload.data.data;
           }
         } else if (typeof payload === "object") {
           // try to detect common wrapper
           items = payload.items || payload.users || [];
+          console.log(
+            "[dashboardStore] Extracted items from object wrapper, length:",
+            items.length
+          );
         }
 
-        const mapped: UserItem[] = (items || []).map((u) => ({
-          id: String(u.id ?? u.userId ?? u._id ?? ""),
-          name: String(
-            u.name ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`
-          ).trim(),
-          username: u.username ?? u.userName ?? undefined,
-          email: u.email ?? undefined,
-          phone: u.phone ?? u.mobile ?? undefined,
-          role: u.role ?? undefined,
-          status: u.status ?? undefined,
-          avatar:
-            u.avatar ??
-            (u.name
-              ? String(u.name)
-                  .split(" ")
-                  .map((s: string) => s[0])
-                  .join("")
-                  .slice(0, 2)
-              : undefined),
-          region: u.region ?? u.location ?? undefined,
-        }));
+        console.log("[dashboardStore] Raw items before mapping:", items);
+
+        // Log first user's raw data to see available fields
+        if (items.length > 0) {
+          console.log("[dashboardStore] Sample raw user object:", items[0]);
+          console.log(
+            "[dashboardStore] Available keys in raw user:",
+            Object.keys(items[0])
+          );
+        }
+
+        const mapped: UserItem[] = (items || []).map((u) => {
+          // Try multiple possible role field names
+          const roleValue =
+            u.role ?? u.userRole ?? u.type ?? u.accountType ?? undefined;
+
+          console.log(`[dashboardStore] Mapping user ${u.id}:`, {
+            rawRole: u.role,
+            rawUserRole: u.userRole,
+            rawType: u.type,
+            rawAccountType: u.accountType,
+            finalRole: roleValue,
+          });
+
+          return {
+            id: String(u.id ?? u.userId ?? u._id ?? ""),
+            name: String(
+              u.name ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`
+            ).trim(),
+            username: u.username ?? u.userName ?? undefined,
+            email: u.email ?? undefined,
+            phone: u.phone ?? u.mobile ?? undefined,
+            role: roleValue,
+            status: u.status ?? undefined,
+            avatar:
+              u.avatar ??
+              (u.name
+                ? String(u.name)
+                    .split(" ")
+                    .map((s: string) => s[0])
+                    .join("")
+                    .slice(0, 2)
+                : undefined),
+            region: u.region ?? u.location ?? undefined,
+          };
+        });
+
+        console.log("[dashboardStore] Mapped users:", mapped);
+        console.log("[dashboardStore] Total users fetched:", mapped.length);
 
         set({ users: mapped, loading: { ...get().loading, users: false } });
       } catch (err) {
         const errorMessage = (err as Error).message || "Failed to fetch users";
+        console.error("[dashboardStore] fetchUsers error:", {
+          message: errorMessage,
+          error: err,
+        });
 
         set({
           error: { ...get().error, users: errorMessage },

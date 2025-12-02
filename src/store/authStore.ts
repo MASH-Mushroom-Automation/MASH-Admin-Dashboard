@@ -58,14 +58,36 @@ export const useAuthStore = create<AuthState>()(
         try {
           logger.info("Attempting login", { email });
 
-          // Call Next.js API route (handles token storage in HttpOnly cookies)
+          // Step 1: Fetch CSRF token from backend
+          logger.info("Fetching CSRF token");
+          const csrfResponse = await fetch("/api/auth/csrf", {
+            method: "GET",
+            credentials: "include", // ← CRITICAL: Receive CSRF cookie
+          });
+
+          let csrfToken: string | null = null;
+          if (csrfResponse.ok) {
+            const csrfData = await csrfResponse.json();
+            csrfToken = csrfData.csrfToken;
+            logger.info("CSRF token fetched successfully");
+          } else {
+            logger.warn("Failed to fetch CSRF token, proceeding without it");
+          }
+
+          // Step 2: Call Next.js login API route with CSRF token
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          };
+
+          if (csrfToken) {
+            headers["x-csrf-token"] = csrfToken;
+          }
+
           const response = await fetch("/api/auth/login", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            credentials: "include", // ← CRITICAL: Send/receive cookies
+            headers,
+            credentials: "include", // ← CRITICAL: Send/receive cookies (includes CSRF cookie)
             body: JSON.stringify({ email, password }),
           });
 
