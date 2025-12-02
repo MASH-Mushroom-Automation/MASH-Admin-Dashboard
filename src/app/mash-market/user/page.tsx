@@ -54,7 +54,10 @@ export default function UsersManagement() {
 
   // All users from /v1/users endpoint are BUYER role by default
   const users = useMemo(() => {
-    console.log('[UserPage] Total users (all are BUYER):', (allUsers || []).length);
+    console.log(
+      "[UserPage] Total users (all are BUYER):",
+      (allUsers || []).length
+    );
     return allUsers || [];
   }, [allUsers]);
 
@@ -383,13 +386,7 @@ export default function UsersManagement() {
                           colSpan={8}
                           className="px-6 py-12 text-center text-muted-foreground"
                         >
-                          {/* Debug info when no users */}
-                          <div>
-                            <p>There is no user yet</p>
-                            <p className="text-xs mt-2 text-gray-500">
-                              Debug: {allUsers?.length || 0} total users, {users.length} BUYER users, {filteredUsers.length} after filters
-                            </p>
-                          </div>
+                          There is no user yet
                         </TableCell>
                       </TableRow>
                     ) : (

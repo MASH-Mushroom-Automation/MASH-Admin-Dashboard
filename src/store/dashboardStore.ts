@@ -319,23 +319,12 @@ export const useDashboardStore = create<DashboardState>()(
     fetchUsers: async (page: number = 1, limit: number = 50) => {
       console.log("[dashboardStore] fetchUsers called with:", { page, limit });
 
-      // Check if user is authenticated before making API call
+      // Note: refreshToken is HttpOnly cookie (not readable by JS - this is correct for security)
+      // The API will send it automatically with credentials: "include"
       if (typeof window !== "undefined") {
-        const cookie = document.cookie;
-        const hasRefreshToken = cookie.includes("refreshToken=");
-        console.log("[dashboardStore] 🔐 Authentication check:", {
-          refreshToken: hasRefreshToken ? "✓ present" : "✗ MISSING",
-          warning: !hasRefreshToken
-            ? "⚠️ User not logged in - API call will fail with 401"
-            : null,
-        });
-
-        if (!hasRefreshToken) {
-          // eslint-disable-next-line no-console
-          console.error(
-            "[dashboardStore] ❌ Cannot fetch users - no refresh token. User needs to log in."
-          );
-        }
+        console.log(
+          "[dashboardStore] 🔐 Fetching users (refreshToken sent automatically via HttpOnly cookie)"
+        );
       }
 
       set({
