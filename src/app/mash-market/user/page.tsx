@@ -34,7 +34,7 @@ const ITEMS_PER_PAGE = 5;
 export default function UsersManagement() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  // Multi-select bulk filters (checkboxes) - Role filter removed since we only show BUYER
+  // Multi-select bulk filters (checkboxes) - Role filter removed since we only show USER role
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<
@@ -52,13 +52,19 @@ export default function UsersManagement() {
     fetchUsers,
   } = useDashboardStore();
 
-  // All users from /v1/users endpoint are BUYER role by default
+  // Filter to only show users with "user" role (case-insensitive)
   const users = useMemo(() => {
-    console.log(
-      "[UserPage] Total users (all are BUYER):",
-      (allUsers || []).length
+    const total = (allUsers || []).length;
+    const filtered = (allUsers || []).filter(
+      (user) => user.role?.toLowerCase() === "user"
     );
-    return allUsers || [];
+    console.log(
+      "[UserPage] Total users from API:",
+      total,
+      "| Filtered USER role:",
+      filtered.length
+    );
+    return filtered;
   }, [allUsers]);
 
   const loading = storeLoading.users ?? false;
@@ -74,13 +80,13 @@ export default function UsersManagement() {
   useEffect(() => {
     console.log("[UserPage] All users from store:", allUsers?.length || 0);
     console.log("[UserPage] All users data:", allUsers);
-    console.log("[UserPage] Filtered BUYER users:", users.length);
-    console.log("[UserPage] BUYER users:", users);
+    console.log("[UserPage] Filtered USER role users:", users.length);
+    console.log("[UserPage] USER role users:", users);
     console.log("[UserPage] Loading state:", loading);
     console.log("[UserPage] Error state:", error);
   }, [allUsers, users, loading, error]);
 
-  // Filtered users (already filtered to BUYER role only)
+  // Filtered users (already filtered to USER role only in users memo)
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const matchesSearch = [user.name, user.email, user.username].some(
@@ -146,9 +152,9 @@ export default function UsersManagement() {
       <div className="mx-auto w-full space-y-4">
         {/* Header */}
         <header>
-          <h1 className="sm:text-3xl text-2xl font-bold">Buyer Management</h1>
+          <h1 className="sm:text-3xl text-2xl font-bold">User Management</h1>
           <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
-            BUYER Accounts Overview
+            User Accounts Overview
           </p>
         </header>
 
