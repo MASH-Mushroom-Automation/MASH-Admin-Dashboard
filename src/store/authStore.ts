@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { logger } from "@/lib/logger";
 import { sentry } from "@/lib/sentry";
 import { setAccessToken, clearAccessToken } from "@/lib/tokenManager";
+import { clearCsrfToken } from "@/lib/csrfService";
 
 interface User {
   id: string;
@@ -44,6 +45,9 @@ export const useAuthStore = create<AuthState>()(
 
         // Clear in-memory access token
         clearAccessToken();
+
+        // Clear cached CSRF token
+        clearCsrfToken();
 
         // Call logout endpoint to clear HttpOnly cookies
         fetch("/api/auth/logout", { method: "POST" }).catch(() => {});

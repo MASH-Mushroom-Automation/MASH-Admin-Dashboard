@@ -50,6 +50,7 @@ export default function UsersManagement() {
     loading: storeLoading,
     error: storeError,
     fetchUsers,
+    archiveUser,
   } = useUserManagementStore();
 
   // Filter to only show users with "user" role (case-insensitive)
@@ -137,14 +138,30 @@ export default function UsersManagement() {
     );
   }, [filteredUsers, paginatedUsers, currentPage, startIndex]);
 
-  const handleArchive = () => {
-    // In a real app we'd call the archive API here. For now, navigate to the archive page.
+  const handleArchive = async () => {
     const id = deletingId;
-    setShowArchiveConfirm(false);
-    setDeletingId(null);
-    toast.success("User archived — opening archive page");
-    // navigate to the archive page and include the archived id as a query param
-    if (id) router.push(`/mash-market/user/archive?id=${id}`);
+    if (!id) {
+      toast.error("No user selected for archiving");
+      setShowArchiveConfirm(false);
+      return;
+    }
+
+    try {
+      toast.loading("Archiving user...", { id: "archive-user" });
+      await archiveUser(id);
+      toast.success("User archived successfully", { id: "archive-user" });
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+      // Optionally refresh the user list to reflect changes
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to archive user:", error);
+      toast.error("Failed to archive user. Please try again.", {
+        id: "archive-user",
+      });
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+    }
   };
 
   return (

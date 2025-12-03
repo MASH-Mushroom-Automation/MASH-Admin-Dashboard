@@ -86,11 +86,25 @@ async function handler(
     );
   }
 
-  // Forward CSRF token if present (required by backend)
-  const csrfToken = req.headers.get("x-csrf-token");
+  // Forward CSRF token if present (required by backend for POST/PUT/DELETE/PATCH)
+  // Backend expects X-XSRF-TOKEN header (case-sensitive)
+  // Check both lowercase and uppercase variants since Next.js normalizes headers
+  const csrfToken =
+    req.headers.get("x-xsrf-token") || req.headers.get("X-XSRF-TOKEN");
   if (csrfToken) {
-    headers["x-csrf-token"] = csrfToken;
-    console.log(`[PROXY] Forwarding CSRF token to backend`);
+    headers["X-XSRF-TOKEN"] = csrfToken;
+    console.log(
+      `[PROXY] ✓ Forwarding CSRF token to backend:`,
+      csrfToken.substring(0, 20) + "..."
+    );
+  } else {
+    // Debug: Log all headers to see what's being sent
+    console.warn(
+      `[PROXY] ⚠️ No CSRF token in request headers - backend may reject`
+    );
+    if (process.env.NODE_ENV === "development") {
+      console.log("[PROXY] Available headers:", Array.from(req.headers.keys()));
+    }
   }
 
   // Forward all cookies to backend (may contain CSRF cookie)

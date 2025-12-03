@@ -15,6 +15,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { api } from "@/lib/api";
+import { getCsrfToken } from "@/lib/csrfService";
 
 // User item interface
 export interface UserItem {
@@ -66,6 +67,7 @@ interface UserManagementState {
   fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchUserById: (id: string) => Promise<void>;
   fetchUserByUsername: (username: string) => Promise<void>;
+  archiveUser: (id: string) => Promise<void>;
   clearSelectedUser: () => void;
 }
 
@@ -385,6 +387,118 @@ export const useUserManagementStore = create<UserManagementState>()(
           error: { ...get().error, selectedUser: errorMessage },
           loading: { ...get().loading, selectedUser: false },
         });
+      }
+    },
+
+    archiveUser: async (id: string) => {
+      console.log("[userManagementStore] archiveUser called with id:", id);
+
+      if (!id) {
+        console.error("[userManagementStore] Invalid user ID provided");
+        throw new Error("Invalid user ID");
+      }
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[userManagementStore] 🔐 Archiving user (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, archiveUser: true },
+        error: { ...get().error, archiveUser: null },
+      });
+
+      try {
+        // Archive user via dedicated API route that handles CSRF internally
+        // This avoids CORS issues with direct backend calls
+        console.log(
+          `[userManagementStore] Archiving user via API route: DELETE /api/users/${id}`
+        );
+
+        // Get access token from tokenManager
+        const { getAccessToken } = await import("@/lib/tokenManager");
+        const accessToken = getAccessToken();
+
+        if (!accessToken) {
+          throw new Error("Access token not found - please login again");
+        }
+
+        const response = await fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          credentials: "include", // Send cookies for CSRF
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("[userManagementStore] Delete failed:", errorData);
+          throw new Error(
+            errorData.message || `Delete failed: ${response.status}`
+          );
+        }
+
+        const resData = await response.json();
+        console.log("[userManagementStore] Archive API response:", resData);
+
+        // Remove user from cached list if it exists
+        const currentUsers = get().users;
+        if (currentUsers) {
+          const updatedUsers = currentUsers.filter((u) => u.id !== id);
+          console.log(
+            `[userManagementStore] Removed user ${id} from cache. Remaining users:`,
+            updatedUsers.length
+          );
+          set({ users: updatedUsers });
+        }
+
+        // Clear selected user if it was the archived one
+        if (get().selectedUser?.id === id) {
+          console.log(
+            "[userManagementStore] Clearing selected user as it was archived"
+          );
+          set({ selectedUser: null });
+        }
+
+        set({
+          loading: { ...get().loading, archiveUser: false },
+        });
+
+        console.log("[userManagementStore] User archived successfully");
+      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const axiosError = err as any;
+        let errorMessage = "Failed to archive user";
+
+        // Handle 403 Forbidden - insufficient permissions
+        if (axiosError?.response?.status === 403) {
+          errorMessage =
+            "Access denied: Only ADMIN or SUPER_ADMIN can archive users";
+          console.error(
+            "[userManagementStore] 403 Forbidden - Current user lacks required role (ADMIN/SUPER_ADMIN)"
+          );
+        } else {
+          errorMessage =
+            axiosError?.message ||
+            axiosError?.response?.data?.message ||
+            errorMessage;
+        }
+
+        console.error("[userManagementStore] archiveUser error:", {
+          message: errorMessage,
+          status: axiosError?.response?.status,
+          error: err,
+        });
+
+        set({
+          error: { ...get().error, archiveUser: errorMessage },
+          loading: { ...get().loading, archiveUser: false },
+        });
+
+        throw new Error(errorMessage); // Re-throw with clear message
       }
     },
 
