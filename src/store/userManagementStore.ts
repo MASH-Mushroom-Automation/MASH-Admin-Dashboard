@@ -37,7 +37,25 @@ export interface UserDetail extends UserItem {
   updatedAt?: string;
   lastLogin?: string;
   verified?: boolean;
-  // Add other fields as needed based on backend response
+  // Customer-specific fields
+  preferredPaymentMethod?: string;
+  addressBook?: string[];
+  city?: string;
+  completeAddress?: string;
+  // Seller-specific fields
+  businessName?: string;
+  businessAddress?: string;
+  businessType?: string;
+  taxId?: string;
+  businessDocuments?: string[];
+  // Product information
+  typesOfMushroom?: string[];
+  monthlyProductionCapacity?: string;
+  certifications?: string[];
+  // Banking details
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
 }
 
 interface UserManagementState {
