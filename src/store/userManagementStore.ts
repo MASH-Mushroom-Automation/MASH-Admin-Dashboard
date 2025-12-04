@@ -31,6 +31,31 @@ export interface UserItem {
   region?: string;
 }
 
+// Seller application interface (from /api/v1/super-admin/seller-applications/pending)
+export interface SellerApplication {
+  requestId: string;
+  userId: string;
+  sellerName: string; // Combined firstName + lastName from user object
+  storeName?: string; // May not be in the response yet
+  email: string;
+  address?: string; // May not be in the response yet
+  currentRole: string;
+  requestedRole: string;
+  queuedAt: string;
+  priority: number;
+  isApproved: boolean; // Derived from status or explicitly returned
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    imageUrl?: string;
+    createdAt: string;
+  };
+}
+
 // Detailed user interface for single user fetch
 export interface UserDetail extends UserItem {
   firstName?: string;
@@ -63,11 +88,13 @@ export interface UserDetail extends UserItem {
 interface UserManagementState {
   users: UserItem[] | null;
   selectedUser: UserDetail | null;
+  sellerApplications: SellerApplication[] | null;
   loading: { [key: string]: boolean };
   error: { [key: string]: string | null };
   fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchUserById: (id: string) => Promise<void>;
   fetchUserByUsername: (username: string) => Promise<void>;
+  fetchPendingSellerApplications: () => Promise<void>;
   archiveUser: (id: string) => Promise<void>;
   clearSelectedUser: () => void;
 }
@@ -76,6 +103,7 @@ export const useUserManagementStore = create<UserManagementState>()(
   devtools((set, get) => ({
     users: null,
     selectedUser: null,
+    sellerApplications: null,
     loading: {},
     error: {},
 
@@ -388,6 +416,147 @@ export const useUserManagementStore = create<UserManagementState>()(
         set({
           error: { ...get().error, selectedUser: errorMessage },
           loading: { ...get().loading, selectedUser: false },
+        });
+      }
+    },
+
+    fetchPendingSellerApplications: async () => {
+      console.log(
+        "[userManagementStore] fetchPendingSellerApplications called"
+      );
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[userManagementStore] 🔐 Fetching pending seller applications (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, sellerApplications: true },
+        error: { ...get().error, sellerApplications: null },
+      });
+
+      try {
+        console.log(
+          "[userManagementStore] Fetching from API: v1/super-admin/seller-applications/pending"
+        );
+        const res = await api.get("v1/super-admin/seller-applications/pending");
+        console.log("[userManagementStore] API response received:", res.data);
+
+        // Normalize possible response shapes
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = res.data;
+        console.log(
+          "[userManagementStore] Payload type:",
+          Array.isArray(payload) ? "array" : typeof payload
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let items: any[] = [];
+
+        if (Array.isArray(payload)) {
+          console.log(
+            "[userManagementStore] Payload is array, length:",
+            payload.length
+          );
+          items = payload;
+        } else if (payload?.data) {
+          if (Array.isArray(payload.data)) {
+            console.log(
+              "[userManagementStore] payload.data is array, length:",
+              payload.data.length
+            );
+            items = payload.data;
+          } else if (Array.isArray(payload.data?.data)) {
+            console.log(
+              "[userManagementStore] payload.data.data is array, length:",
+              payload.data.data.length
+            );
+            items = payload.data.data;
+          }
+        } else if (typeof payload === "object") {
+          items =
+            payload.applications || payload.sellers || payload.items || [];
+          console.log(
+            "[userManagementStore] Extracted items from object wrapper, length:",
+            items.length
+          );
+        }
+
+        console.log("[userManagementStore] Raw items before mapping:", items);
+
+        // Log first application's raw data to see available fields
+        if (items.length > 0) {
+          console.log(
+            "[userManagementStore] Sample raw seller application:",
+            items[0]
+          );
+          console.log(
+            "[userManagementStore] Available keys in raw application:",
+            Object.keys(items[0])
+          );
+        }
+
+        const mapped: SellerApplication[] = (items || []).map((app) => {
+          const user = app.user || {};
+          const sellerName =
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            user.username ||
+            "Unknown";
+
+          return {
+            requestId: String(app.requestId ?? ""),
+            userId: String(app.userId ?? user.id ?? ""),
+            sellerName,
+            storeName: app.storeName ?? undefined, // Not in current API response
+            email: String(user.email ?? app.email ?? ""),
+            address: app.address ?? undefined, // Not in current API response
+            currentRole: String(app.currentRole ?? user.role ?? ""),
+            requestedRole: String(app.requestedRole ?? ""),
+            queuedAt: String(app.queuedAt ?? ""),
+            priority: Number(app.priority ?? 0),
+            isApproved: app.isApproved ?? false,
+            user: {
+              id: String(user.id ?? ""),
+              email: String(user.email ?? ""),
+              username: String(user.username ?? ""),
+              firstName: String(user.firstName ?? ""),
+              lastName: String(user.lastName ?? ""),
+              role: String(user.role ?? ""),
+              imageUrl: user.imageUrl ?? undefined,
+              createdAt: String(user.createdAt ?? ""),
+            },
+          };
+        });
+
+        console.log(
+          "[userManagementStore] Mapped seller applications:",
+          mapped
+        );
+        console.log(
+          "[userManagementStore] Total applications fetched:",
+          mapped.length
+        );
+
+        set({
+          sellerApplications: mapped,
+          loading: { ...get().loading, sellerApplications: false },
+        });
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message ||
+          "Failed to fetch pending seller applications";
+        console.error(
+          "[userManagementStore] fetchPendingSellerApplications error:",
+          {
+            message: errorMessage,
+            error: err,
+          }
+        );
+
+        set({
+          error: { ...get().error, sellerApplications: errorMessage },
+          loading: { ...get().loading, sellerApplications: false },
         });
       }
     },
