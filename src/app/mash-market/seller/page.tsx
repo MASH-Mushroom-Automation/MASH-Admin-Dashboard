@@ -11,8 +11,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
-import { useUserManagementStore } from "@/store/userManagementStore";
-import { useMemo } from "react";
 
 // Local Seller type for mock data (matches SellerTable component expectations)
 interface Seller {
@@ -31,6 +29,33 @@ interface Seller {
 
 export type TabType = "pending" | "rejected";
 
+// Mock sellers data (will be replaced with real API later)
+const mockSellers: Seller[] = [
+  {
+    id: "1",
+    name: "John Doe",
+    storeName: "Fresh Mushrooms Co.",
+    email: "john@freshmushrooms.com",
+    status: "pending",
+    username: "johndoe",
+    phone: "+63 912 345 6789",
+    businessName: "Fresh Mushrooms Co.",
+    businessType: "Retail",
+  },
+  {
+    id: "2",
+    name: "Jane Smith",
+    storeName: "Organic Fungi Farm",
+    email: "jane@organicfungi.com",
+    status: "rejected",
+    rejectReason: "Incomplete documentation",
+    username: "janesmith",
+    phone: "+63 923 456 7890",
+    businessName: "Organic Fungi Farm",
+    businessType: "Wholesale",
+  },
+];
+
 export default function SellerContent() {
   const [activeTab, setActiveTab] = useState<TabType>("pending");
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,43 +63,12 @@ export default function SellerContent() {
   const itemsPerPage = 5;
   const router = useRouter();
 
-  // Use Zustand store for users data
-  const {
-    users: allUsers,
-    loading: storeLoading,
-    error: storeError,
-    fetchUsers,
-  } = useUserManagementStore();
+  // Use mock data for now
+  const [sellers] = useState<Seller[]>(mockSellers);
+  const loading = false;
+  const error = null;
 
-  // Filter users to only show ADMIN role (these are sellers in the system)
-  const sellers = useMemo(() => {
-    const filtered = (allUsers || []).filter(
-      (user) => user.role?.toUpperCase() === "ADMIN"
-    );
-    // Map UserItem to Seller type for compatibility with SellerTable
-    return filtered.map(
-      (user): Seller => ({
-        id: user.id,
-        name: user.name || "N/A",
-        storeName: user.username || "N/A",
-        email: user.email || "N/A",
-        status: "pending", // Default since API doesn't provide this
-        username: user.username,
-        phone: user.phone,
-        businessName: user.username,
-        businessType: user.region,
-      })
-    );
-  }, [allUsers]);
-
-  const loading = storeLoading.users ?? false;
-  const error = storeError.users ?? null;
-
-  // Fetch users from API on mount
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
+  // Filter sellers by active tab
   const tabFilteredSellers = sellers.filter((seller) => {
     if (activeTab === "pending") return seller.status === "pending";
     if (activeTab === "rejected") return seller.status === "rejected";

@@ -53,16 +53,16 @@ export default function UsersManagement() {
     archiveUser,
   } = useUserManagementStore();
 
-  // Filter to only show users with "user" role (case-insensitive)
+  // Show all users except SUPER_ADMIN (both ADMIN and USER roles)
   const users = useMemo(() => {
     const total = (allUsers || []).length;
     const filtered = (allUsers || []).filter(
-      (user) => user.role?.toLowerCase() === "user"
+      (user) => user.role?.toUpperCase() !== "SUPER_ADMIN"
     );
     console.log(
       "[UserPage] Total users from API:",
       total,
-      "| Filtered USER role:",
+      "| Filtered (excluding SUPER_ADMIN):",
       filtered.length
     );
     return filtered;
@@ -81,13 +81,16 @@ export default function UsersManagement() {
   useEffect(() => {
     console.log("[UserPage] All users from store:", allUsers?.length || 0);
     console.log("[UserPage] All users data:", allUsers);
-    console.log("[UserPage] Filtered USER role users:", users.length);
-    console.log("[UserPage] USER role users:", users);
+    console.log(
+      "[UserPage] Displaying all roles (ADMIN + USER):",
+      users.length
+    );
+    console.log("[UserPage] Users:", users);
     console.log("[UserPage] Loading state:", loading);
     console.log("[UserPage] Error state:", error);
   }, [allUsers, users, loading, error]);
 
-  // Filtered users (already filtered to USER role only in users memo)
+  // Filtered users (showing all roles: ADMIN and USER)
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const matchesSearch = [user.name, user.email, user.username].some(
@@ -171,7 +174,7 @@ export default function UsersManagement() {
         <header>
           <h1 className="sm:text-3xl text-2xl font-bold">User Management</h1>
           <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
-            User Accounts Overview
+            Buyers & Sellers Overview
           </p>
         </header>
 
@@ -432,8 +435,10 @@ export default function UsersManagement() {
                             {user.region || "N/A"}
                           </TableCell>
                           <TableCell>
-                            {user.role?.toLowerCase() === "user"
+                            {user.role?.toUpperCase() === "USER"
                               ? "Buyer"
+                              : user.role?.toUpperCase() === "ADMIN"
+                              ? "Seller"
                               : user.role || "N/A"}
                           </TableCell>
                           <TableCell>
