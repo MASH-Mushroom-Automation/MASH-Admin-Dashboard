@@ -53,16 +53,17 @@ export default function UsersManagement() {
     archiveUser,
   } = useUserManagementStore();
 
-  // Show all users except SUPER_ADMIN (both ADMIN and USER roles)
+  // Show only active users (isActive === true), excluding SUPER_ADMIN
   const users = useMemo(() => {
     const total = (allUsers || []).length;
     const filtered = (allUsers || []).filter(
-      (user) => user.role?.toUpperCase() !== "SUPER_ADMIN"
+      (user) =>
+        user.role?.toUpperCase() !== "SUPER_ADMIN" && user.isActive === true
     );
     console.log(
       "[UserPage] Total users from API:",
       total,
-      "| Filtered (excluding SUPER_ADMIN):",
+      "| Filtered (active users, excluding SUPER_ADMIN):",
       filtered.length
     );
     return filtered;

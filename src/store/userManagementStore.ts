@@ -26,6 +26,7 @@ export interface UserItem {
   phone?: string;
   role?: string;
   status?: string;
+  isActive?: boolean;
   avatar?: string;
   region?: string;
 }
@@ -180,6 +181,7 @@ export const useUserManagementStore = create<UserManagementState>()(
             phone: u.phone ?? u.mobile ?? undefined,
             role: roleValue,
             status: u.status ?? undefined,
+            isActive: u.isActive ?? undefined,
             avatar:
               u.avatar ??
               (u.name
