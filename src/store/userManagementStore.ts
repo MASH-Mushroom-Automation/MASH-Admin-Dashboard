@@ -56,6 +56,41 @@ export interface SellerApplication {
   };
 }
 
+// Detailed seller application interface (from /api/v1/super-admin/seller-applications/:requestId)
+export interface SellerApplicationDetail {
+  requestId: string;
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    imageUrl?: string;
+    createdAt: string;
+  };
+  currentRole: string;
+  requestedRole: string;
+  documents: {
+    governmentId?: string;
+    birCertificate?: string;
+    businessCertificate?: string;
+    bankAccountDocumentation?: string;
+  };
+  businessInfo: {
+    businessName?: string;
+    additionalInfo?: string;
+    businessAddress?: string;
+  };
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  queuedAt: string;
+  processedAt?: string | null;
+  completedAt?: string | null;
+  errorMessage?: string | null;
+  adminNotes?: string | null;
+  priority: number;
+}
+
 // Detailed user interface for single user fetch
 export interface UserDetail extends UserItem {
   firstName?: string;
@@ -89,14 +124,17 @@ interface UserManagementState {
   users: UserItem[] | null;
   selectedUser: UserDetail | null;
   sellerApplications: SellerApplication[] | null;
+  selectedSellerApplication: SellerApplicationDetail | null;
   loading: { [key: string]: boolean };
   error: { [key: string]: string | null };
   fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchUserById: (id: string) => Promise<void>;
   fetchUserByUsername: (username: string) => Promise<void>;
   fetchPendingSellerApplications: () => Promise<void>;
+  fetchSellerApplicationById: (requestId: string) => Promise<void>;
   archiveUser: (id: string) => Promise<void>;
   clearSelectedUser: () => void;
+  clearSelectedSellerApplication: () => void;
 }
 
 export const useUserManagementStore = create<UserManagementState>()(
@@ -104,6 +142,7 @@ export const useUserManagementStore = create<UserManagementState>()(
     users: null,
     selectedUser: null,
     sellerApplications: null,
+    selectedSellerApplication: null,
     loading: {},
     error: {},
 
@@ -561,6 +600,137 @@ export const useUserManagementStore = create<UserManagementState>()(
       }
     },
 
+    fetchSellerApplicationById: async (requestId: string) => {
+      console.log(
+        "[userManagementStore] fetchSellerApplicationById called with requestId:",
+        requestId
+      );
+
+      if (!requestId) {
+        console.error("[userManagementStore] Invalid requestId provided");
+        set({
+          error: {
+            ...get().error,
+            selectedSellerApplication: "Invalid request ID",
+          },
+        });
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[userManagementStore] 🔐 Fetching seller application details (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, selectedSellerApplication: true },
+        error: { ...get().error, selectedSellerApplication: null },
+      });
+
+      try {
+        console.log(
+          `[userManagementStore] Fetching from API: v1/super-admin/seller-applications/${requestId}`
+        );
+        const res = await api.get(
+          `v1/super-admin/seller-applications/${requestId}`
+        );
+        console.log("[userManagementStore] API response received:", res.data);
+
+        // Normalize response shape
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = res.data;
+
+        // Extract application data from possible wrapper structures
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let appData: any = null;
+
+        if (payload?.data) {
+          appData = payload.data;
+        } else if (payload?.application) {
+          appData = payload.application;
+        } else {
+          appData = payload;
+        }
+
+        console.log(
+          "[userManagementStore] Extracted application data:",
+          appData
+        );
+        console.log(
+          "[userManagementStore] Available keys:",
+          Object.keys(appData || {})
+        );
+
+        if (!appData) {
+          throw new Error("Application data not found in response");
+        }
+
+        // Map to SellerApplicationDetail interface
+        const mappedApplication: SellerApplicationDetail = {
+          requestId: String(appData.requestId ?? ""),
+          user: {
+            id: String(appData.user?.id ?? ""),
+            email: String(appData.user?.email ?? ""),
+            username: String(appData.user?.username ?? ""),
+            firstName: String(appData.user?.firstName ?? ""),
+            lastName: String(appData.user?.lastName ?? ""),
+            role: String(appData.user?.role ?? ""),
+            imageUrl: appData.user?.imageUrl ?? undefined,
+            createdAt: String(appData.user?.createdAt ?? ""),
+          },
+          currentRole: String(appData.currentRole ?? ""),
+          requestedRole: String(appData.requestedRole ?? ""),
+          documents: {
+            governmentId: appData.documents?.governmentId ?? undefined,
+            birCertificate: appData.documents?.birCertificate ?? undefined,
+            businessCertificate:
+              appData.documents?.businessCertificate ?? undefined,
+            bankAccountDocumentation:
+              appData.documents?.bankAccountDocumentation ?? undefined,
+          },
+          businessInfo: {
+            businessName: appData.businessInfo?.businessName ?? undefined,
+            additionalInfo: appData.businessInfo?.additionalInfo ?? undefined,
+            businessAddress: appData.businessInfo?.businessAddress ?? undefined,
+          },
+          status: appData.status ?? "PENDING",
+          queuedAt: String(appData.queuedAt ?? ""),
+          processedAt: appData.processedAt ?? null,
+          completedAt: appData.completedAt ?? null,
+          errorMessage: appData.errorMessage ?? null,
+          adminNotes: appData.adminNotes ?? null,
+          priority: Number(appData.priority ?? 0),
+        };
+
+        console.log(
+          "[userManagementStore] Mapped seller application detail:",
+          mappedApplication
+        );
+
+        set({
+          selectedSellerApplication: mappedApplication,
+          loading: { ...get().loading, selectedSellerApplication: false },
+        });
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message ||
+          "Failed to fetch seller application details";
+        console.error(
+          "[userManagementStore] fetchSellerApplicationById error:",
+          {
+            message: errorMessage,
+            error: err,
+          }
+        );
+
+        set({
+          error: { ...get().error, selectedSellerApplication: errorMessage },
+          loading: { ...get().loading, selectedSellerApplication: false },
+        });
+      }
+    },
+
     archiveUser: async (id: string) => {
       console.log("[userManagementStore] archiveUser called with id:", id);
 
@@ -676,6 +846,11 @@ export const useUserManagementStore = create<UserManagementState>()(
     clearSelectedUser: () => {
       console.log("[userManagementStore] Clearing selected user");
       set({ selectedUser: null });
+    },
+
+    clearSelectedSellerApplication: () => {
+      console.log("[userManagementStore] Clearing selected seller application");
+      set({ selectedSellerApplication: null });
     },
   }))
 );
