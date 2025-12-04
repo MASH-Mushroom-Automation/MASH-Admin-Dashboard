@@ -31,66 +31,6 @@ export interface UserItem {
   region?: string;
 }
 
-// Seller application interface (from /api/v1/super-admin/seller-applications/pending)
-export interface SellerApplication {
-  requestId: string;
-  userId: string;
-  sellerName: string; // Combined firstName + lastName from user object
-  storeName?: string; // May not be in the response yet
-  email: string;
-  address?: string; // May not be in the response yet
-  currentRole: string;
-  requestedRole: string;
-  queuedAt: string;
-  priority: number;
-  isApproved: boolean; // Derived from status or explicitly returned
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    imageUrl?: string;
-    createdAt: string;
-  };
-}
-
-// Detailed seller application interface (from /api/v1/super-admin/seller-applications/:requestId)
-export interface SellerApplicationDetail {
-  requestId: string;
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    imageUrl?: string;
-    createdAt: string;
-  };
-  currentRole: string;
-  requestedRole: string;
-  documents: {
-    governmentId?: string;
-    birCertificate?: string;
-    businessCertificate?: string;
-    bankAccountDocumentation?: string;
-  };
-  businessInfo: {
-    businessName?: string;
-    additionalInfo?: string;
-    businessAddress?: string;
-  };
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  queuedAt: string;
-  processedAt?: string | null;
-  completedAt?: string | null;
-  errorMessage?: string | null;
-  adminNotes?: string | null;
-  priority: number;
-}
-
 // Detailed user interface for single user fetch
 export interface UserDetail extends UserItem {
   firstName?: string;
@@ -123,26 +63,19 @@ export interface UserDetail extends UserItem {
 interface UserManagementState {
   users: UserItem[] | null;
   selectedUser: UserDetail | null;
-  sellerApplications: SellerApplication[] | null;
-  selectedSellerApplication: SellerApplicationDetail | null;
   loading: { [key: string]: boolean };
   error: { [key: string]: string | null };
   fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchUserById: (id: string) => Promise<void>;
   fetchUserByUsername: (username: string) => Promise<void>;
-  fetchPendingSellerApplications: () => Promise<void>;
-  fetchSellerApplicationById: (requestId: string) => Promise<void>;
   archiveUser: (id: string) => Promise<void>;
   clearSelectedUser: () => void;
-  clearSelectedSellerApplication: () => void;
 }
 
 export const useUserManagementStore = create<UserManagementState>()(
   devtools((set, get) => ({
     users: null,
     selectedUser: null,
-    sellerApplications: null,
-    selectedSellerApplication: null,
     loading: {},
     error: {},
 
@@ -459,46 +392,88 @@ export const useUserManagementStore = create<UserManagementState>()(
       }
     },
 
-    fetchPendingSellerApplications: async () => {
-      console.log(
-        "[userManagementStore] fetchPendingSellerApplications called"
-      );
+    archiveUser: async (id: string) => {
+      console.log("[userManagementStore] archiveUser called with id:", id);
+
+      if (!id) {
+        console.error("[userManagementStore] Invalid user ID provided");
+        throw new Error("Invalid user ID");
+      }
 
       if (typeof window !== "undefined") {
         console.log(
-          "[userManagementStore] 🔐 Fetching pending seller applications (refreshToken sent automatically via HttpOnly cookie)"
+          "[userManagementStore] 🔐 Archiving user (refreshToken sent automatically via HttpOnly cookie)"
         );
       }
 
       set({
-        loading: { ...get().loading, sellerApplications: true },
-        error: { ...get().error, sellerApplications: null },
+        loading: { ...get().loading, archiveUser: true },
+        error: { ...get().error, archiveUser: null },
       });
 
       try {
+        // Archive user via dedicated API route that handles CSRF internally
+        // This avoids CORS issues with direct backend calls
         console.log(
-          "[userManagementStore] Fetching from API: v1/super-admin/seller-applications/pending"
-        );
-        const res = await api.get("v1/super-admin/seller-applications/pending");
-        console.log("[userManagementStore] API response received:", res.data);
-
-        // Normalize possible response shapes
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const payload: any = res.data;
-        console.log(
-          "[userManagementStore] Payload type:",
-          Array.isArray(payload) ? "array" : typeof payload
+          `[userManagementStore] Archiving user via API route: DELETE /api/users/${id}`
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let items: any[] = [];
+        // Get access token from tokenManager
+        const { getAccessToken } = await import("@/lib/tokenManager");
+        const accessToken = getAccessToken();
 
-        if (Array.isArray(payload)) {
-          console.log(
-            "[userManagementStore] Payload is array, length:",
-            payload.length
+        if (!accessToken) {
+          throw new Error("Access token not found - please login again");
+        }
+
+        const response = await fetch(`/api/users/${id}`, {
+          method: "DELETE",
+          credentials: "include", // Send cookies for CSRF
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("[userManagementStore] Delete failed:", errorData);
+          throw new Error(
+            errorData.message || `Delete failed: ${response.status}`
           );
-          items = payload;
+        }
+
+        const resData = await response.json();
+        console.log("[userManagementStore] Archive API response:", resData);
+
+        // Remove user from cached list if it exists
+        const currentUsers = get().users;
+        if (currentUsers) {
+          const updatedUsers = currentUsers.filter((u) => u.id !== id);
+          console.log(
+            `[userManagementStore] Removed user ${id} from cache. Remaining users:`,
+            updatedUsers.length
+          );
+          set({ users: updatedUsers });
+        }
+
+        // Clear selected user if it was the archived one
+        if (get().selectedUser?.id === id) {
+          console.log(
+            "[userManagementStore] Clearing selected user as it was archived"
+          );
+          set({ selectedUser: null });
+        }
+
+        set({
+          loading: { ...get().loading, archiveUser: false },
+        });
+
+        console.log("[userManagementStore] User archived successfully");
+      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const axiosError = err as any;
+        let errorMessage = "Failed to archive user";
         } else if (payload?.data) {
           if (Array.isArray(payload.data)) {
             console.log(
@@ -846,11 +821,6 @@ export const useUserManagementStore = create<UserManagementState>()(
     clearSelectedUser: () => {
       console.log("[userManagementStore] Clearing selected user");
       set({ selectedUser: null });
-    },
-
-    clearSelectedSellerApplication: () => {
-      console.log("[userManagementStore] Clearing selected seller application");
-      set({ selectedSellerApplication: null });
     },
   }))
 );
