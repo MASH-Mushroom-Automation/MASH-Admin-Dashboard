@@ -17,6 +17,13 @@ api.interceptors.request.use(
     const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log(
+        "[API Request] Token present, adding to Authorization header"
+      );
+    } else {
+      console.warn(
+        "[API Request] ⚠️ NO ACCESS TOKEN FOUND - Request will likely fail with 401"
+      );
     }
 
     // Debug log in development
@@ -26,19 +33,29 @@ api.interceptors.request.use(
     ) {
       try {
         const cookie = document.cookie;
-        const hasToken = cookie.includes("authToken=");
+        const hasRefreshToken = cookie.includes("refreshToken=");
         console.log(
-          "api ->",
+          "[API Request] ->",
           config.method?.toUpperCase(),
           config.url,
-          "| authToken cookie:",
-          hasToken ? "YES (not HttpOnly!)" : "none (correct – HttpOnly)",
-          "| Bearer token:",
-          token ? "present" : "none"
+          "| Access token:",
+          token ? "✓ present" : "✗ missing",
+          "| Refresh token cookie:",
+          hasRefreshToken ? "✓ present" : "✗ missing"
         );
+
+        // Additional authentication check
+        if (!token && !hasRefreshToken) {
+          console.error(
+            "[API] ❌ AUTHENTICATION FAILURE - No tokens found. User must log in first!"
+          );
+          console.log(
+            "[API] 💡 Tip: Check if login was successful and tokens were stored"
+          );
+        }
       } catch {
         console.log(
-          "api ->",
+          "[API Request] ->",
           config.method,
           config.url,
           "(cookie check failed)"

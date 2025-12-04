@@ -64,8 +64,6 @@ interface DashboardState {
   sales: DailySale[] | null;
   chambers: ChamberRegistry | null;
   usersStats: UsersStats | null;
-  // list of users for admin pages
-  users: UserItem[] | null;
   cards: CardsSummary | null;
   loading: { [key: string]: boolean };
   error: { [key: string]: string | null };
@@ -73,21 +71,7 @@ interface DashboardState {
   fetchSales: (days: number) => Promise<void>;
   fetchChambers: (page: number, limit: number) => Promise<void>;
   fetchUsersStats: () => Promise<void>;
-  fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchCards: () => Promise<void>;
-}
-
-// lightweight user shape returned to UI
-export interface UserItem {
-  id: string;
-  name: string;
-  username?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
-  status?: string;
-  avatar?: string;
-  region?: string;
 }
 
 export const useDashboardStore = create<DashboardState>()(
@@ -96,7 +80,6 @@ export const useDashboardStore = create<DashboardState>()(
     sales: null,
     chambers: null,
     usersStats: null,
-    users: null,
     cards: null,
     loading: {},
     error: {},
@@ -312,71 +295,6 @@ export const useDashboardStore = create<DashboardState>()(
         set({
           error: { ...get().error, usersStats: errorMessage },
           loading: { ...get().loading, usersStats: false },
-        });
-      }
-    },
-
-    fetchUsers: async (page: number = 1, limit: number = 50) => {
-      set({
-        loading: { ...get().loading, users: true },
-        error: { ...get().error, users: null },
-      });
-
-      try {
-        const res = await api.get(`v1/users`, { params: { page, limit } });
-
-        // Normalize possible response shapes:
-        // 1) { success, statusCode, data: { data: [...], meta: { total, page, limit } } }
-        // 2) { success, statusCode, data: [...] }
-        // 3) Array of users or plain object
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const payload: any = res.data;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let items: any[] = [];
-
-        if (Array.isArray(payload)) {
-          items = payload;
-        } else if (payload?.data) {
-          if (Array.isArray(payload.data)) {
-            items = payload.data;
-          } else if (Array.isArray(payload.data?.data)) {
-            items = payload.data.data;
-          }
-        } else if (typeof payload === "object") {
-          // try to detect common wrapper
-          items = payload.items || payload.users || [];
-        }
-
-        const mapped: UserItem[] = (items || []).map((u) => ({
-          id: String(u.id ?? u.userId ?? u._id ?? ""),
-          name: String(
-            u.name ?? `${u.firstName ?? ""} ${u.lastName ?? ""}`
-          ).trim(),
-          username: u.username ?? u.userName ?? undefined,
-          email: u.email ?? undefined,
-          phone: u.phone ?? u.mobile ?? undefined,
-          role: u.role ?? undefined,
-          status: u.status ?? undefined,
-          avatar:
-            u.avatar ??
-            (u.name
-              ? String(u.name)
-                  .split(" ")
-                  .map((s: string) => s[0])
-                  .join("")
-                  .slice(0, 2)
-              : undefined),
-          region: u.region ?? u.location ?? undefined,
-        }));
-
-        set({ users: mapped, loading: { ...get().loading, users: false } });
-      } catch (err) {
-        const errorMessage = (err as Error).message || "Failed to fetch users";
-
-        set({
-          error: { ...get().error, users: errorMessage },
-          loading: { ...get().loading, users: false },
         });
       }
     },

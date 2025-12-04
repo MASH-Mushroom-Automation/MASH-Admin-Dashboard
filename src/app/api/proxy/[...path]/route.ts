@@ -27,7 +27,12 @@ async function handler(
   const params = await context.params; // ← AWAIT
   const path = params.path.join("/");
   const search = req.nextUrl.search;
-  const url = `${BACKEND_URL}/api/${path}${search}`;
+
+  // Remove trailing slash from BACKEND_URL to prevent double slashes
+  const baseUrl = BACKEND_URL?.endsWith("/")
+    ? BACKEND_URL.slice(0, -1)
+    : BACKEND_URL;
+  const url = `${baseUrl}/api/${path}${search}`;
 
   console.log(`[PROXY] ${req.method} → ${url}`);
 
@@ -54,7 +59,7 @@ async function handler(
   // Priority 1: Check if client already sent Authorization header (direct backend auth)
   let token: string | null = null;
   const authHeader = req.headers.get("authorization");
-  
+
   if (authHeader?.startsWith("Bearer ")) {
     token = authHeader.substring(7); // Remove "Bearer " prefix
     console.log(`[PROXY] Token from Authorization header: YES`);
@@ -76,7 +81,37 @@ async function handler(
     headers["Authorization"] = `Bearer ${token}`;
     console.log(`[PROXY] Forwarding Bearer token to backend`);
   } else {
-    console.warn(`[PROXY] ⚠️ No token found - request will likely fail with 401`);
+    console.warn(
+      `[PROXY] ⚠️ No token found - request will likely fail with 401`
+    );
+  }
+
+  // Forward CSRF token if present (required by backend for POST/PUT/DELETE/PATCH)
+  // Backend expects X-XSRF-TOKEN header (case-sensitive)
+  // Check both lowercase and uppercase variants since Next.js normalizes headers
+  const csrfToken =
+    req.headers.get("x-xsrf-token") || req.headers.get("X-XSRF-TOKEN");
+  if (csrfToken) {
+    headers["X-XSRF-TOKEN"] = csrfToken;
+    console.log(
+      `[PROXY] ✓ Forwarding CSRF token to backend:`,
+      csrfToken.substring(0, 20) + "..."
+    );
+  } else {
+    // Debug: Log all headers to see what's being sent
+    console.warn(
+      `[PROXY] ⚠️ No CSRF token in request headers - backend may reject`
+    );
+    if (process.env.NODE_ENV === "development") {
+      console.log("[PROXY] Available headers:", Array.from(req.headers.keys()));
+    }
+  }
+
+  // Forward all cookies to backend (may contain CSRF cookie)
+  const cookieHeader = req.headers.get("cookie");
+  if (cookieHeader) {
+    headers["Cookie"] = cookieHeader;
+    console.log(`[PROXY] Forwarding cookies to backend`);
   }
 
   const body = ["GET", "HEAD"].includes(req.method)

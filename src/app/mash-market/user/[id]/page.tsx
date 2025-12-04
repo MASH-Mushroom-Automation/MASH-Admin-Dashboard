@@ -1,10 +1,14 @@
-import { use } from "react";
+"use client";
+
+import { use, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import UserAvatar from "@/components/ecommerce/user-avatar";
 import StatusBadge from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useUserManagementStore } from "@/store/userManagementStore";
 
 interface User {
   id: string;
@@ -177,10 +181,99 @@ export default function UserViewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const user = MOCK_USERS.find((u) => u.id === id) ?? null;
+  const { id: username } = use(params); // This is the username from URL path
+  const searchParams = useSearchParams();
+  const userId = searchParams.get("id"); // This is the actual ID from query param
 
-  if (!user) {
+  const { selectedUser, loading, error, fetchUserById, clearSelectedUser } =
+    useUserManagementStore();
+
+  // Fetch user data when component mounts using the actual ID
+  useEffect(() => {
+    if (userId) {
+      console.log(
+        "[UserViewPage] Fetching user with ID:",
+        userId,
+        "| Username in URL:",
+        username
+      );
+      fetchUserById(userId);
+    } else {
+      console.warn("[UserViewPage] No user ID provided in query params");
+    }
+
+    // Cleanup: clear selected user when leaving page
+    return () => {
+      clearSelectedUser();
+    };
+  }, [userId, username, fetchUserById, clearSelectedUser]);
+
+  // Loading state
+  if (loading.selectedUser) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-4xl">
+          <Card className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">
+                Loading user details...
+              </span>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // No ID provided in query params
+  if (!userId) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-4xl">
+          <Card className="p-6">
+            <h2 className="text-lg font-medium text-destructive">
+              Invalid URL
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              User ID is missing from the URL. Please navigate from the user
+              list.
+            </p>
+            <div className="mt-4">
+              <Link href="/mash-market/user">
+                <Button>Back to users</Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error.selectedUser && !loading.selectedUser) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-4xl">
+          <Card className="p-6">
+            <h2 className="text-lg font-medium text-destructive">Error</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              {error.selectedUser}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Button onClick={() => fetchUserById(userId)}>Retry</Button>
+              <Link href="/mash-market/user">
+                <Button variant="ghost">Back to users</Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // User not found state
+  if (!selectedUser && !loading.selectedUser) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -200,7 +293,15 @@ export default function UserViewPage({
     );
   }
 
-  const role = user.role;
+  const user = selectedUser!;
+
+  // Map role to display format (handle both "user" and "USER" from API)
+  const role =
+    user.role?.toLowerCase() === "user"
+      ? "Customer"
+      : user.role === "ADMIN"
+      ? "Seller"
+      : user.role || "Customer";
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -208,7 +309,11 @@ export default function UserViewPage({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="shrink-0">
-              <UserAvatar initials={user.avatar} />
+              <UserAvatar
+                initials={
+                  user.avatar || user.name?.substring(0, 2).toUpperCase() || "U"
+                }
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold">{user.name}</h1>

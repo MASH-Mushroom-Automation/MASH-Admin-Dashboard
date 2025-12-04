@@ -1,5 +1,5 @@
 interface UserAvatarProps {
-  initials: string
+  initials?: string;
 }
 
 export default function UserAvatar({ initials }: UserAvatarProps) {
@@ -12,15 +12,17 @@ export default function UserAvatar({ initials }: UserAvatarProps) {
     "bg-red-500",
     "bg-indigo-500",
     "bg-cyan-500",
-  ]
+  ];
 
-  const colorIndex = initials.charCodeAt(0) % colors.length
+  // Default to "U" if initials is undefined or empty
+  const displayInitials = initials || "U";
+  const colorIndex = displayInitials.charCodeAt(0) % colors.length;
 
   return (
     <div
       className={`flex h-10 w-10 items-center justify-center rounded-full ${colors[colorIndex]} text-sm font-semibold text-white`}
     >
-      {initials}
+      {displayInitials}
     </div>
-  )
+  );
 }
