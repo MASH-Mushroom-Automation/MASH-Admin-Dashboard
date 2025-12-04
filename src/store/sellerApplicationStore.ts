@@ -83,6 +83,8 @@ interface SellerApplicationState {
   error: { [key: string]: string | null };
   fetchPendingApplications: () => Promise<void>;
   fetchApplicationById: (requestId: string) => Promise<void>;
+  approveApplication: (requestId: string) => Promise<void>;
+  rejectApplication: (requestId: string, reason?: string) => Promise<void>;
   clearSelectedApplication: () => void;
 }
 
@@ -366,6 +368,174 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
           error: { ...get().error, selectedApplication: errorMessage },
           loading: { ...get().loading, selectedApplication: false },
         });
+      }
+    },
+
+    approveApplication: async (requestId: string) => {
+      console.log(
+        "[sellerApplicationStore] approveApplication called with requestId:",
+        requestId
+      );
+
+      if (!requestId) {
+        console.error("[sellerApplicationStore] Invalid requestId provided");
+        throw new Error("Invalid request ID");
+      }
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[sellerApplicationStore] 🔐 Approving seller application (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, approveApplication: true },
+        error: { ...get().error, approveApplication: null },
+      });
+
+      try {
+        console.log(
+          `[sellerApplicationStore] Approving application via API: PUT v1/super-admin/seller-applications/${requestId}/approve`
+        );
+        const res = await api.put(
+          `v1/super-admin/seller-applications/${requestId}/approve`
+        );
+        console.log("[sellerApplicationStore] Approve API response:", res.data);
+
+        // Update the application in the list if it exists
+        const currentApplications = get().applications;
+        if (currentApplications) {
+          const updatedApplications = currentApplications.filter(
+            (app) => app.requestId !== requestId
+          );
+          console.log(
+            `[sellerApplicationStore] Removed approved application ${requestId} from pending list`
+          );
+          set({ applications: updatedApplications });
+        }
+
+        // Update selected application if it's the one that was approved
+        if (get().selectedApplication?.requestId === requestId) {
+          console.log(
+            "[sellerApplicationStore] Updating selected application status to APPROVED"
+          );
+          set({
+            selectedApplication: {
+              ...get().selectedApplication!,
+              status: "APPROVED",
+              processedAt: new Date().toISOString(),
+            },
+          });
+        }
+
+        set({
+          loading: { ...get().loading, approveApplication: false },
+        });
+
+        console.log(
+          "[sellerApplicationStore] Application approved successfully"
+        );
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to approve seller application";
+        console.error("[sellerApplicationStore] approveApplication error:", {
+          message: errorMessage,
+          error: err,
+        });
+
+        set({
+          error: { ...get().error, approveApplication: errorMessage },
+          loading: { ...get().loading, approveApplication: false },
+        });
+
+        throw new Error(errorMessage); // Re-throw for UI handling
+      }
+    },
+
+    rejectApplication: async (requestId: string, reason?: string) => {
+      console.log(
+        "[sellerApplicationStore] rejectApplication called with requestId:",
+        requestId,
+        "reason:",
+        reason
+      );
+
+      if (!requestId) {
+        console.error("[sellerApplicationStore] Invalid requestId provided");
+        throw new Error("Invalid request ID");
+      }
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[sellerApplicationStore] 🔐 Rejecting seller application (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, rejectApplication: true },
+        error: { ...get().error, rejectApplication: null },
+      });
+
+      try {
+        console.log(
+          `[sellerApplicationStore] Rejecting application via API: PUT v1/super-admin/seller-applications/${requestId}/reject`
+        );
+
+        // Send rejection reason in request body if provided
+        const res = await api.put(
+          `v1/super-admin/seller-applications/${requestId}/reject`,
+          reason ? { reason } : {}
+        );
+        console.log("[sellerApplicationStore] Reject API response:", res.data);
+
+        // Update the application in the list if it exists
+        const currentApplications = get().applications;
+        if (currentApplications) {
+          const updatedApplications = currentApplications.filter(
+            (app) => app.requestId !== requestId
+          );
+          console.log(
+            `[sellerApplicationStore] Removed rejected application ${requestId} from pending list`
+          );
+          set({ applications: updatedApplications });
+        }
+
+        // Update selected application if it's the one that was rejected
+        if (get().selectedApplication?.requestId === requestId) {
+          console.log(
+            "[sellerApplicationStore] Updating selected application status to REJECTED"
+          );
+          set({
+            selectedApplication: {
+              ...get().selectedApplication!,
+              status: "REJECTED",
+              processedAt: new Date().toISOString(),
+              adminNotes: reason || null,
+            },
+          });
+        }
+
+        set({
+          loading: { ...get().loading, rejectApplication: false },
+        });
+
+        console.log(
+          "[sellerApplicationStore] Application rejected successfully"
+        );
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to reject seller application";
+        console.error("[sellerApplicationStore] rejectApplication error:", {
+          message: errorMessage,
+          error: err,
+        });
+
+        set({
+          error: { ...get().error, rejectApplication: errorMessage },
+          loading: { ...get().loading, rejectApplication: false },
+        });
+
+        throw new Error(errorMessage); // Re-throw for UI handling
       }
     },
 
