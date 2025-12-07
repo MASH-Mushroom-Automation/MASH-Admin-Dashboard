@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
-import { useUserManagementStore } from "@/store/userManagementStore";
+import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
 
 interface Seller {
   id: string;
@@ -109,41 +109,55 @@ export default function SellerDetailPage({
 }) {
   const { id: username } = use(params); // This is the username from URL path
   const searchParams = useSearchParams();
-  const sellerId = searchParams.get("id"); // This is the actual ID from query param
+  const requestId = searchParams.get("requestId"); // This is the requestId from query param
   const router = useRouter();
 
   const {
-    selectedUser,
+    selectedApplication,
     loading: storeLoading,
     error: storeError,
-    fetchUserById,
-    clearSelectedUser,
-  } = useUserManagementStore();
+    fetchApplicationById,
+    approveApplication,
+    rejectApplication,
+    clearSelectedApplication,
+  } = useSellerApplicationStore();
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
-  // Fetch seller (user with ADMIN role) data when component mounts using the actual ID
+  // Fetch seller application data if not already loaded
   useEffect(() => {
-    if (sellerId) {
+    if (requestId && !selectedApplication) {
       console.log(
-        "[SellerDetailPage] Fetching seller with ID:",
-        sellerId,
+        "[SellerDetailPage] Fetching seller application with requestId:",
+        requestId,
         "| Username in URL:",
         username
       );
-      fetchUserById(sellerId);
-    } else {
-      console.warn("[SellerDetailPage] No seller ID provided in query params");
+      fetchApplicationById(requestId);
+    } else if (requestId && selectedApplication?.requestId !== requestId) {
+      console.log(
+        "[SellerDetailPage] RequestId mismatch, refetching:",
+        requestId
+      );
+      fetchApplicationById(requestId);
+    } else if (!requestId) {
+      console.warn("[SellerDetailPage] No requestId provided in query params");
     }
 
-    // Cleanup: clear selected user when leaving page
+    // Cleanup: clear selected application when leaving page
     return () => {
-      clearSelectedUser();
+      clearSelectedApplication();
     };
-  }, [sellerId, username, fetchUserById, clearSelectedUser]);
+  }, [
+    requestId,
+    username,
+    selectedApplication,
+    fetchApplicationById,
+    clearSelectedApplication,
+  ]);
 
   // Loading state
-  if (storeLoading.selectedUser) {
+  if (storeLoading.selectedApplication) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -160,8 +174,8 @@ export default function SellerDetailPage({
     );
   }
 
-  // No ID provided in query params
-  if (!sellerId) {
+  // No requestId provided in query params
+  if (!requestId) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -185,17 +199,19 @@ export default function SellerDetailPage({
   }
 
   // Error state
-  if (storeError.selectedUser && !storeLoading.selectedUser) {
+  if (storeError.selectedApplication && !storeLoading.selectedApplication) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium text-destructive">Error</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              {storeError.selectedUser}
+              {storeError.selectedApplication}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => fetchUserById(sellerId)}>Retry</Button>
+              <Button onClick={() => fetchApplicationById(requestId)}>
+                Retry
+              </Button>
               <Button
                 variant="ghost"
                 onClick={() => router.push("/mash-market/seller")}
@@ -209,8 +225,8 @@ export default function SellerDetailPage({
     );
   }
 
-  // Seller not found state
-  if (!selectedUser && !storeLoading.selectedUser) {
+  // Seller application not found state
+  if (!selectedApplication && !storeLoading.selectedApplication) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -230,61 +246,56 @@ export default function SellerDetailPage({
     );
   }
 
-  // Map user data to seller format
+  // Map application data to seller format
   const seller: Seller = {
-    id: selectedUser!.id,
-    name: selectedUser!.name,
-    username: selectedUser!.username,
-    email: selectedUser!.email || "",
-    phone: selectedUser!.phone,
+    id: selectedApplication!.requestId,
+    name: `${selectedApplication!.user.firstName} ${
+      selectedApplication!.user.lastName
+    }`,
+    username: selectedApplication!.user.username,
+    email: selectedApplication!.user.email,
+    phone: undefined, // Not in application response
     status:
-      (selectedUser!.status?.toLowerCase() as
+      (selectedApplication!.status?.toLowerCase() as
         | "pending"
         | "approved"
         | "rejected") || "pending",
-    city: selectedUser!.region,
-    region: selectedUser!.region,
-    // Additional fields would come from backend API
-    storeName: selectedUser!.username,
-    businessName: selectedUser!.name,
+    city: undefined,
+    region: undefined,
+    completeAddress: selectedApplication!.businessInfo.businessAddress,
+    // Map business info from application
+    storeName: selectedApplication!.businessInfo.businessName,
+    businessName: selectedApplication!.businessInfo.businessName,
     businessType: "company",
-    completeAddress: selectedUser!.region,
   };
 
   const handleAccept = async () => {
     setLoading(true);
-    // Placeholder: call API to accept seller
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    toast.success("Seller accepted");
-    router.push("/mash-market/seller");
+    try {
+      await approveApplication(seller.id);
+      toast.success("Seller application approved successfully");
+      router.push("/mash-market/seller");
+    } catch (err) {
+      console.error("Failed to approve seller:", err);
+      toast.error("Failed to approve seller application");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // reject using modal reason; updates persisted sellers in localStorage so list shows reason
+  // Reject using modal reason
   const handleReject = async (reason?: string) => {
     setLoading(true);
     try {
-      // read persisted sellers
-      const raw = localStorage.getItem("mash_sellers");
-      type MarketSeller = Seller & { rejectReason?: string };
-      const parsed = raw
-        ? (JSON.parse(raw) as MarketSeller[])
-        : (mockSellers as MarketSeller[]);
-      const list = parsed.map((s) =>
-        s.id === seller.id
-          ? { ...s, status: "rejected", rejectReason: reason }
-          : s
-      );
-      localStorage.setItem("mash_sellers", JSON.stringify(list));
-      await new Promise((r) => setTimeout(r, 300));
-      toast.error(`Seller rejected${reason ? ` — ${reason}` : ""}`);
+      await rejectApplication(seller.id, reason);
+      toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
+      router.push("/mash-market/seller");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to reject seller");
+      toast.error("Failed to reject seller application");
     } finally {
       setLoading(false);
       setRejectModalOpen(false);
-      router.push("/mash-market/seller");
     }
   };
 

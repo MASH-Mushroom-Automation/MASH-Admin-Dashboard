@@ -450,7 +450,8 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
           res.data
         );
 
-        // Normalize response shape
+        // Normalize response shape - handle nested data structure
+        // Response format: { success, statusCode, data: { success, data: {...} } }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: any = res.data;
 
@@ -458,7 +459,10 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let appData: any = null;
 
-        if (payload?.data) {
+        // Handle nested data.data structure
+        if (payload?.data?.data) {
+          appData = payload.data.data;
+        } else if (payload?.data) {
           appData = payload.data;
         } else if (payload?.application) {
           appData = payload.application;
