@@ -76,12 +76,19 @@ export interface SellerApplicationDetail {
   priority: number;
 }
 
+interface FetchAllApplicationsParams {
+  status?: "PENDING" | "APPROVED" | "REJECTED";
+  userId?: string;
+}
+
 interface SellerApplicationState {
   applications: SellerApplication[] | null;
+  allApplications: SellerApplication[] | null;
   selectedApplication: SellerApplicationDetail | null;
   loading: { [key: string]: boolean };
   error: { [key: string]: string | null };
   fetchPendingApplications: () => Promise<void>;
+  fetchAllApplications: (params?: FetchAllApplicationsParams) => Promise<void>;
   fetchApplicationById: (requestId: string) => Promise<void>;
   approveApplication: (requestId: string) => Promise<void>;
   rejectApplication: (requestId: string, reason?: string) => Promise<void>;
@@ -91,6 +98,7 @@ interface SellerApplicationState {
 export const useSellerApplicationStore = create<SellerApplicationState>()(
   devtools((set, get) => ({
     applications: null,
+    allApplications: null,
     selectedApplication: null,
     loading: {},
     error: {},
@@ -236,6 +244,168 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         set({
           error: { ...get().error, applications: errorMessage },
           loading: { ...get().loading, applications: false },
+        });
+      }
+    },
+
+    fetchAllApplications: async (params?: FetchAllApplicationsParams) => {
+      console.log(
+        "[sellerApplicationStore] fetchAllApplications called with params:",
+        params
+      );
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[sellerApplicationStore] 🔐 Fetching all seller applications (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, allApplications: true },
+        error: { ...get().error, allApplications: null },
+      });
+
+      try {
+        // Build query string from params
+        const queryParams = new URLSearchParams();
+        if (params?.status) {
+          queryParams.append("status", params.status);
+        }
+        if (params?.userId) {
+          queryParams.append("userId", params.userId);
+        }
+
+        const queryString = queryParams.toString();
+        const endpoint = `v1/super-admin/seller-applications/all${
+          queryString ? `?${queryString}` : ""
+        }`;
+
+        console.log("[sellerApplicationStore] Fetching from API:", endpoint);
+
+        const res = await api.get(endpoint);
+        console.log(
+          "[sellerApplicationStore] API response received:",
+          res.data
+        );
+
+        // Normalize possible response shapes
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = res.data;
+        console.log(
+          "[sellerApplicationStore] Payload type:",
+          Array.isArray(payload) ? "array" : typeof payload
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let items: any[] = [];
+
+        if (Array.isArray(payload)) {
+          console.log(
+            "[sellerApplicationStore] Payload is array, length:",
+            payload.length
+          );
+          items = payload;
+        } else if (payload?.data) {
+          if (Array.isArray(payload.data)) {
+            console.log(
+              "[sellerApplicationStore] payload.data is array, length:",
+              payload.data.length
+            );
+            items = payload.data;
+          } else if (Array.isArray(payload.data?.data)) {
+            console.log(
+              "[sellerApplicationStore] payload.data.data is array, length:",
+              payload.data.data.length
+            );
+            items = payload.data.data;
+          }
+        } else if (typeof payload === "object") {
+          items =
+            payload.applications || payload.sellers || payload.items || [];
+          console.log(
+            "[sellerApplicationStore] Extracted items from object wrapper, length:",
+            items.length
+          );
+        }
+
+        console.log(
+          "[sellerApplicationStore] Raw items before mapping:",
+          items
+        );
+
+        // Log first application's raw data to see available fields
+        if (items.length > 0) {
+          console.log(
+            "[sellerApplicationStore] Sample raw seller application:",
+            items[0]
+          );
+          console.log(
+            "[sellerApplicationStore] Available keys in raw application:",
+            Object.keys(items[0])
+          );
+        }
+
+        const mapped: SellerApplication[] = (items || []).map((app) => {
+          const user = app.user || {};
+          const sellerName =
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            user.username ||
+            "Unknown";
+
+          return {
+            requestId: String(app.requestId ?? ""),
+            userId: String(app.userId ?? user.id ?? ""),
+            sellerName,
+            storeName: app.storeName ?? undefined,
+            email: String(user.email ?? app.email ?? ""),
+            address: app.address ?? undefined,
+            currentRole: String(app.currentRole ?? user.role ?? ""),
+            requestedRole: String(app.requestedRole ?? ""),
+            queuedAt: String(app.queuedAt ?? ""),
+            priority: Number(app.priority ?? 0),
+            isApproved: app.isApproved ?? app.status === "APPROVED",
+            user: {
+              id: String(user.id ?? ""),
+              email: String(user.email ?? ""),
+              username: String(user.username ?? ""),
+              firstName: String(user.firstName ?? ""),
+              lastName: String(user.lastName ?? ""),
+              role: String(user.role ?? ""),
+              imageUrl: user.imageUrl ?? undefined,
+              createdAt: String(user.createdAt ?? ""),
+            },
+          };
+        });
+
+        console.log(
+          "[sellerApplicationStore] Mapped all seller applications:",
+          mapped
+        );
+        console.log(
+          "[sellerApplicationStore] Total applications fetched:",
+          mapped.length
+        );
+        console.log(
+          "[sellerApplicationStore] Filter params used:",
+          params || "none"
+        );
+
+        set({
+          allApplications: mapped,
+          loading: { ...get().loading, allApplications: false },
+        });
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch all seller applications";
+        console.error("[sellerApplicationStore] fetchAllApplications error:", {
+          message: errorMessage,
+          error: err,
+          params,
+        });
+
+        set({
+          error: { ...get().error, allApplications: errorMessage },
+          loading: { ...get().loading, allApplications: false },
         });
       }
     },

@@ -11,8 +11,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
+import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
 
-// Local Seller type for mock data (matches SellerTable component expectations)
+// Local Seller type (matches SellerTable component expectations)
 interface Seller {
   id: string;
   name: string;
@@ -29,33 +30,6 @@ interface Seller {
 
 export type TabType = "pending" | "rejected";
 
-// Mock sellers data (will be replaced with real API later)
-const mockSellers: Seller[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    storeName: "Fresh Mushrooms Co.",
-    email: "john@freshmushrooms.com",
-    status: "pending",
-    username: "johndoe",
-    phone: "+63 912 345 6789",
-    businessName: "Fresh Mushrooms Co.",
-    businessType: "Retail",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    storeName: "Organic Fungi Farm",
-    email: "jane@organicfungi.com",
-    status: "rejected",
-    rejectReason: "Incomplete documentation",
-    username: "janesmith",
-    phone: "+63 923 456 7890",
-    businessName: "Organic Fungi Farm",
-    businessType: "Wholesale",
-  },
-];
-
 export default function SellerContent() {
   const [activeTab, setActiveTab] = useState<TabType>("pending");
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,10 +37,47 @@ export default function SellerContent() {
   const itemsPerPage = 5;
   const router = useRouter();
 
-  // Use mock data for now
-  const [sellers] = useState<Seller[]>(mockSellers);
-  const loading = false;
-  const error = null;
+  // Use seller application store
+  const {
+    allApplications,
+    fetchAllApplications,
+    approveApplication,
+    rejectApplication,
+    loading,
+    error,
+  } = useSellerApplicationStore();
+
+  // Fetch applications on mount and when tab changes
+  useEffect(() => {
+    const status = activeTab === "pending" ? "PENDING" : "REJECTED";
+    fetchAllApplications({ status }).catch((err) => {
+      console.error("Failed to fetch seller applications:", err);
+      toast.error("Failed to load seller applications");
+    });
+  }, [activeTab, fetchAllApplications]);
+
+  // Transform applications to Seller format
+  const sellers: Seller[] =
+    allApplications?.map((app) => ({
+      id: app.requestId,
+      name: app.sellerName,
+      storeName: app.storeName || "N/A",
+      email: app.email,
+      status: app.isApproved
+        ? "approved"
+        : activeTab === "rejected"
+        ? "rejected"
+        : "pending",
+      rejectReason: undefined, // Will be fetched from detail view if needed
+      address: app.address,
+      username: app.user.username,
+      phone: undefined, // Not in current API response
+      businessName: app.storeName,
+      businessType: undefined, // Not in current API response
+    })) || [];
+
+  const isLoading = loading.allApplications;
+  const fetchError = error.allApplications;
 
   // Filter sellers by active tab
   const tabFilteredSellers = sellers.filter((seller) => {
@@ -94,19 +105,30 @@ export default function SellerContent() {
     );
   };
 
-  const handleAccept = (sellerId: string) => {
-    // TODO: Implement API call to approve seller
-    void sellerId; // Will be used in API call
-    toast.success("Seller approved (API integration pending)");
+  const handleAccept = async (sellerId: string) => {
+    try {
+      await approveApplication(sellerId);
+      toast.success("Seller application approved successfully");
+      // Refresh the list
+      const status = activeTab === "pending" ? "PENDING" : "REJECTED";
+      await fetchAllApplications({ status });
+    } catch (err) {
+      console.error("Failed to approve seller:", err);
+      toast.error("Failed to approve seller application");
+    }
   };
 
-  const handleReject = (sellerId: string, reason?: string) => {
-    // TODO: Implement API call to reject seller
-    void sellerId; // Will be used in API call
-    toast.error(
-      `Seller rejected${reason ? ` — ${reason}` : ""} (API integration pending)`
-    );
-    setActiveTab("rejected");
+  const handleReject = async (sellerId: string, reason?: string) => {
+    try {
+      await rejectApplication(sellerId, reason);
+      toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
+      setActiveTab("rejected");
+      // Refresh the list
+      await fetchAllApplications({ status: "REJECTED" });
+    } catch (err) {
+      console.error("Failed to reject seller:", err);
+      toast.error("Failed to reject seller application");
+    }
   };
 
   const handleArchive = (id: string) => {
@@ -136,7 +158,7 @@ export default function SellerContent() {
       </div>
 
       {/* Loading State */}
-      {loading && (
+      {isLoading && (
         <Card className="p-8">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -148,17 +170,24 @@ export default function SellerContent() {
       )}
 
       {/* Error State */}
-      {error && !loading && (
+      {fetchError && !isLoading && (
         <Card className="p-8">
           <div className="text-center">
-            <p className="text-destructive mb-4">Error: {error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+            <p className="text-destructive mb-4">Error: {fetchError}</p>
+            <Button
+              onClick={() => {
+                const status = activeTab === "pending" ? "PENDING" : "REJECTED";
+                fetchAllApplications({ status }).catch(console.error);
+              }}
+            >
+              Retry
+            </Button>
           </div>
         </Card>
       )}
 
       {/* Main Content */}
-      {!loading && !error && (
+      {!isLoading && !fetchError && (
         <>
           {/* Tabs */}
           <Tabs
