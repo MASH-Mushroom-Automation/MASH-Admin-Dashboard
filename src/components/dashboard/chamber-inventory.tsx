@@ -199,7 +199,7 @@ export default function ChamberInventorySection() {
                         {user.email}
                       </td>
                       <td className="py-3 px-4 text-foreground">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-secondary">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-foreground">
                           {roleLabelMap[user.role || ""] || user.role}
                         </span>
                       </td>

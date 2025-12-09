@@ -39,13 +39,13 @@ interface Seller {
 const mockSellers: Seller[] = [
   {
     id: "1",
-    name: "Jin Failana",
-    username: "jinfail",
+    name: "John Doe",
+    username: "johndoe",
     storeName: "Smith Mushrooms",
     businessName: "Smith Mushrooms",
     businessType: "company",
     taxIdNumber: "TAX-0012345",
-    email: "jin@smithmushrooms.com",
+    email: "john@smithmushrooms.com",
     phone: "+63 912 345 6789",
     city: "Caloocan City",
     region: "NCR",
@@ -461,7 +461,7 @@ export default function SellerDetailPage({
           </div>
 
           {/* Banking details */}
-          <div>
+          {/* <div>
             <h3 className="text-lg font-medium mb-3">Banking details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -498,7 +498,7 @@ export default function SellerDetailPage({
                 />
               </div>
             </div>
-          </div>
+          </div> */}
 
           {seller.status === "pending" && (
             <div className="mt-6 flex gap-3">
