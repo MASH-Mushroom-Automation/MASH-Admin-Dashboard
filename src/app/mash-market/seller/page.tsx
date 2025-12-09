@@ -314,15 +314,17 @@ export default function SellerContent() {
         id: "actions",
         header: "Actions",
         cell: ({ row }: any) => (
-          <SellerActionMenu
-            seller={row.original}
-            activeTab={activeTab}
-            mode={activeTab === "pending" ? "pending" : "default"}
-            onReject={() => setConfirmAction({ sellerId: row.original.id, action: "reject" })}
-            onArchive={() => setConfirmAction({ sellerId: row.original.id, action: "Archive" })}
-            onAccept={() => setConfirmAction({ sellerId: row.original.id, action: "accept" })}
-            onView={() => handleView(row.original)}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <SellerActionMenu
+              seller={row.original}
+              activeTab={activeTab}
+              mode={activeTab === "pending" ? "pending" : "default"}
+              onReject={() => setConfirmAction({ sellerId: row.original.id, action: "reject" })}
+              onArchive={() => setConfirmAction({ sellerId: row.original.id, action: "Archive" })}
+              onAccept={() => setConfirmAction({ sellerId: row.original.id, action: "accept" })}
+              onView={() => handleView(row.original)}
+            />
+          </div>
         ),
       },
     ];
@@ -425,6 +427,7 @@ export default function SellerContent() {
                 initialPageSize={itemsPerPage}
                 hidePagination
                 columns={columns}
+                mode="sellers"
                 onArchive={(ids: string[]) => {
                   const idsArr = ids && ids.length ? ids : null;
                   setBulkArchiveIds(idsArr);
@@ -435,6 +438,16 @@ export default function SellerContent() {
                     setBulkArchiveNames(null);
                   }
                   setShowArchiveConfirm(true);
+                }}
+                onBulkAccept={(ids: string[]) => {
+                  // Bulk accept selected sellers
+                  ids.forEach(id => handleAccept(id));
+                  toast.success(`Accepted ${ids.length} seller(s)`);
+                }}
+                onBulkReject={(ids: string[], reason?: string) => {
+                  // For bulk reject, we need to handle rejection with reason
+                  ids.forEach(id => handleReject(id, reason || "Bulk rejection"));
+                  toast.success(`Rejected ${ids.length} seller(s)`);
                 }}
               />
             </div>

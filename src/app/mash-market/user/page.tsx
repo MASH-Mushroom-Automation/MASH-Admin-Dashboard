@@ -441,6 +441,7 @@ export default function UsersManagement() {
                   data={paginatedUsers}
                   initialPageSize={itemsPerPage}
                   hidePagination
+                  mode="users"
                   onArchive={(ids) => {
                     // open confirmation for bulk archive
                     const idsArr = ids && ids.length ? ids : null;
@@ -452,6 +453,16 @@ export default function UsersManagement() {
                       setBulkArchiveNames(null);
                     }
                     setShowArchiveConfirm(true);
+                  }}
+                  onBulkChangeRole={(ids, newRole) => {
+                    // TODO: Implement bulk role change
+                    console.log('Bulk change role:', ids, newRole);
+                    toast.success(`Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`);
+                  }}
+                  onBulkChangeStatus={(ids, newStatus) => {
+                    // TODO: Implement bulk status change
+                    console.log('Bulk change status:', ids, newStatus);
+                    toast.success(`Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`);
                   }}
                 />
               </div>

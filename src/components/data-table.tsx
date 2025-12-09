@@ -21,11 +21,16 @@ interface DataTableProps<TData extends AnyRow> {
   initialPageSize?: number;
   columns?: ColumnDef<any, any>[];
   onArchive?: (ids: string[]) => void;
+  onBulkChangeRole?: (ids: string[], newRole: string) => void;
+  onBulkChangeStatus?: (ids: string[], newStatus: string) => void;
+  onBulkAccept?: (ids: string[]) => void;
+  onBulkReject?: (ids: string[], reason?: string) => void;
+  mode?: 'users' | 'sellers';
   hidePagination?: boolean;
 }
 
 export function DataTable(props: DataTableProps<any>) {
-  const { data, initialPageSize = 10, columns, onArchive, hidePagination } = props;
+  const { data, initialPageSize = 10, columns, onArchive, onBulkChangeRole, onBulkChangeStatus, onBulkAccept, onBulkReject, mode = 'users', hidePagination } = props;
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<any[]>([]);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
@@ -34,15 +39,22 @@ export function DataTable(props: DataTableProps<any>) {
     return [
       {
         id: "select",
-        header: ({ table }) => (
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded-md border-2 border-slate-300 bg-white accent-primary transition-transform duration-150 ease-in-out transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            checked={table.getIsAllPageRowsSelected()}
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            aria-label="Select all rows"
-          />
-        ),
+        header: ({ table }) => {
+          const allSelected = table.getIsAllPageRowsSelected();
+          const someSelected = table.getIsSomePageRowsSelected();
+          return (
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded-md border-2 border-slate-300 bg-white accent-primary transition-transform duration-150 ease-in-out transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              checked={allSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = someSelected && !allSelected;
+              }}
+              onChange={table.getToggleAllPageRowsSelectedHandler()}
+              aria-label="Select all rows"
+            />
+          );
+        },
         cell: ({ row }) => (
           <input
             type="checkbox"
@@ -149,6 +161,7 @@ export function DataTable(props: DataTableProps<any>) {
 
   const selectedCount = Object.keys(rowSelection).length;
   const selectedIds = table.getSelectedRowModel().flatRows.map((r) => r.original.id).filter(Boolean) as string[];
+  const selectedRows = table.getSelectedRowModel().flatRows.map((r) => r.original);
 
   // dynamic rows-per-page options based on data length
   const totalRows = (data || []).length;
@@ -192,8 +205,15 @@ export function DataTable(props: DataTableProps<any>) {
     <div className="w-full">
       <SelectionBar
         selectedCount={selectedCount}
+        selectedIds={selectedIds}
+        selectedRows={selectedRows}
+        mode={mode}
         onClear={() => table.resetRowSelection()}
-        onArchive={() => onArchive && onArchive(selectedIds)}
+        onArchive={(ids) => onArchive && onArchive(ids)}
+        onBulkChangeRole={(ids, newRole) => onBulkChangeRole && onBulkChangeRole(ids, newRole)}
+        onBulkChangeStatus={(ids, newStatus) => onBulkChangeStatus && onBulkChangeStatus(ids, newStatus)}
+        onBulkAccept={(ids) => onBulkAccept && onBulkAccept(ids)}
+        onBulkReject={(ids, reason) => onBulkReject && onBulkReject(ids, reason)}
       />
 
       <div className="overflow-x-auto bg-card">
@@ -254,7 +274,14 @@ export function DataTable(props: DataTableProps<any>) {
 
             {table.getRowModel().rows.map((row) => {
               return (
-                <tr key={row.id} className="odd:bg-card">
+                <tr
+                  key={row.id}
+                  className={`transition-colors duration-150 ${
+                    row.getIsSelected()
+                      ? 'bg-primary/5 border-l-4 border-primary shadow-xs hover:bg-primary/15'
+                      : 'odd:bg-card hover:bg-muted/50'
+                  }`}
+                >
                   {row.getVisibleCells().map((cell) => {
                     return (
                       <td key={cell.id} className="px-4 py-3 align-middle">
