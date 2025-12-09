@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Search } from "lucide-react";
-import { SellerTable } from "@/components/ecommerce/seller-table";
+import { DataTable } from "@/components/data-table";
+import { SellerActionMenu } from "@/components/ecommerce/seller-action-menu";
+import { ConfirmationPopover } from "@/components/confirmation-popover";
+import RejectReasonModal from "@/components/ecommerce/reject-reason-modal";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
@@ -60,7 +63,15 @@ export default function SellerContent() {
   const [activeTab, setActiveTab] = useState<TabType>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
+  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    sellerId: string;
+    action: "reject" | "Archive" | "accept";
+  } | null>(null);
   const router = useRouter();
 
   // Use mock data for now
@@ -85,6 +96,32 @@ export default function SellerContent() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedSellers = filteredSellers.slice(startIndex, endIndex);
+
+  // Dynamic rows-per-page options
+  const getRowsPerPageOptions = (total: number) => {
+    const opts = new Set<number>();
+    // always include current itemsPerPage so the select remains controlled
+    opts.add(itemsPerPage);
+
+    if (total <= 1) {
+      opts.add(Math.max(1, total));
+      return Array.from(opts).sort((a, b) => a - b);
+    }
+
+    // build sensible multiples of 5 up to total (5,10,15,...)
+    for (let v = 5; v <= total; v += 5) {
+      opts.add(v);
+    }
+
+    // always include total as an option (exact all)
+    opts.add(total);
+
+    // ensure small totals still show an option
+    if (total < 5) opts.add(total);
+
+    return Array.from(opts).sort((a, b) => a - b);
+  };
+  const rowsPerPageOptions = getRowsPerPageOptions(filteredSellers.length);
 
   const handleView = (seller: Seller) => {
     // Navigate to seller detail page
@@ -114,6 +151,184 @@ export default function SellerContent() {
     toast.success("Seller archived successfully — opening archive page");
     router.push(`/mash-market/seller/archive?id=${id}`);
   };
+
+  const handleBulkArchive = async () => {
+    const idsToArchive = bulkArchiveIds && bulkArchiveIds.length ? bulkArchiveIds : deletingId ? [deletingId] : [];
+    if (idsToArchive.length === 0) {
+      toast.error("No seller selected for archiving");
+      setShowArchiveConfirm(false);
+      return;
+    }
+
+    try {
+      toast.loading("Archiving seller(s)...", { id: "archive-seller" });
+      // Run all in parallel but keep frontend-only behavior (no backend changes)
+      const results = await Promise.allSettled(idsToArchive.map(async (id) => {
+        // For now, call the single-archive handler for each id but avoid navigating for each.
+        // We will simulate by waiting a tick and returning success.
+        await new Promise((res) => setTimeout(res, 50));
+        return { id, status: 'ok' };
+      }));
+
+      const successes = results.filter((r) => r.status === "fulfilled").length;
+      const failures = results.filter((r) => r.status === "rejected").length;
+
+      if (successes > 0) toast.success(`Archived ${successes} seller(s)`, { id: "archive-seller" });
+      if (failures > 0) toast.error(`${failures} seller(s) failed to archive`, { id: "archive-seller" });
+
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
+      // navigate to archive page for review (preserve previous behavior by navigating to archive root)
+      router.push(`/mash-market/seller/archive`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to archive seller(s). Please try again.");
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
+    }
+  };
+
+  const handleConfirmAction = (reason?: string) => {
+    if (!confirmAction) return;
+
+    if (confirmAction.action === "reject") {
+      handleReject(confirmAction.sellerId, reason);
+    } else if (confirmAction.action === "Archive") {
+      handleArchive(confirmAction.sellerId);
+    } else if (confirmAction.action === "accept") {
+      handleAccept(confirmAction.sellerId);
+    }
+
+    setConfirmAction(null);
+  };
+
+  const columns = useMemo(() => {
+    const getStatusBadgeColor = (status: string) => {
+      switch (status) {
+        case "pending":
+          return "bg-yellow-100 text-yellow-800";
+        case "approved":
+          return "bg-green-100 text-green-800";
+        case "rejected":
+          return "bg-red-100 text-red-800";
+        default:
+          return "bg-gray-100 text-gray-800";
+      }
+    };
+
+    const cols: any[] = [
+      {
+        id: "select",
+        header: ({ table }: any) => (
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded-md border-2 border-slate-300 bg-white accent-primary"
+            checked={table.getIsAllPageRowsSelected()}
+            onChange={table.getToggleAllPageRowsSelectedHandler()}
+            aria-label="Select all rows"
+          />
+        ),
+        cell: ({ row }: any) => (
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded-md border-2 border-slate-300 bg-white accent-primary"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            aria-label={`Select row ${row.id}`}
+          />
+        ),
+        size: 24,
+      },
+      {
+        accessorKey: "name",
+        header: "Seller Name",
+        cell: ({ row }: any) => (
+          <div className="max-w-[220px] truncate">
+            {typeof handleView === "function" ? (
+              <button
+                className="text-primary underline text-sm p-0 truncate block"
+                onClick={() => handleView(row.original)}
+                title={row.original.name}
+              >
+                {row.original.name}
+              </button>
+            ) : (
+              <span className="truncate" title={row.original.name}>{row.original.name}</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "storeName",
+        header: "Store Name",
+        cell: ({ getValue }: any) => (
+          <div className="max-w-[220px] truncate" title={String(getValue() ?? "—")}>
+            {getValue() ?? "—"}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ getValue }: any) => (
+          <div className="max-w-[220px] truncate" title={String(getValue() ?? "—")}>
+            {getValue() ?? "—"}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "address",
+        header: "Address",
+        cell: ({ getValue }: any) => (
+          <div className="max-w-[220px] truncate" title={String(getValue() ?? "—")}>
+            {getValue() ?? "—"}
+          </div>
+        ),
+      },
+      activeTab === "rejected"
+        ? {
+            accessorKey: "rejectReason",
+            header: "Reason",
+            cell: ({ getValue }: any) => (
+              <div className="max-w-[300px] truncate" title={String(getValue() ?? "—")}>
+                {getValue() ?? "—"}
+              </div>
+            ),
+          }
+        : {
+            accessorKey: "status",
+            header: "Status",
+            cell: ({ getValue }: any) => (
+              <div className="max-w-[160px] truncate" title={String(getValue() ?? "")}>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(getValue() ?? "")}`}>
+                  {getValue() === "pending" ? "For Approval" : getValue()}
+                </span>
+              </div>
+            ),
+          },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }: any) => (
+          <SellerActionMenu
+            seller={row.original}
+            activeTab={activeTab}
+            mode={activeTab === "pending" ? "pending" : "default"}
+            onReject={() => setConfirmAction({ sellerId: row.original.id, action: "reject" })}
+            onArchive={() => setConfirmAction({ sellerId: row.original.id, action: "Archive" })}
+            onAccept={() => setConfirmAction({ sellerId: row.original.id, action: "accept" })}
+            onView={() => handleView(row.original)}
+          />
+        ),
+      },
+    ];
+
+    return cols;
+  }, [activeTab, handleView, filteredSellers]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -199,17 +414,30 @@ export default function SellerContent() {
 
           {/* Table Section */}
           <Card className="overflow-hidden">
-            <SellerTable
-              sellers={paginatedSellers.filter(
-                (seller) => seller.status === activeTab
-              )}
-              activeTab={activeTab}
-              searchQuery={searchQuery}
-              onView={handleView}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onArchive={handleArchive}
-            />
+            <div className="p-4">
+              {/** Build columns for DataTable to match SellerTable layout */}
+              {
+                /* eslint-disable react-hooks/rules-of-hooks */
+              }
+              {/** Columns memoized for stability */}
+              <DataTable
+                data={paginatedSellers.filter((seller) => seller.status === activeTab)}
+                initialPageSize={itemsPerPage}
+                hidePagination
+                columns={columns}
+                onArchive={(ids: string[]) => {
+                  const idsArr = ids && ids.length ? ids : null;
+                  setBulkArchiveIds(idsArr);
+                  if (idsArr) {
+                    const names = idsArr.map((id) => filteredSellers.find((s) => s.id === id)?.name || id);
+                    setBulkArchiveNames(names.length ? names : null);
+                  } else {
+                    setBulkArchiveNames(null);
+                  }
+                  setShowArchiveConfirm(true);
+                }}
+              />
+            </div>
           </Card>
 
           {/* Pagination Section */}
@@ -220,6 +448,37 @@ export default function SellerContent() {
             onPageChange={handlePageChange}
             label="Pending"
           />
+
+          {/* Confirm / Reject Modals */}
+          {confirmAction && confirmAction.action === "reject" ? (
+            <RejectReasonModal
+              open={true}
+              onOpenChange={(open) => {
+                if (!open) setConfirmAction(null);
+              }}
+              onConfirm={(reason) => handleConfirmAction(reason)}
+            />
+          ) : confirmAction ? (
+            <ConfirmationPopover
+              action={confirmAction.action}
+              onConfirm={() => handleConfirmAction()}
+              onCancel={() => setConfirmAction(null)}
+            />
+          ) : null}
+
+          {showArchiveConfirm && (
+            <ConfirmationPopover
+              action="Archive"
+              entity={bulkArchiveIds && bulkArchiveIds.length > 1 ? "Sellers" : "Seller"}
+              onConfirm={handleBulkArchive}
+              onCancel={() => {
+                setShowArchiveConfirm(false);
+                setDeletingId(null);
+                setBulkArchiveIds(null);
+                setBulkArchiveNames(null);
+              }}
+            />
+          )}
         </>
       )}
     </div>
