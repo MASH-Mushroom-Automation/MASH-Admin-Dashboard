@@ -126,36 +126,44 @@ export default function SellerDetailPage({
 
   // Fetch seller application data if not already loaded
   useEffect(() => {
-    if (requestId && !selectedApplication) {
-      console.log(
-        "[SellerDetailPage] Fetching seller application with requestId:",
-        requestId,
-        "| Username in URL:",
-        username
-      );
-      fetchApplicationById(requestId);
-    } else if (requestId && selectedApplication?.requestId !== requestId) {
-      console.log(
-        "[SellerDetailPage] RequestId mismatch, refetching:",
-        requestId
-      );
-      fetchApplicationById(requestId);
-    } else if (!requestId) {
+    if (!requestId) {
       console.warn("[SellerDetailPage] No requestId provided in query params");
-    } else {
-      console.log(
-        "[SellerDetailPage] Using cached application data:",
-        selectedApplication?.requestId
-      );
+      return;
     }
 
-    // Cleanup: clear selected application when leaving page
+    // If we already have the correct application, don't refetch
+    if (selectedApplication?.requestId === requestId) {
+      console.log(
+        "[SellerDetailPage] Using cached application data:",
+        selectedApplication.requestId
+      );
+      return;
+    }
+
+    // Fetch the application
+    console.log(
+      "[SellerDetailPage] Fetching seller application with requestId:",
+      requestId,
+      "| Username in URL:",
+      username
+    );
+    fetchApplicationById(requestId);
+  }, [
+    requestId,
+    username,
+    selectedApplication?.requestId,
+    fetchApplicationById,
+  ]);
+
+  // Cleanup on unmount only
+  useEffect(() => {
     return () => {
+      console.log(
+        "[SellerDetailPage] Clearing selected application on unmount"
+      );
       clearSelectedApplication();
     };
-    // Only depend on requestId and username, not selectedApplication to avoid refetch loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestId, username]);
+  }, [clearSelectedApplication]);
 
   // Loading state
   if (storeLoading.selectedApplication) {
@@ -338,198 +346,268 @@ export default function SellerDetailPage({
         </div>
 
         <Card className="p-6 space-y-6">
+          {/* Application Status */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">Application Status</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Current Role
+                </label>
+                <Input
+                  value={selectedApplication.currentRole}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Requested Role
+                </label>
+                <Input
+                  value={selectedApplication.requestedRole}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Status
+                </label>
+                <Input
+                  value={selectedApplication.status}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Priority
+                </label>
+                <Input
+                  value={selectedApplication.priority.toString()}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Queued At
+                </label>
+                <Input
+                  value={new Date(
+                    selectedApplication.queuedAt
+                  ).toLocaleString()}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              {selectedApplication.processedAt && (
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    Processed At
+                  </label>
+                  <Input
+                    value={new Date(
+                      selectedApplication.processedAt
+                    ).toLocaleString()}
+                    disabled
+                    readOnly
+                    className="mt-1"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* User Information */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">User Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Full Name
+                </label>
+                <Input
+                  value={`${selectedApplication.user.firstName} ${selectedApplication.user.lastName}`}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Username
+                </label>
+                <Input
+                  value={selectedApplication.user.username}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Email Address
+                </label>
+                <Input
+                  value={selectedApplication.user.email}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  User ID
+                </label>
+                <Input
+                  value={selectedApplication.user.id}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Business Information */}
           <div>
             <h3 className="text-lg font-medium mb-3">Business Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
                   Business Name
                 </label>
                 <Input
-                  value={seller.businessName ?? ""}
+                  value={selectedApplication.businessInfo.businessName || "N/A"}
                   disabled
                   readOnly
                   className="mt-1"
                 />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Business Type
+                  Business Address
                 </label>
                 <Input
-                  value={seller.businessType ?? ""}
+                  value={
+                    selectedApplication.businessInfo.businessAddress || "N/A"
+                  }
                   disabled
                   readOnly
                   className="mt-1"
                 />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
-                  TAX ID Number
+                  Additional Information
                 </label>
-                <Input
-                  value={seller.taxIdNumber ?? ""}
+                <textarea
+                  value={
+                    selectedApplication.businessInfo.additionalInfo || "N/A"
+                  }
                   disabled
                   readOnly
-                  className="mt-1"
+                  className="mt-1 w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
             </div>
           </div>
 
-          {/* Contact Details */}
+          {/* Documents */}
           <div>
-            <h3 className="text-lg font-medium mb-3">Contact Details</h3>
+            <h3 className="text-lg font-medium mb-3">Submitted Documents</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Full name
-                </label>
-                <Input
-                  value={seller.name ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Email address
-                </label>
-                <Input
-                  value={seller.email ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Phone number
-                </label>
-                <Input
-                  value={seller.phone ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  City
-                </label>
-                <Input
-                  value={seller.city ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Region
-                </label>
-                <Input
-                  value={seller.region ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Complete address
-                </label>
-                <Input
-                  value={seller.completeAddress ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
+              {selectedApplication.documents.governmentId && (
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Government ID
+                  </label>
+                  <a
+                    href={selectedApplication.documents.governmentId}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    View Document
+                  </a>
+                  <img
+                    src={selectedApplication.documents.governmentId}
+                    alt="Government ID"
+                    className="mt-2 max-w-full h-auto rounded border"
+                  />
+                </div>
+              )}
+              {selectedApplication.documents.birCertificate && (
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    BIR Certificate
+                  </label>
+                  <a
+                    href={selectedApplication.documents.birCertificate}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    View Document
+                  </a>
+                  <img
+                    src={selectedApplication.documents.birCertificate}
+                    alt="BIR Certificate"
+                    className="mt-2 max-w-full h-auto rounded border"
+                  />
+                </div>
+              )}
+              {selectedApplication.documents.businessCertificate && (
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Business Certificate
+                  </label>
+                  <a
+                    href={selectedApplication.documents.businessCertificate}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    View Document
+                  </a>
+                  <img
+                    src={selectedApplication.documents.businessCertificate}
+                    alt="Business Certificate"
+                    className="mt-2 max-w-full h-auto rounded border"
+                  />
+                </div>
+              )}
+              {selectedApplication.documents.bankAccountDocumentation && (
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                    Bank Account Documentation
+                  </label>
+                  <a
+                    href={
+                      selectedApplication.documents.bankAccountDocumentation
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    View Document
+                  </a>
+                  <img
+                    src={selectedApplication.documents.bankAccountDocumentation}
+                    alt="Bank Account Documentation"
+                    className="mt-2 max-w-full h-auto rounded border"
+                  />
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Product information */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Product information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Types of mushroom
-                </label>
-                <Input
-                  value={(seller.typesOfMushroom || []).join(", ")}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Monthly production capacity
-                </label>
-                <Input
-                  value={seller.monthlyProductionCapacity ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Certifications
-                </label>
-                <Input
-                  value={(seller.certifications || []).join(", ")}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Banking details */}
-          {/* <div>
-            <h3 className="text-lg font-medium mb-3">Banking details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Bank name
-                </label>
-                <Input
-                  value={seller.bankName ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Account number
-                </label>
-                <Input
-                  value={seller.accountNumber ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Account holder name
-                </label>
-                <Input
-                  value={seller.accountHolderName ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div> */}
 
           {seller.status === "pending" && (
             <div className="mt-6 flex gap-3">

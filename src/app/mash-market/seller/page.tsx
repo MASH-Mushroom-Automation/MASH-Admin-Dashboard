@@ -137,12 +137,22 @@ export default function SellerContent() {
   };
   const rowsPerPageOptions = getRowsPerPageOptions(filteredSellers.length);
 
-  const handleView = (seller: Seller) => {
-    // Navigate to seller detail page
-    // URL shows username for better UX, but ID is passed via query
-    router.push(
-      `/mash-market/seller/${seller.username || seller.id}?id=${seller.id}`
-    );
+  const handleView = async (seller: Seller) => {
+    try {
+      // Fetch detailed application data before navigating
+      // seller.id is the requestId from the application
+      await fetchApplicationById(seller.id);
+      // Navigate to seller detail page with requestId
+      // URL shows username for better UX, but requestId is passed via query
+      router.push(
+        `/mash-market/seller/${seller.username || seller.id}?requestId=${
+          seller.id
+        }`
+      );
+    } catch (err) {
+      console.error("Failed to fetch seller details:", err);
+      toast.error("Failed to load seller details");
+    }
   };
 
   const handleAccept = async (sellerId: string) => {
