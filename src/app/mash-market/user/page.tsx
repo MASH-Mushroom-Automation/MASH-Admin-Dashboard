@@ -15,21 +15,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import PaginationWrapper from "@/components/pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// DataTable replaces the legacy table and pagination components
 import { Button } from "@/components/ui/button";
-import { Archive } from "lucide-react";
+import PaginationWrapper from "@/components/pagination";
+import { Archive, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserManagementStore } from "@/store/userManagementStore";
+import { DataTable } from "@/components/data-table";
 
-const ITEMS_PER_PAGE = 5;
+// Controlled items per page (rows per page selector)
+const DEFAULT_ITEMS_PER_PAGE = 5;
 
 export default function UsersManagement() {
   const router = useRouter();
@@ -41,8 +36,11 @@ export default function UsersManagement() {
     "All" | "Active" | "Inactive"
   >("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(DEFAULT_ITEMS_PER_PAGE);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
+  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(null);
 
   // Use Zustand store for users data
   const {
@@ -93,10 +91,13 @@ export default function UsersManagement() {
 
   // Filtered users (showing all roles: ADMIN and USER)
   const filteredUsers = useMemo(() => {
+    const q = (searchQuery || "").trim().toLowerCase();
+
     return users.filter((user) => {
-      const matchesSearch = [user.name, user.email, user.username].some(
-        (field) => field?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const matchesSearch =
+        q === "" || [user.name, user.email, user.username].some((field) =>
+          String(field ?? "").toLowerCase().includes(q)
+        );
 
       // Status filter: If no status filters selected, show all users (including those without status)
       let matchesStatus = true;
@@ -120,12 +121,42 @@ export default function UsersManagement() {
     });
   }, [users, searchQuery, statusFilter, selectedStatuses, selectedRegions]);
 
-  // Pagination logic
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedUsers = filteredUsers.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
-  );
+  // Dynamic rows-per-page options based on amount of filtered data
+  const rowsPerPageOptions = useMemo(() => {
+    const total = filteredUsers.length;
+
+    // Helper: build multiples of 5 up to total (5,10,15,...), then include total itself
+    const opts = new Set<number>();
+    // always include current itemsPerPage so the select remains controlled
+    opts.add(itemsPerPage);
+
+    if (total <= 1) {
+      opts.add(Math.max(1, total));
+      return Array.from(opts).sort((a, b) => a - b);
+    }
+
+    // Use multiples of 5 as sensible page sizes based on DB size
+    for (let v = 5; v <= total; v += 5) {
+      opts.add(v);
+    }
+
+    // Also include the total number (so exact-all option exists)
+    opts.add(total);
+
+    // If total is less than 5, we still want a small, sensible option
+    if (total < 5) opts.add(total);
+
+    return Array.from(opts).sort((a, b) => a - b);
+  }, [filteredUsers.length, itemsPerPage]);
+
+  // Reset page to 1 whenever search or filters change to avoid jumping pages
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatuses, selectedRegions, statusFilter]);
+
+  // Pagination logic (controlled by local itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
   // Debug logging for filtered/paginated results
   useEffect(() => {
@@ -143,28 +174,44 @@ export default function UsersManagement() {
   }, [filteredUsers, paginatedUsers, currentPage, startIndex]);
 
   const handleArchive = async () => {
-    const id = deletingId;
-    if (!id) {
+    // Support bulk archive (bulkArchiveIds) or single id (deletingId)
+    const idsToArchive = bulkArchiveIds && bulkArchiveIds.length > 0 ? bulkArchiveIds : deletingId ? [deletingId] : [];
+    if (idsToArchive.length === 0) {
       toast.error("No user selected for archiving");
       setShowArchiveConfirm(false);
       return;
     }
 
     try {
-      toast.loading("Archiving user...", { id: "archive-user" });
-      await archiveUser(id);
-      toast.success("User archived successfully", { id: "archive-user" });
+      toast.loading("Archiving user(s)...", { id: "archive-user" });
+
+      // Run archive requests in parallel and handle results
+      const results = await Promise.allSettled(idsToArchive.map((id) => archiveUser(id)));
+      const successes = results.filter((r) => r.status === "fulfilled").length;
+      const failures = results.filter((r) => r.status === "rejected").length;
+
+      if (successes > 0) {
+        toast.success(`Archived ${successes} user(s)`, { id: "archive-user" });
+      }
+      if (failures > 0) {
+        toast.error(`${failures} user(s) failed to archive`, { id: "archive-user" });
+      }
+
       setShowArchiveConfirm(false);
       setDeletingId(null);
-      // Optionally refresh the user list to reflect changes
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
+      // refresh
       fetchUsers();
     } catch (error) {
-      console.error("Failed to archive user:", error);
-      toast.error("Failed to archive user. Please try again.", {
+      console.error("Failed to archive user(s):", error);
+      toast.error("Failed to archive user(s). Please try again.", {
         id: "archive-user",
       });
       setShowArchiveConfirm(false);
       setDeletingId(null);
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
     }
   };
 
@@ -225,7 +272,8 @@ export default function UsersManagement() {
                           size="sm"
                           className="flex items-center py-4.5"
                         >
-                          <span className="font-medium">Filters</span>
+                          <Filter className="h-4 w-4" />
+                          <span className="font-medium">Filter</span>
                           {selectedStatuses.length + selectedRegions.length >
                             0 && (
                             <span className="inline-flex items-center justify-center rounded-full bg-emerald-700 px-2 py-0.5 text-xs text-white">
@@ -244,7 +292,7 @@ export default function UsersManagement() {
                           <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
                             <input
                               type="checkbox"
-                              className="rounded-sm"
+                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                               checked={selectedStatuses.includes("Active")}
                               onChange={(e) => {
                                 const val = e.target.checked;
@@ -261,7 +309,7 @@ export default function UsersManagement() {
                           <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
                             <input
                               type="checkbox"
-                              className="rounded-sm"
+                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                               checked={selectedStatuses.includes("Inactive")}
                               onChange={(e) => {
                                 const val = e.target.checked;
@@ -284,7 +332,7 @@ export default function UsersManagement() {
                           <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
                             <input
                               type="checkbox"
-                              className="rounded-sm"
+                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                               checked={selectedRegions.includes("Caloocan")}
                               onChange={(e) => {
                                 const val = e.target.checked;
@@ -301,7 +349,7 @@ export default function UsersManagement() {
                           <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
                             <input
                               type="checkbox"
-                              className="rounded-sm"
+                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                               checked={selectedRegions.includes("Manila")}
                               onChange={(e) => {
                                 const val = e.target.checked;
@@ -318,7 +366,7 @@ export default function UsersManagement() {
                           <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
                             <input
                               type="checkbox"
-                              className="rounded-sm"
+                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                               checked={selectedRegions.includes("Quezon City")}
                               onChange={(e) => {
                                 const val = e.target.checked;
@@ -386,102 +434,90 @@ export default function UsersManagement() {
               </div>
             </div>
 
-            {/* Users Table */}
+            {/* Users Table (TanStack DataTable) - we pass paginated users and hide internal pagination */}
             <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table className="table-fixed">
-                  <TableHeader>
-                    <tr>
-                      {[
-                        "Profile",
-                        "Name",
-                        "Username",
-                        "Email",
-                        "Phone",
-                        "Region",
-                        "Role",
-                        "Actions",
-                      ].map((h) => (
-                        <TableHead key={h}>{h}</TableHead>
-                      ))}
-                    </tr>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedUsers.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="px-6 py-12 text-center text-muted-foreground"
-                        >
-                          There is no user yet
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="px-6 py-4">
-                            <UserAvatar initials={user.avatar || "U"} />
-                          </TableCell>
-                          <TableCell>{user.name || "N/A"}</TableCell>
-                          <TableCell className="whitespace-nowrap text-sm truncate">
-                            {user.username || "N/A"}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap truncate">
-                            {user.email || "N/A"}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap truncate">
-                            {user.phone || "N/A"}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {user.region || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {user.role?.toUpperCase() === "USER"
-                              ? "Buyer"
-                              : user.role?.toUpperCase() === "ADMIN"
-                              ? "Seller"
-                              : user.role || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            <ActionsMenu
-                              id={user.id}
-                              // navigate to the new detail page for this user
-                              // URL shows username for better UX, but ID is passed via query
-                              viewUrl={`/mash-market/user/${
-                                user.username || user.id
-                              }?id=${user.id}`}
-                              onArchive={() => {
-                                setDeletingId(user.id);
-                                setShowArchiveConfirm(true);
-                              }}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="p-4">
+                <DataTable
+                  data={paginatedUsers}
+                  initialPageSize={itemsPerPage}
+                  hidePagination
+                  mode="users"
+                  onArchive={(ids) => {
+                    // open confirmation for bulk archive
+                    const idsArr = ids && ids.length ? ids : null;
+                    setBulkArchiveIds(idsArr);
+                    if (idsArr) {
+                      const names = idsArr.map((id) => filteredUsers.find((u) => u.id === id)?.name || id);
+                      setBulkArchiveNames(names.length ? names : null);
+                    } else {
+                      setBulkArchiveNames(null);
+                    }
+                    setShowArchiveConfirm(true);
+                  }}
+                  onBulkChangeRole={(ids, newRole) => {
+                    // TODO: Implement bulk role change
+                    console.log('Bulk change role:', ids, newRole);
+                    toast.success(`Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`);
+                  }}
+                  onBulkChangeStatus={(ids, newStatus) => {
+                    // TODO: Implement bulk status change
+                    console.log('Bulk change status:', ids, newStatus);
+                    toast.success(`Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`);
+                  }}
+                />
               </div>
             </Card>
 
-            {/* Pagination */}
-            <PaginationWrapper
-              totalItems={filteredUsers.length}
-              itemsPerPage={ITEMS_PER_PAGE}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              label="users"
-            />
+            {/* Rows per page selector + existing pagination */}
+            <div className="flex items-center justify-between">
+              <div>
+                {filteredUsers.length > DEFAULT_ITEMS_PER_PAGE && (
+                  <div className="flex items-center">
+                    <label className="text-sm text-muted-foreground mr-2">Rows per page:</label>
+                    <select
+                      className="rounded-md border px-2 py-1 text-sm transition-shadow duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      {rowsPerPageOptions.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <PaginationWrapper
+                totalItems={filteredUsers.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                label="users"
+              />
+            </div>
 
             {/* Archive Confirmation */}
             {showArchiveConfirm && (
               <ConfirmationPopover
                 action="Archive"
-                entity="User"
+                entity={
+                  bulkArchiveNames && bulkArchiveNames.length > 1
+                    ? `${bulkArchiveNames.length} Users (${bulkArchiveNames.join(", ")})`
+                    : bulkArchiveNames && bulkArchiveNames.length === 1
+                    ? `User (${bulkArchiveNames[0]})`
+                    : "User"
+                }
                 onConfirm={handleArchive}
                 onCancel={() => {
                   setShowArchiveConfirm(false);
                   setDeletingId(null);
+                  setBulkArchiveIds(null);
+                  setBulkArchiveNames(null);
                 }}
               />
             )}
