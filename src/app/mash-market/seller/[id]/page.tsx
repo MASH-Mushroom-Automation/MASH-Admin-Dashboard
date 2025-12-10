@@ -346,85 +346,6 @@ export default function SellerDetailPage({
         </div>
 
         <Card className="p-6 space-y-6">
-          {/* Application Status */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Application Status</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Current Role
-                </label>
-                <Input
-                  value={selectedApplication.currentRole}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Requested Role
-                </label>
-                <Input
-                  value={selectedApplication.requestedRole}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Status
-                </label>
-                <Input
-                  value={selectedApplication.status}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Priority
-                </label>
-                <Input
-                  value={selectedApplication.priority.toString()}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Queued At
-                </label>
-                <Input
-                  value={new Date(
-                    selectedApplication.queuedAt
-                  ).toLocaleString()}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              {selectedApplication.processedAt && (
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground">
-                    Processed At
-                  </label>
-                  <Input
-                    value={new Date(
-                      selectedApplication.processedAt
-                    ).toLocaleString()}
-                    disabled
-                    readOnly
-                    className="mt-1"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* User Information */}
           <div>
             <h3 className="text-lg font-medium mb-3">User Information</h3>
@@ -508,102 +429,129 @@ export default function SellerDetailPage({
                 <label className="block text-sm font-medium text-muted-foreground">
                   Additional Information
                 </label>
-                <textarea
+                <Input
                   value={
                     selectedApplication.businessInfo.additionalInfo || "N/A"
                   }
                   disabled
                   readOnly
-                  className="mt-1 w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1"
                 />
               </div>
             </div>
           </div>
 
           {/* Documents */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Submitted Documents</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="border rounded-lg p-4">
+            <h3 className="text-lg font-medium mb-3">Business Documents</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Documents required for verification.
+            </p>
+
+            <div className="grid grid-cols-3 gap-4">
+              {/* Government ID */}
               {selectedApplication.documents.governmentId && (
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Government ID
-                  </label>
-                  <a
-                    href={selectedApplication.documents.governmentId}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View Document
-                  </a>
-                  <img
-                    src={selectedApplication.documents.governmentId}
-                    alt="Government ID"
-                    className="mt-2 max-w-full h-auto rounded border"
-                  />
+                <div className="border rounded-md p-3 flex flex-col items-start">
+                  <div className="text-sm font-medium">
+                    Valid ID of Business Owner
+                  </div>
+                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                    {selectedApplication.documents.governmentId.match(
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                    ) ? (
+                      <img
+                        src={selectedApplication.documents.governmentId}
+                        alt="Government ID"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-500">📄 Document</span>
+                    )}
+                  </div>
+                  <div className="mt-3 w-full">
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open(
+                          selectedApplication.documents.governmentId,
+                          "_blank"
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
                 </div>
               )}
+
+              {/* BIR Certificate */}
               {selectedApplication.documents.birCertificate && (
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    BIR Certificate
-                  </label>
-                  <a
-                    href={selectedApplication.documents.birCertificate}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View Document
-                  </a>
-                  <img
-                    src={selectedApplication.documents.birCertificate}
-                    alt="BIR Certificate"
-                    className="mt-2 max-w-full h-auto rounded border"
-                  />
+                <div className="border rounded-md p-3 flex flex-col items-start">
+                  <div className="text-sm font-medium">BIR Certificate</div>
+                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                    {selectedApplication.documents.birCertificate.match(
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                    ) ? (
+                      <img
+                        src={selectedApplication.documents.birCertificate}
+                        alt="BIR Certificate"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-500">📄 PDF</span>
+                    )}
+                  </div>
+                  <div className="mt-3 w-full">
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open(
+                          selectedApplication.documents.birCertificate,
+                          "_blank"
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
                 </div>
               )}
+
+              {/* Business Certificate */}
               {selectedApplication.documents.businessCertificate && (
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                <div className="border rounded-md p-3 flex flex-col items-start">
+                  <div className="text-sm font-medium">
                     Business Certificate
-                  </label>
-                  <a
-                    href={selectedApplication.documents.businessCertificate}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View Document
-                  </a>
-                  <img
-                    src={selectedApplication.documents.businessCertificate}
-                    alt="Business Certificate"
-                    className="mt-2 max-w-full h-auto rounded border"
-                  />
-                </div>
-              )}
-              {selectedApplication.documents.bankAccountDocumentation && (
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Bank Account Documentation
-                  </label>
-                  <a
-                    href={
-                      selectedApplication.documents.bankAccountDocumentation
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View Document
-                  </a>
-                  <img
-                    src={selectedApplication.documents.bankAccountDocumentation}
-                    alt="Bank Account Documentation"
-                    className="mt-2 max-w-full h-auto rounded border"
-                  />
+                  </div>
+                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                    {selectedApplication.documents.businessCertificate.match(
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                    ) ? (
+                      <img
+                        src={selectedApplication.documents.businessCertificate}
+                        alt="Business Certificate"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-500">📄 PDF</span>
+                    )}
+                  </div>
+                  <div className="mt-3 w-full">
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open(
+                          selectedApplication.documents.businessCertificate,
+                          "_blank"
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
