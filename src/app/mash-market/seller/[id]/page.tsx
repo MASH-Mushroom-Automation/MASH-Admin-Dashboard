@@ -142,19 +142,20 @@ export default function SellerDetailPage({
       fetchApplicationById(requestId);
     } else if (!requestId) {
       console.warn("[SellerDetailPage] No requestId provided in query params");
+    } else {
+      console.log(
+        "[SellerDetailPage] Using cached application data:",
+        selectedApplication?.requestId
+      );
     }
 
     // Cleanup: clear selected application when leaving page
     return () => {
       clearSelectedApplication();
     };
-  }, [
-    requestId,
-    username,
-    selectedApplication,
-    fetchApplicationById,
-    clearSelectedApplication,
-  ]);
+    // Only depend on requestId and username, not selectedApplication to avoid refetch loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestId, username]);
 
   // Loading state
   if (storeLoading.selectedApplication) {
@@ -225,8 +226,27 @@ export default function SellerDetailPage({
     );
   }
 
-  // Seller application not found state
-  if (!selectedApplication && !storeLoading.selectedApplication) {
+  // Wait for selectedApplication to be available (either from cache or fetch)
+  if (!selectedApplication) {
+    // If no error and not loading, but still no data, it means we're waiting for the effect to run
+    if (!storeLoading.selectedApplication && !storeError.selectedApplication) {
+      return (
+        <div className="min-h-screen bg-background p-6">
+          <div className="mx-auto max-w-4xl">
+            <Card className="p-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="ml-3 text-muted-foreground">
+                  Loading seller details...
+                </span>
+              </div>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Only show "not found" if we've tried to load and there's no loading happening
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
