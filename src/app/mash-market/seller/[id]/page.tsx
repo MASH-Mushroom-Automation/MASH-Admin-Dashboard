@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
-import { useUserManagementStore } from "@/store/userManagementStore";
+import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
 
 interface Seller {
   id: string;
@@ -109,41 +109,65 @@ export default function SellerDetailPage({
 }) {
   const { id: username } = use(params); // This is the username from URL path
   const searchParams = useSearchParams();
-  const sellerId = searchParams.get("id"); // This is the actual ID from query param
+  const requestId = searchParams.get("requestId"); // This is the requestId from query param
   const router = useRouter();
 
   const {
-    selectedUser,
+    selectedApplication,
     loading: storeLoading,
     error: storeError,
-    fetchUserById,
-    clearSelectedUser,
-  } = useUserManagementStore();
+    fetchApplicationById,
+    approveApplication,
+    rejectApplication,
+    clearSelectedApplication,
+  } = useSellerApplicationStore();
+
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
-  // Fetch seller (user with ADMIN role) data when component mounts using the actual ID
+  // Fetch seller application data if not already loaded
   useEffect(() => {
-    if (sellerId) {
-      console.log(
-        "[SellerDetailPage] Fetching seller with ID:",
-        sellerId,
-        "| Username in URL:",
-        username
-      );
-      fetchUserById(sellerId);
-    } else {
-      console.warn("[SellerDetailPage] No seller ID provided in query params");
+    if (!requestId) {
+      console.warn("[SellerDetailPage] No requestId provided in query params");
+      return;
     }
 
-    // Cleanup: clear selected user when leaving page
+    // If we already have the correct application, don't refetch
+    if (selectedApplication?.requestId === requestId) {
+      console.log(
+        "[SellerDetailPage] Using cached application data:",
+        selectedApplication.requestId
+      );
+      return;
+    }
+
+    // Fetch the application
+    console.log(
+      "[SellerDetailPage] Fetching seller application with requestId:",
+      requestId,
+      "| Username in URL:",
+      username
+    );
+    fetchApplicationById(requestId);
+  }, [
+    requestId,
+    username,
+    selectedApplication?.requestId,
+    fetchApplicationById,
+  ]);
+
+  // Cleanup on unmount only
+  useEffect(() => {
     return () => {
-      clearSelectedUser();
+      console.log(
+        "[SellerDetailPage] Clearing selected application on unmount"
+      );
+      clearSelectedApplication();
     };
-  }, [sellerId, username, fetchUserById, clearSelectedUser]);
+  }, [clearSelectedApplication]);
 
   // Loading state
-  if (storeLoading.selectedUser) {
+  if (storeLoading.selectedApplication) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -160,8 +184,8 @@ export default function SellerDetailPage({
     );
   }
 
-  // No ID provided in query params
-  if (!sellerId) {
+  // No requestId provided in query params
+  if (!requestId) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -185,17 +209,19 @@ export default function SellerDetailPage({
   }
 
   // Error state
-  if (storeError.selectedUser && !storeLoading.selectedUser) {
+  if (storeError.selectedApplication && !storeLoading.selectedApplication) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium text-destructive">Error</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              {storeError.selectedUser}
+              {storeError.selectedApplication}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => fetchUserById(sellerId)}>Retry</Button>
+              <Button onClick={() => fetchApplicationById(requestId)}>
+                Retry
+              </Button>
               <Button
                 variant="ghost"
                 onClick={() => router.push("/mash-market/seller")}
@@ -209,8 +235,27 @@ export default function SellerDetailPage({
     );
   }
 
-  // Seller not found state
-  if (!selectedUser && !storeLoading.selectedUser) {
+  // Wait for selectedApplication to be available (either from cache or fetch)
+  if (!selectedApplication) {
+    // If no error and not loading, but still no data, it means we're waiting for the effect to run
+    if (!storeLoading.selectedApplication && !storeError.selectedApplication) {
+      return (
+        <div className="min-h-screen bg-background p-6">
+          <div className="mx-auto max-w-4xl">
+            <Card className="p-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="ml-3 text-muted-foreground">
+                  Loading seller details...
+                </span>
+              </div>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Only show "not found" if we've tried to load and there's no loading happening
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -230,61 +275,58 @@ export default function SellerDetailPage({
     );
   }
 
-  // Map user data to seller format
+  // Map application data to seller format
   const seller: Seller = {
-    id: selectedUser!.id,
-    name: selectedUser!.name,
-    username: selectedUser!.username,
-    email: selectedUser!.email || "",
-    phone: selectedUser!.phone,
+    id: selectedApplication!.requestId,
+    name: `${selectedApplication!.user.firstName} ${
+      selectedApplication!.user.lastName
+    }`,
+    username: selectedApplication!.user.username,
+    email: selectedApplication!.user.email,
+    phone: undefined, // Not in application response
     status:
-      (selectedUser!.status?.toLowerCase() as
+      (selectedApplication!.status?.toLowerCase() as
         | "pending"
         | "approved"
         | "rejected") || "pending",
-    city: selectedUser!.region,
-    region: selectedUser!.region,
-    // Additional fields would come from backend API
-    storeName: selectedUser!.username,
-    businessName: selectedUser!.name,
+    city: undefined,
+    region: undefined,
+    completeAddress: selectedApplication!.businessInfo.businessAddress,
+    // Map business info from application
+    storeName: selectedApplication!.businessInfo.businessName,
+    businessName: selectedApplication!.businessInfo.businessName,
     businessType: "company",
-    completeAddress: selectedUser!.region,
   };
 
   const handleAccept = async () => {
+    console.log("[SellerDetailPage] Approving seller:", seller.id);
+
     setLoading(true);
-    // Placeholder: call API to accept seller
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    toast.success("Seller accepted");
-    router.push("/mash-market/seller");
+    try {
+      await approveApplication(seller.id);
+      toast.success("Seller application approved successfully");
+      router.push("/mash-market/seller");
+    } catch (err) {
+      console.error("Failed to approve seller:", err);
+      toast.error("Failed to approve seller application");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // reject using modal reason; updates persisted sellers in localStorage so list shows reason
+  // Reject using modal reason
   const handleReject = async (reason?: string) => {
     setLoading(true);
     try {
-      // read persisted sellers
-      const raw = localStorage.getItem("mash_sellers");
-      type MarketSeller = Seller & { rejectReason?: string };
-      const parsed = raw
-        ? (JSON.parse(raw) as MarketSeller[])
-        : (mockSellers as MarketSeller[]);
-      const list = parsed.map((s) =>
-        s.id === seller.id
-          ? { ...s, status: "rejected", rejectReason: reason }
-          : s
-      );
-      localStorage.setItem("mash_sellers", JSON.stringify(list));
-      await new Promise((r) => setTimeout(r, 300));
-      toast.error(`Seller rejected${reason ? ` — ${reason}` : ""}`);
+      await rejectApplication(seller.id, reason);
+      toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
+      router.push("/mash-market/seller");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to reject seller");
+      toast.error("Failed to reject seller application");
     } finally {
       setLoading(false);
       setRejectModalOpen(false);
-      router.push("/mash-market/seller");
     }
   };
 
@@ -307,38 +349,93 @@ export default function SellerDetailPage({
         </div>
 
         <Card className="p-6 space-y-6">
+          {/* User Information */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">User Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Full Name
+                </label>
+                <Input
+                  value={`${selectedApplication.user.firstName} ${selectedApplication.user.lastName}`}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Username
+                </label>
+                <Input
+                  value={selectedApplication.user.username}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Email Address
+                </label>
+                <Input
+                  value={selectedApplication.user.email}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Phone Number
+                </label>
+                <Input
+                  value={selectedApplication.user.phoneNumber || "N/A"}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Business Information */}
           <div>
             <h3 className="text-lg font-medium mb-3">Business Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
                   Business Name
                 </label>
                 <Input
-                  value={seller.businessName ?? ""}
+                  value={selectedApplication.businessInfo.businessName || "N/A"}
                   disabled
                   readOnly
                   className="mt-1"
                 />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Business Type
+                  Business Address
                 </label>
                 <Input
-                  value={seller.businessType ?? ""}
+                  value={
+                    selectedApplication.businessInfo.businessAddress || "N/A"
+                  }
                   disabled
                   readOnly
                   className="mt-1"
                 />
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
-                  TAX ID Number
+                  Additional Information
                 </label>
                 <Input
-                  value={seller.taxIdNumber ?? ""}
+                  value={
+                    selectedApplication.businessInfo.additionalInfo || "N/A"
+                  }
                   disabled
                   readOnly
                   className="mt-1"
@@ -347,158 +444,136 @@ export default function SellerDetailPage({
             </div>
           </div>
 
-          {/* Contact Details */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Contact Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Full name
-                </label>
-                <Input
-                  value={seller.name ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Email address
-                </label>
-                <Input
-                  value={seller.email ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Phone number
-                </label>
-                <Input
-                  value={seller.phone ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  City
-                </label>
-                <Input
-                  value={seller.city ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Region
-                </label>
-                <Input
-                  value={seller.region ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Complete address
-                </label>
-                <Input
-                  value={seller.completeAddress ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
+          {/* Documents */}
+          <div className="border rounded-lg p-4">
+            <h3 className="text-lg font-medium mb-3">Business Documents</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Documents required for verification.
+            </p>
+
+            <div className="grid grid-cols-3 gap-4">
+              {/* Government ID */}
+              {selectedApplication.documents.governmentId && (
+                <div className="border rounded-md p-3 flex flex-col items-start">
+                  <div className="text-sm font-medium">
+                    Valid ID of Business Owner
+                  </div>
+                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                    {selectedApplication.documents.governmentId.match(
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                    ) ? (
+                      <img
+                        src={selectedApplication.documents.governmentId}
+                        alt="Government ID"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-gray-500">📄 Document</span>';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-gray-500">📄 Document</span>
+                    )}
+                  </div>
+                  <div className="mt-3 w-full">
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open(
+                          selectedApplication.documents.governmentId,
+                          "_blank"
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* BIR Certificate */}
+              {selectedApplication.documents.birCertificate && (
+                <div className="border rounded-md p-3 flex flex-col items-start">
+                  <div className="text-sm font-medium">BIR Certificate</div>
+                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                    {selectedApplication.documents.birCertificate.match(
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                    ) ? (
+                      <img
+                        src={selectedApplication.documents.birCertificate}
+                        alt="BIR Certificate"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-gray-500">📄 PDF</span>';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-gray-500">📄 PDF</span>
+                    )}
+                  </div>
+                  <div className="mt-3 w-full">
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open(
+                          selectedApplication.documents.birCertificate,
+                          "_blank"
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Business Certificate */}
+              {selectedApplication.documents.businessCertificate && (
+                <div className="border rounded-md p-3 flex flex-col items-start">
+                  <div className="text-sm font-medium">
+                    Business Certificate
+                  </div>
+                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                    {selectedApplication.documents.businessCertificate.match(
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                    ) ? (
+                      <img
+                        src={selectedApplication.documents.businessCertificate}
+                        alt="Business Certificate"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-gray-500">📄 PDF</span>';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-gray-500">📄 PDF</span>
+                    )}
+                  </div>
+                  <div className="mt-3 w-full">
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open(
+                          selectedApplication.documents.businessCertificate,
+                          "_blank"
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Product information */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Product information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Types of mushroom
-                </label>
-                <Input
-                  value={(seller.typesOfMushroom || []).join(", ")}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Monthly production capacity
-                </label>
-                <Input
-                  value={seller.monthlyProductionCapacity ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Certifications
-                </label>
-                <Input
-                  value={(seller.certifications || []).join(", ")}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Banking details */}
-          {/* <div>
-            <h3 className="text-lg font-medium mb-3">Banking details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Bank name
-                </label>
-                <Input
-                  value={seller.bankName ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Account number
-                </label>
-                <Input
-                  value={seller.accountNumber ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground">
-                  Account holder name
-                </label>
-                <Input
-                  value={seller.accountHolderName ?? ""}
-                  disabled
-                  readOnly
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div> */}
 
           {seller.status === "pending" && (
             <div className="mt-6 flex gap-3">

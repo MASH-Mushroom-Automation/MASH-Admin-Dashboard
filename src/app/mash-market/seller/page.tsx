@@ -14,8 +14,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
+import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
 
-// Local Seller type for mock data (matches SellerTable component expectations)
+// Local Seller type (matches SellerTable component expectations)
 interface Seller {
   id: string;
   name: string;
@@ -32,33 +33,6 @@ interface Seller {
 
 export type TabType = "pending" | "rejected";
 
-// Mock sellers data (will be replaced with real API later)
-const mockSellers: Seller[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    storeName: "Fresh Mushrooms Co.",
-    email: "john@freshmushrooms.com",
-    status: "pending",
-    username: "johndoe",
-    phone: "+63 912 345 6789",
-    businessName: "Fresh Mushrooms Co.",
-    businessType: "Retail",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    storeName: "Organic Fungi Farm",
-    email: "jane@organicfungi.com",
-    status: "rejected",
-    rejectReason: "Incomplete documentation",
-    username: "janesmith",
-    phone: "+63 923 456 7890",
-    businessName: "Organic Fungi Farm",
-    businessType: "Wholesale",
-  },
-];
-
 export default function SellerContent() {
   const [activeTab, setActiveTab] = useState<TabType>("pending");
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,17 +41,61 @@ export default function SellerContent() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
-  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(null);
+  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(
+    null
+  );
+  const [bulkRejectIds, setBulkRejectIds] = useState<string[] | null>(null);
+  const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string;
     action: "reject" | "Archive" | "accept";
   } | null>(null);
   const router = useRouter();
 
-  // Use mock data for now
-  const [sellers] = useState<Seller[]>(mockSellers);
-  const loading = false;
-  const error = null;
+  // Use seller application store
+  const {
+    allApplications,
+    fetchAllApplications,
+    fetchApplicationById,
+    approveApplication,
+    rejectApplication,
+    bulkApproveApplications,
+    bulkRejectApplications,
+    loading,
+    error,
+  } = useSellerApplicationStore();
+
+  // Fetch applications on mount and when tab changes
+  useEffect(() => {
+    const status = activeTab === "pending" ? "PENDING" : "FAILED";
+    fetchAllApplications({ status }).catch((err) => {
+      console.error("Failed to fetch seller applications:", err);
+      toast.error("Failed to load seller applications");
+    });
+  }, [activeTab, fetchAllApplications]);
+
+  // Transform applications to Seller format
+  const sellers: Seller[] =
+    allApplications?.map((app) => ({
+      id: app.requestId,
+      name: app.sellerName,
+      storeName: app.storeName || "N/A",
+      email: app.email,
+      status: app.isApproved
+        ? "approved"
+        : activeTab === "rejected"
+        ? "rejected"
+        : "pending",
+      rejectReason: undefined, // Will be fetched from detail view if needed
+      address: app.address,
+      username: app.user.username,
+      phone: undefined, // Not in current API response
+      businessName: app.storeName,
+      businessType: undefined, // Not in current API response
+    })) || [];
+
+  const isLoading = loading.allApplications;
+  const fetchError = error.allApplications;
 
   // Filter sellers by active tab
   const tabFilteredSellers = sellers.filter((seller) => {
@@ -123,27 +141,50 @@ export default function SellerContent() {
   };
   const rowsPerPageOptions = getRowsPerPageOptions(filteredSellers.length);
 
-  const handleView = (seller: Seller) => {
-    // Navigate to seller detail page
-    // URL shows username for better UX, but ID is passed via query
-    router.push(
-      `/mash-market/seller/${seller.username || seller.id}?id=${seller.id}`
-    );
+  const handleView = async (seller: Seller) => {
+    try {
+      // Fetch detailed application data before navigating
+      // seller.id is the requestId from the application
+      await fetchApplicationById(seller.id);
+      // Navigate to seller detail page with requestId
+      // URL shows username for better UX, but requestId is passed via query
+      router.push(
+        `/mash-market/seller/${seller.username || seller.id}?requestId=${
+          seller.id
+        }`
+      );
+    } catch (err) {
+      console.error("Failed to fetch seller details:", err);
+      toast.error("Failed to load seller details");
+    }
   };
 
-  const handleAccept = (sellerId: string) => {
-    // TODO: Implement API call to approve seller
-    void sellerId; // Will be used in API call
-    toast.success("Seller approved (API integration pending)");
+  const handleAccept = async (sellerId: string) => {
+    console.log("[SellerPage] Approving seller:", sellerId);
+
+    try {
+      await approveApplication(sellerId);
+      toast.success("Seller application approved successfully");
+      // Refresh the list
+      const status = activeTab === "pending" ? "PENDING" : "FAILED";
+      await fetchAllApplications({ status });
+    } catch (err) {
+      console.error("Failed to approve seller:", err);
+      toast.error("Failed to approve seller application");
+    }
   };
 
-  const handleReject = (sellerId: string, reason?: string) => {
-    // TODO: Implement API call to reject seller
-    void sellerId; // Will be used in API call
-    toast.error(
-      `Seller rejected${reason ? ` — ${reason}` : ""} (API integration pending)`
-    );
-    setActiveTab("rejected");
+  const handleReject = async (sellerId: string, reason?: string) => {
+    try {
+      await rejectApplication(sellerId, reason);
+      toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
+      setActiveTab("rejected");
+      // Refresh the list
+      await fetchAllApplications({ status: "FAILED" });
+    } catch (err) {
+      console.error("Failed to reject seller:", err);
+      toast.error("Failed to reject seller application");
+    }
   };
 
   const handleArchive = (id: string) => {
@@ -153,7 +194,12 @@ export default function SellerContent() {
   };
 
   const handleBulkArchive = async () => {
-    const idsToArchive = bulkArchiveIds && bulkArchiveIds.length ? bulkArchiveIds : deletingId ? [deletingId] : [];
+    const idsToArchive =
+      bulkArchiveIds && bulkArchiveIds.length
+        ? bulkArchiveIds
+        : deletingId
+        ? [deletingId]
+        : [];
     if (idsToArchive.length === 0) {
       toast.error("No seller selected for archiving");
       setShowArchiveConfirm(false);
@@ -163,18 +209,26 @@ export default function SellerContent() {
     try {
       toast.loading("Archiving seller(s)...", { id: "archive-seller" });
       // Run all in parallel but keep frontend-only behavior (no backend changes)
-      const results = await Promise.allSettled(idsToArchive.map(async (id) => {
-        // For now, call the single-archive handler for each id but avoid navigating for each.
-        // We will simulate by waiting a tick and returning success.
-        await new Promise((res) => setTimeout(res, 50));
-        return { id, status: 'ok' };
-      }));
+      const results = await Promise.allSettled(
+        idsToArchive.map(async (id) => {
+          // For now, call the single-archive handler for each id but avoid navigating for each.
+          // We will simulate by waiting a tick and returning success.
+          await new Promise((res) => setTimeout(res, 50));
+          return { id, status: "ok" };
+        })
+      );
 
       const successes = results.filter((r) => r.status === "fulfilled").length;
       const failures = results.filter((r) => r.status === "rejected").length;
 
-      if (successes > 0) toast.success(`Archived ${successes} seller(s)`, { id: "archive-seller" });
-      if (failures > 0) toast.error(`${failures} seller(s) failed to archive`, { id: "archive-seller" });
+      if (successes > 0)
+        toast.success(`Archived ${successes} seller(s)`, {
+          id: "archive-seller",
+        });
+      if (failures > 0)
+        toast.error(`${failures} seller(s) failed to archive`, {
+          id: "archive-seller",
+        });
 
       setShowArchiveConfirm(false);
       setDeletingId(null);
@@ -257,7 +311,9 @@ export default function SellerContent() {
                 {row.original.name}
               </button>
             ) : (
-              <span className="truncate" title={row.original.name}>{row.original.name}</span>
+              <span className="truncate" title={row.original.name}>
+                {row.original.name}
+              </span>
             )}
           </div>
         ),
@@ -266,7 +322,10 @@ export default function SellerContent() {
         accessorKey: "storeName",
         header: "Store Name",
         cell: ({ getValue }: any) => (
-          <div className="max-w-[220px] truncate" title={String(getValue() ?? "—")}>
+          <div
+            className="max-w-[220px] truncate"
+            title={String(getValue() ?? "—")}
+          >
             {getValue() ?? "—"}
           </div>
         ),
@@ -275,7 +334,10 @@ export default function SellerContent() {
         accessorKey: "email",
         header: "Email",
         cell: ({ getValue }: any) => (
-          <div className="max-w-[220px] truncate" title={String(getValue() ?? "—")}>
+          <div
+            className="max-w-[220px] truncate"
+            title={String(getValue() ?? "—")}
+          >
             {getValue() ?? "—"}
           </div>
         ),
@@ -284,7 +346,10 @@ export default function SellerContent() {
         accessorKey: "address",
         header: "Address",
         cell: ({ getValue }: any) => (
-          <div className="max-w-[220px] truncate" title={String(getValue() ?? "—")}>
+          <div
+            className="max-w-[220px] truncate"
+            title={String(getValue() ?? "—")}
+          >
             {getValue() ?? "—"}
           </div>
         ),
@@ -294,7 +359,10 @@ export default function SellerContent() {
             accessorKey: "rejectReason",
             header: "Reason",
             cell: ({ getValue }: any) => (
-              <div className="max-w-[300px] truncate" title={String(getValue() ?? "—")}>
+              <div
+                className="max-w-[300px] truncate"
+                title={String(getValue() ?? "—")}
+              >
                 {getValue() ?? "—"}
               </div>
             ),
@@ -303,8 +371,15 @@ export default function SellerContent() {
             accessorKey: "status",
             header: "Status",
             cell: ({ getValue }: any) => (
-              <div className="max-w-[160px] truncate" title={String(getValue() ?? "")}>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(getValue() ?? "")}`}>
+              <div
+                className="max-w-[160px] truncate"
+                title={String(getValue() ?? "")}
+              >
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
+                    getValue() ?? ""
+                  )}`}
+                >
                   {getValue() === "pending" ? "For Approval" : getValue()}
                 </span>
               </div>
@@ -319,9 +394,24 @@ export default function SellerContent() {
               seller={row.original}
               activeTab={activeTab}
               mode={activeTab === "pending" ? "pending" : "default"}
-              onReject={() => setConfirmAction({ sellerId: row.original.id, action: "reject" })}
-              onArchive={() => setConfirmAction({ sellerId: row.original.id, action: "Archive" })}
-              onAccept={() => setConfirmAction({ sellerId: row.original.id, action: "accept" })}
+              onReject={() =>
+                setConfirmAction({
+                  sellerId: row.original.id,
+                  action: "reject",
+                })
+              }
+              onArchive={() =>
+                setConfirmAction({
+                  sellerId: row.original.id,
+                  action: "Archive",
+                })
+              }
+              onAccept={() =>
+                setConfirmAction({
+                  sellerId: row.original.id,
+                  action: "accept",
+                })
+              }
               onView={() => handleView(row.original)}
             />
           </div>
@@ -353,7 +443,7 @@ export default function SellerContent() {
       </div>
 
       {/* Loading State */}
-      {loading && (
+      {isLoading && (
         <Card className="p-8">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -365,17 +455,24 @@ export default function SellerContent() {
       )}
 
       {/* Error State */}
-      {error && !loading && (
+      {fetchError && !isLoading && (
         <Card className="p-8">
           <div className="text-center">
-            <p className="text-destructive mb-4">Error: {error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+            <p className="text-destructive mb-4">Error: {fetchError}</p>
+            <Button
+              onClick={() => {
+                const status = activeTab === "pending" ? "PENDING" : "FAILED";
+                fetchAllApplications({ status }).catch(console.error);
+              }}
+            >
+              Retry
+            </Button>
           </div>
         </Card>
       )}
 
       {/* Main Content */}
-      {!loading && !error && (
+      {!isLoading && !fetchError && (
         <>
           {/* Tabs */}
           <Tabs
@@ -418,12 +515,12 @@ export default function SellerContent() {
           <Card className="overflow-hidden">
             <div className="p-4">
               {/** Build columns for DataTable to match SellerTable layout */}
-              {
-                /* eslint-disable react-hooks/rules-of-hooks */
-              }
+              {/* eslint-disable react-hooks/rules-of-hooks */}
               {/** Columns memoized for stability */}
               <DataTable
-                data={paginatedSellers.filter((seller) => seller.status === activeTab)}
+                data={paginatedSellers.filter(
+                  (seller) => seller.status === activeTab
+                )}
                 initialPageSize={itemsPerPage}
                 hidePagination
                 columns={columns}
@@ -432,22 +529,73 @@ export default function SellerContent() {
                   const idsArr = ids && ids.length ? ids : null;
                   setBulkArchiveIds(idsArr);
                   if (idsArr) {
-                    const names = idsArr.map((id) => filteredSellers.find((s) => s.id === id)?.name || id);
+                    const names = idsArr.map(
+                      (id) =>
+                        filteredSellers.find((s) => s.id === id)?.name || id
+                    );
                     setBulkArchiveNames(names.length ? names : null);
                   } else {
                     setBulkArchiveNames(null);
                   }
                   setShowArchiveConfirm(true);
                 }}
-                onBulkAccept={(ids: string[]) => {
-                  // Bulk accept selected sellers
-                  ids.forEach(id => handleAccept(id));
-                  toast.success(`Accepted ${ids.length} seller(s)`);
+                onBulkAccept={async (ids: string[]) => {
+                  if (!ids || ids.length === 0) {
+                    toast.error("No sellers selected");
+                    return;
+                  }
+
+                  try {
+                    toast.loading(`Approving ${ids.length} seller(s)...`, {
+                      id: "bulk-approve",
+                    });
+
+                    const result = await bulkApproveApplications(
+                      ids,
+                      "Bulk approval"
+                    );
+
+                    console.log("Bulk approve result:", result);
+
+                    // Explicitly dismiss loading toast
+                    toast.dismiss("bulk-approve");
+
+                    // Wait a tiny bit for dismiss to process
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+
+                    if (result.approved > 0) {
+                      toast.success(
+                        `Successfully approved ${result.approved} seller(s)${
+                          result.failed > 0 ? `, ${result.failed} failed` : ""
+                        }`,
+                        { duration: 4000 }
+                      );
+                    } else if (result.failed > 0) {
+                      toast.error(
+                        `Failed to approve ${result.failed} seller(s)`
+                      );
+                    }
+
+                    // Refresh the list
+                    const status =
+                      activeTab === "pending" ? "PENDING" : "FAILED";
+                    await fetchAllApplications({ status });
+                  } catch (err) {
+                    console.error("Bulk approve failed:", err);
+                    toast.error("Failed to approve sellers", {
+                      id: "bulk-approve",
+                    });
+                  }
                 }}
-                onBulkReject={(ids: string[], reason?: string) => {
-                  // For bulk reject, we need to handle rejection with reason
-                  ids.forEach(id => handleReject(id, reason || "Bulk rejection"));
-                  toast.success(`Rejected ${ids.length} seller(s)`);
+                onBulkReject={(ids: string[]) => {
+                  if (!ids || ids.length === 0) {
+                    toast.error("No sellers selected");
+                    return;
+                  }
+
+                  // Open reject modal for bulk rejection
+                  setBulkRejectIds(ids);
+                  setShowBulkRejectModal(true);
                 }}
               />
             </div>
@@ -479,10 +627,71 @@ export default function SellerContent() {
             />
           ) : null}
 
+          {/* Bulk Reject Modal */}
+          {showBulkRejectModal && bulkRejectIds && (
+            <RejectReasonModal
+              open={true}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setShowBulkRejectModal(false);
+                  setBulkRejectIds(null);
+                }
+              }}
+              onConfirm={async (reason) => {
+                try {
+                  toast.loading(
+                    `Rejecting ${bulkRejectIds.length} seller(s)...`,
+                    { id: "bulk-reject" }
+                  );
+
+                  const result = await bulkRejectApplications(
+                    bulkRejectIds,
+                    reason || "Bulk rejection"
+                  );
+
+                  console.log("Bulk reject result:", result);
+
+                  // Explicitly dismiss loading toast
+                  toast.dismiss("bulk-reject");
+
+                  // Wait a tiny bit for dismiss to process
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+
+                  if (result.approved > 0) {
+                    toast.success(
+                      `Successfully rejected ${result.approved} seller(s)${
+                        result.failed > 0 ? `, ${result.failed} failed` : ""
+                      }`,
+                      { duration: 4000 }
+                    );
+                  } else if (result.failed > 0) {
+                    toast.error(`Failed to reject ${result.failed} seller(s)`);
+                  }
+
+                  // Switch to rejected tab and refresh
+                  setActiveTab("rejected");
+                  await fetchAllApplications({ status: "FAILED" });
+                } catch (err) {
+                  console.error("Bulk reject failed:", err);
+                  toast.error("Failed to reject sellers", {
+                    id: "bulk-reject",
+                  });
+                } finally {
+                  setShowBulkRejectModal(false);
+                  setBulkRejectIds(null);
+                }
+              }}
+            />
+          )}
+
           {showArchiveConfirm && (
             <ConfirmationPopover
               action="Archive"
-              entity={bulkArchiveIds && bulkArchiveIds.length > 1 ? "Sellers" : "Seller"}
+              entity={
+                bulkArchiveIds && bulkArchiveIds.length > 1
+                  ? "Sellers"
+                  : "Seller"
+              }
               onConfirm={handleBulkArchive}
               onCancel={() => {
                 setShowArchiveConfirm(false);
