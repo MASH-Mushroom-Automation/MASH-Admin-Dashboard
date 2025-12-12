@@ -70,7 +70,7 @@ export interface SellerApplicationDetail {
     additionalInfo?: string;
     businessAddress?: string;
   };
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: "PENDING" | "APPROVED" | "COMPLETED" | "FAILED" | "PROCESSING" | "EXPIRED";
   queuedAt: string;
   processedAt?: string | null;
   completedAt?: string | null;
@@ -80,7 +80,7 @@ export interface SellerApplicationDetail {
 }
 
 interface FetchAllApplicationsParams {
-  status?: "PENDING" | "APPROVED" | "REJECTED";
+  status?: "PENDING" | "COMPLETED" | "FAILED" | "PROCESSING" | "EXPIRED";
   userId?: string;
 }
 
@@ -731,12 +731,12 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         // Update selected application if it's the one that was rejected
         if (get().selectedApplication?.requestId === requestId) {
           console.log(
-            "[sellerApplicationStore] Updating selected application status to REJECTED"
+            "[sellerApplicationStore] Updating selected application status to FAILED"
           );
           set({
             selectedApplication: {
               ...get().selectedApplication!,
-              status: "REJECTED",
+              status: "FAILED",
               processedAt: new Date().toISOString(),
               adminNotes: reason || null,
             },

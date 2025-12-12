@@ -63,7 +63,7 @@ export default function SellerContent() {
 
   // Fetch applications on mount and when tab changes
   useEffect(() => {
-    const status = activeTab === "pending" ? "PENDING" : "REJECTED";
+    const status = activeTab === "pending" ? "PENDING" : "FAILED";
     fetchAllApplications({ status }).catch((err) => {
       console.error("Failed to fetch seller applications:", err);
       toast.error("Failed to load seller applications");
@@ -162,7 +162,7 @@ export default function SellerContent() {
       await approveApplication(sellerId);
       toast.success("Seller application approved successfully");
       // Refresh the list
-      const status = activeTab === "pending" ? "PENDING" : "REJECTED";
+      const status = activeTab === "pending" ? "PENDING" : "FAILED";
       await fetchAllApplications({ status });
     } catch (err) {
       console.error("Failed to approve seller:", err);
@@ -176,7 +176,7 @@ export default function SellerContent() {
       toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
       setActiveTab("rejected");
       // Refresh the list
-      await fetchAllApplications({ status: "REJECTED" });
+      await fetchAllApplications({ status: "FAILED" });
     } catch (err) {
       console.error("Failed to reject seller:", err);
       toast.error("Failed to reject seller application");
@@ -457,7 +457,7 @@ export default function SellerContent() {
             <p className="text-destructive mb-4">Error: {fetchError}</p>
             <Button
               onClick={() => {
-                const status = activeTab === "pending" ? "PENDING" : "REJECTED";
+                const status = activeTab === "pending" ? "PENDING" : "FAILED";
                 fetchAllApplications({ status }).catch(console.error);
               }}
             >
