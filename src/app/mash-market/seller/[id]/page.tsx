@@ -121,6 +121,7 @@ export default function SellerDetailPage({
     rejectApplication,
     clearSelectedApplication,
   } = useSellerApplicationStore();
+
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
@@ -298,6 +299,8 @@ export default function SellerDetailPage({
   };
 
   const handleAccept = async () => {
+    console.log("[SellerDetailPage] Approving seller:", seller.id);
+
     setLoading(true);
     try {
       await approveApplication(seller.id);

@@ -15,6 +15,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { api } from "@/lib/api";
+import { getCsrfToken } from "@/lib/csrfService";
 
 // Seller application list item interface (from /api/v1/super-admin/seller-applications/pending)
 export interface SellerApplication {
@@ -92,7 +93,7 @@ interface SellerApplicationState {
   fetchPendingApplications: () => Promise<void>;
   fetchAllApplications: (params?: FetchAllApplicationsParams) => Promise<void>;
   fetchApplicationById: (requestId: string) => Promise<void>;
-  approveApplication: (requestId: string) => Promise<void>;
+  approveApplication: (requestId: string, adminNotes?: string) => Promise<void>;
   rejectApplication: (requestId: string, reason?: string) => Promise<void>;
   clearSelectedApplication: () => void;
 }
@@ -548,10 +549,12 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
       }
     },
 
-    approveApplication: async (requestId: string) => {
+    approveApplication: async (requestId: string, adminNotes?: string) => {
       console.log(
         "[sellerApplicationStore] approveApplication called with requestId:",
-        requestId
+        requestId,
+        "adminNotes:",
+        adminNotes
       );
 
       if (!requestId) {
@@ -571,11 +574,31 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
       });
 
       try {
+        // Fetch CSRF token for state-changing operation
+        const csrfToken = await getCsrfToken();
+        console.log(
+          "[sellerApplicationStore] CSRF token fetched:",
+          csrfToken ? "✓" : "✗"
+        );
+
         console.log(
           `[sellerApplicationStore] Approving application via API: PUT v1/super-admin/seller-applications/${requestId}/approve`
         );
+
+        // Backend expects ProcessRoleRequestDto: { adminNotes?: string }
+        // The action (approve/reject) is determined by the endpoint URL
+        const requestBody = adminNotes ? { adminNotes } : {};
+        console.log(
+          "[sellerApplicationStore] Request body:",
+          JSON.stringify(requestBody, null, 2)
+        );
+
         const res = await api.put(
-          `v1/super-admin/seller-applications/${requestId}/approve`
+          `v1/super-admin/seller-applications/${requestId}/approve`,
+          requestBody,
+          {
+            headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
+          }
         );
         console.log("[sellerApplicationStore] Approve API response:", res.data);
 
@@ -612,13 +635,28 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         console.log(
           "[sellerApplicationStore] Application approved successfully"
         );
-      } catch (err) {
+      } catch (err: any) {
         const errorMessage =
-          (err as Error).message || "Failed to approve seller application";
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          (err as Error).message ||
+          "Failed to approve seller application";
+
         console.error("[sellerApplicationStore] approveApplication error:", {
           message: errorMessage,
-          error: err,
+          statusCode: err?.response?.status,
+          responseData: err?.response?.data,
+          requestPayload: { adminId: err?.config?.data },
+          fullError: err,
         });
+
+        // Log the full error details for debugging
+        if (err?.response?.data) {
+          console.error(
+            "[sellerApplicationStore] Backend error details:",
+            JSON.stringify(err.response.data, null, 2)
+          );
+        }
 
         set({
           error: { ...get().error, approveApplication: errorMessage },
@@ -654,14 +692,27 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
       });
 
       try {
+        // Fetch CSRF token for state-changing operation
+        const csrfToken = await getCsrfToken();
+        console.log(
+          "[sellerApplicationStore] CSRF token fetched:",
+          csrfToken ? "✓" : "✗"
+        );
+
         console.log(
           `[sellerApplicationStore] Rejecting application via API: PUT v1/super-admin/seller-applications/${requestId}/reject`
         );
 
-        // Send rejection reason in request body if provided
+        // Backend expects ProcessRoleRequestDto: { adminNotes?: string }
+        const requestBody = reason ? { adminNotes: reason } : {};
+        console.log("[sellerApplicationStore] Request body:", requestBody);
+
         const res = await api.put(
           `v1/super-admin/seller-applications/${requestId}/reject`,
-          reason ? { reason } : {}
+          requestBody,
+          {
+            headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
+          }
         );
         console.log("[sellerApplicationStore] Reject API response:", res.data);
 

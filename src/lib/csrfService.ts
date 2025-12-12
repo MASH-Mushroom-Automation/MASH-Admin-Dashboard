@@ -54,10 +54,8 @@ export async function fetchCsrfToken(): Promise<string | null> {
   }
 
   try {
-    const baseUrl = BACKEND_URL.endsWith("/")
-      ? BACKEND_URL.slice(0, -1)
-      : BACKEND_URL;
-    const url = `${baseUrl}/api/v1/csrf-token`;
+    // Use proxy endpoint instead of direct backend call to avoid CORS
+    const url = `/api/proxy/v1/csrf-token`;
 
     console.log("[CSRF] Fetching token from:", url);
 
@@ -110,10 +108,8 @@ export async function fetchCsrfToken(): Promise<string | null> {
  */
 export async function refreshCsrfToken(): Promise<string | null> {
   try {
-    const baseUrl = BACKEND_URL.endsWith("/")
-      ? BACKEND_URL.slice(0, -1)
-      : BACKEND_URL;
-    const url = `${baseUrl}/api/v1/csrf-token/refresh`;
+    // Use proxy endpoint instead of direct backend call to avoid CORS
+    const url = `/api/proxy/v1/csrf-token/refresh`;
 
     console.log("[CSRF] Refreshing token from:", url);
 

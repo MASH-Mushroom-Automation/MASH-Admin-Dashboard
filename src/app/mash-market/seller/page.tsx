@@ -156,6 +156,8 @@ export default function SellerContent() {
   };
 
   const handleAccept = async (sellerId: string) => {
+    console.log("[SellerPage] Approving seller:", sellerId);
+
     try {
       await approveApplication(sellerId);
       toast.success("Seller application approved successfully");
