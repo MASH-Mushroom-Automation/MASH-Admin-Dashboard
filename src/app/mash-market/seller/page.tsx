@@ -44,6 +44,8 @@ export default function SellerContent() {
   const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(
     null
   );
+  const [bulkRejectIds, setBulkRejectIds] = useState<string[] | null>(null);
+  const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     sellerId: string;
     action: "reject" | "Archive" | "accept";
@@ -57,6 +59,8 @@ export default function SellerContent() {
     fetchApplicationById,
     approveApplication,
     rejectApplication,
+    bulkApproveApplications,
+    bulkRejectApplications,
     loading,
     error,
   } = useSellerApplicationStore();
@@ -535,17 +539,45 @@ export default function SellerContent() {
                   }
                   setShowArchiveConfirm(true);
                 }}
-                onBulkAccept={(ids: string[]) => {
-                  // Bulk accept selected sellers
-                  ids.forEach((id) => handleAccept(id));
-                  toast.success(`Accepted ${ids.length} seller(s)`);
+                onBulkAccept={async (ids: string[]) => {
+                  if (!ids || ids.length === 0) {
+                    toast.error("No sellers selected");
+                    return;
+                  }
+                  
+                  try {
+                    toast.loading(`Approving ${ids.length} seller(s)...`, { id: "bulk-approve" });
+                    
+                    const result = await bulkApproveApplications(ids, "Bulk approval");
+                    
+                    if (result.approved > 0) {
+                      toast.success(
+                        `Successfully approved ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
+                        { id: "bulk-approve" }
+                      );
+                    }
+                    
+                    if (result.failed > 0 && result.approved === 0) {
+                      toast.error(`Failed to approve ${result.failed} seller(s)`, { id: "bulk-approve" });
+                    }
+                    
+                    // Refresh the list
+                    const status = activeTab === "pending" ? "PENDING" : "FAILED";
+                    await fetchAllApplications({ status });
+                  } catch (err) {
+                    console.error("Bulk approve failed:", err);
+                    toast.error("Failed to approve sellers", { id: "bulk-approve" });
+                  }
                 }}
-                onBulkReject={(ids: string[], reason?: string) => {
-                  // For bulk reject, we need to handle rejection with reason
-                  ids.forEach((id) =>
-                    handleReject(id, reason || "Bulk rejection")
-                  );
-                  toast.success(`Rejected ${ids.length} seller(s)`);
+                onBulkReject={(ids: string[]) => {
+                  if (!ids || ids.length === 0) {
+                    toast.error("No sellers selected");
+                    return;
+                  }
+                  
+                  // Open reject modal for bulk rejection
+                  setBulkRejectIds(ids);
+                  setShowBulkRejectModal(true);
                 }}
               />
             </div>
@@ -576,6 +608,58 @@ export default function SellerContent() {
               onCancel={() => setConfirmAction(null)}
             />
           ) : null}
+
+          {/* Bulk Reject Modal */}
+          {showBulkRejectModal && bulkRejectIds && (
+            <RejectReasonModal
+              open={true}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setShowBulkRejectModal(false);
+                  setBulkRejectIds(null);
+                }
+              }}
+              onConfirm={async (reason) => {
+                try {
+                  toast.loading(
+                    `Rejecting ${bulkRejectIds.length} seller(s)...`,
+                    { id: "bulk-reject" }
+                  );
+
+                  const result = await bulkRejectApplications(
+                    bulkRejectIds,
+                    reason || "Bulk rejection"
+                  );
+
+                  if (result.approved > 0) {
+                    toast.success(
+                      `Successfully rejected ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
+                      { id: "bulk-reject" }
+                    );
+                  }
+
+                  if (result.failed > 0 && result.approved === 0) {
+                    toast.error(
+                      `Failed to reject ${result.failed} seller(s)`,
+                      { id: "bulk-reject" }
+                    );
+                  }
+
+                  // Switch to rejected tab and refresh
+                  setActiveTab("rejected");
+                  await fetchAllApplications({ status: "FAILED" });
+                } catch (err) {
+                  console.error("Bulk reject failed:", err);
+                  toast.error("Failed to reject sellers", {
+                    id: "bulk-reject",
+                  });
+                } finally {
+                  setShowBulkRejectModal(false);
+                  setBulkRejectIds(null);
+                }
+              }}
+            />
+          )}
 
           {showArchiveConfirm && (
             <ConfirmationPopover

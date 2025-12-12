@@ -101,6 +101,8 @@ interface SellerApplicationState {
   fetchApplicationById: (requestId: string) => Promise<void>;
   approveApplication: (requestId: string, adminNotes?: string) => Promise<void>;
   rejectApplication: (requestId: string, reason?: string) => Promise<void>;
+  bulkApproveApplications: (requestIds: string[], adminNotes?: string) => Promise<{ approved: number; failed: number; results: any[] }>;
+  bulkRejectApplications: (requestIds: string[], adminNotes?: string) => Promise<{ approved: number; failed: number; results: any[] }>;
   clearSelectedApplication: () => void;
 }
 
@@ -770,6 +772,278 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         });
 
         throw new Error(errorMessage); // Re-throw for UI handling
+      }
+    },
+
+    bulkApproveApplications: async (requestIds: string[], adminNotes?: string) => {
+      console.log(
+        "[sellerApplicationStore] bulkApproveApplications called with requestIds:",
+        requestIds,
+        "adminNotes:",
+        adminNotes
+      );
+
+      if (!requestIds || requestIds.length === 0) {
+        console.error("[sellerApplicationStore] No request IDs provided");
+        throw new Error("At least one request ID is required");
+      }
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[sellerApplicationStore] 🔐 Bulk approving seller applications (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, bulkApprove: true },
+        error: { ...get().error, bulkApprove: null },
+      });
+
+      try {
+        // Fetch CSRF token for state-changing operation
+        const csrfToken = await getCsrfToken();
+        console.log(
+          "[sellerApplicationStore] CSRF token fetched:",
+          csrfToken ? "✓" : "✗"
+        );
+
+        console.log(
+          "[sellerApplicationStore] Bulk approving applications via API: PUT v1/super-admin/seller-applications/bulk/approve"
+        );
+
+        const requestBody = {
+          requestIds,
+          ...(adminNotes && { adminNotes }),
+        };
+        console.log(
+          "[sellerApplicationStore] Request body:",
+          JSON.stringify(requestBody, null, 2)
+        );
+        console.log(
+          "[sellerApplicationStore] requestIds type check:",
+          "isArray:", Array.isArray(requestIds),
+          "length:", requestIds.length,
+          "first item:", requestIds[0], "type:", typeof requestIds[0]
+        );
+        console.log(
+          "[sellerApplicationStore] adminNotes:",
+          adminNotes, "type:", typeof adminNotes
+        );
+
+        const res = await api.put(
+          "v1/super-admin/seller-applications/bulk/approve",
+          requestBody,
+          {
+            headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
+          }
+        );
+        console.log("[sellerApplicationStore] Bulk approve API response:", res.data);
+
+        // Extract results from response
+        const data = res.data?.data || res.data;
+        const results = data.results || [];
+        const approved = data.approved || 0;
+        const failed = data.failed || 0;
+
+        console.log(
+          `[sellerApplicationStore] Bulk approval completed: ${approved} approved, ${failed} failed`
+        );
+
+        // Update the applications list by removing approved ones
+        const approvedIds = results
+          .filter((r: any) => r.status === "approved")
+          .map((r: any) => r.requestId);
+
+        if (approvedIds.length > 0) {
+          const currentApplications = get().applications;
+          if (currentApplications) {
+            const updatedApplications = currentApplications.filter(
+              (app) => !approvedIds.includes(app.requestId)
+            );
+            console.log(
+              `[sellerApplicationStore] Removed ${approvedIds.length} approved applications from pending list`
+            );
+            set({ applications: updatedApplications });
+          }
+
+          const currentAllApplications = get().allApplications;
+          if (currentAllApplications) {
+            const updatedAllApplications = currentAllApplications.filter(
+              (app) => !approvedIds.includes(app.requestId)
+            );
+            set({ allApplications: updatedAllApplications });
+          }
+        }
+
+        set({
+          loading: { ...get().loading, bulkApprove: false },
+        });
+
+        console.log(
+          "[sellerApplicationStore] Bulk approval process completed successfully"
+        );
+
+        return { approved, failed, results };
+      } catch (err: any) {
+        const errorMessage =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          (err as Error).message ||
+          "Failed to bulk approve seller applications";
+
+        console.error("[sellerApplicationStore] bulkApproveApplications error:", {
+          message: errorMessage,
+          statusCode: err?.response?.status,
+          responseData: err?.response?.data,
+          requestBody: { requestIds, adminNotes },
+          fullError: err,
+        });
+
+        // Log backend error details
+        if (err?.response?.data) {
+          console.error(
+            "[sellerApplicationStore] Backend error details:",
+            JSON.stringify(err.response.data, null, 2)
+          );
+        }
+
+        set({
+          error: { ...get().error, bulkApprove: errorMessage },
+          loading: { ...get().loading, bulkApprove: false },
+        });
+
+        throw new Error(errorMessage);
+      }
+    },
+
+    bulkRejectApplications: async (requestIds: string[], adminNotes?: string) => {
+      console.log(
+        "[sellerApplicationStore] bulkRejectApplications called with requestIds:",
+        requestIds,
+        "adminNotes:",
+        adminNotes
+      );
+
+      if (!requestIds || requestIds.length === 0) {
+        console.error("[sellerApplicationStore] No request IDs provided");
+        throw new Error("At least one request ID is required");
+      }
+
+      if (typeof window !== "undefined") {
+        console.log(
+          "[sellerApplicationStore] 🔐 Bulk rejecting seller applications (refreshToken sent automatically via HttpOnly cookie)"
+        );
+      }
+
+      set({
+        loading: { ...get().loading, bulkReject: true },
+        error: { ...get().error, bulkReject: null },
+      });
+
+      try {
+        // Fetch CSRF token for state-changing operation
+        const csrfToken = await getCsrfToken();
+        console.log(
+          "[sellerApplicationStore] CSRF token fetched:",
+          csrfToken ? "✓" : "✗"
+        );
+
+        console.log(
+          "[sellerApplicationStore] Bulk rejecting applications via API: PUT v1/super-admin/seller-applications/bulk/reject"
+        );
+
+        const requestBody = {
+          requestIds,
+          ...(adminNotes && { adminNotes }),
+        };
+        console.log(
+          "[sellerApplicationStore] Request body:",
+          JSON.stringify(requestBody, null, 2)
+        );
+
+        const res = await api.put(
+          "v1/super-admin/seller-applications/bulk/reject",
+          requestBody,
+          {
+            headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
+          }
+        );
+        console.log("[sellerApplicationStore] Bulk reject API response:", res.data);
+
+        // Extract results from response
+        const data = res.data?.data || res.data;
+        const results = data.results || [];
+        const approved = data.approved || 0; // In reject context, this is "rejected" count
+        const failed = data.failed || 0;
+
+        console.log(
+          `[sellerApplicationStore] Bulk rejection completed: ${approved} rejected, ${failed} failed`
+        );
+
+        // Update the applications list by removing rejected ones
+        const rejectedIds = results
+          .filter((r: any) => r.status === "approved" || r.status === "rejected")
+          .map((r: any) => r.requestId);
+
+        if (rejectedIds.length > 0) {
+          const currentApplications = get().applications;
+          if (currentApplications) {
+            const updatedApplications = currentApplications.filter(
+              (app) => !rejectedIds.includes(app.requestId)
+            );
+            console.log(
+              `[sellerApplicationStore] Removed ${rejectedIds.length} rejected applications from pending list`
+            );
+            set({ applications: updatedApplications });
+          }
+
+          const currentAllApplications = get().allApplications;
+          if (currentAllApplications) {
+            const updatedAllApplications = currentAllApplications.filter(
+              (app) => !rejectedIds.includes(app.requestId)
+            );
+            set({ allApplications: updatedAllApplications });
+          }
+        }
+
+        set({
+          loading: { ...get().loading, bulkReject: false },
+        });
+
+        console.log(
+          "[sellerApplicationStore] Bulk rejection process completed successfully"
+        );
+
+        return { approved, failed, results };
+      } catch (err: any) {
+        const errorMessage =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          (err as Error).message ||
+          "Failed to bulk reject seller applications";
+
+        console.error("[sellerApplicationStore] bulkRejectApplications error:", {
+          message: errorMessage,
+          statusCode: err?.response?.status,
+          responseData: err?.response?.data,
+          requestBody: { requestIds, adminNotes },
+          fullError: err,
+        });
+
+        // Log backend error details
+        if (err?.response?.data) {
+          console.error(
+            "[sellerApplicationStore] Backend error details:",
+            JSON.stringify(err.response.data, null, 2)
+          );
+        }
+
+        set({
+          error: { ...get().error, bulkReject: errorMessage },
+          loading: { ...get().loading, bulkReject: false },
+        });
+
+        throw new Error(errorMessage);
       }
     },
 
