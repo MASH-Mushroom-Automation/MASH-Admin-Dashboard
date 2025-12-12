@@ -861,11 +861,11 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         // Extract results from response
         const data = res.data?.data || res.data;
         const results = data.results || [];
-        
+
         // If backend doesn't return counts, calculate from requestIds
         let approved = data.approved || 0;
         let failed = data.failed || 0;
-        
+
         // If counts are 0 but API succeeded, assume all were approved
         if (approved === 0 && failed === 0 && res.status === 200) {
           approved = requestIds.length;
@@ -1011,11 +1011,11 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         // Extract results from response
         const data = res.data?.data || res.data;
         const results = data.results || [];
-        
+
         // If backend doesn't return counts, calculate from requestIds
         let approved = data.approved || 0; // In reject context, this is "rejected" count
         let failed = data.failed || 0;
-        
+
         // If counts are 0 but API succeeded, assume all were rejected
         if (approved === 0 && failed === 0 && res.status === 200) {
           approved = requestIds.length;

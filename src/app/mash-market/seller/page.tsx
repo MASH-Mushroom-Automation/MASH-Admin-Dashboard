@@ -665,9 +665,7 @@ export default function SellerContent() {
                       { duration: 4000 }
                     );
                   } else if (result.failed > 0) {
-                    toast.error(
-                      `Failed to reject ${result.failed} seller(s)`
-                    );
+                    toast.error(`Failed to reject ${result.failed} seller(s)`);
                   }
 
                   // Switch to rejected tab and refresh
