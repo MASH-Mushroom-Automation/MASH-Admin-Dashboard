@@ -50,7 +50,9 @@ export interface SellerApplicationDetail {
     username: string;
     firstName: string;
     lastName: string;
+    phoneNumber?: string;
     role: string;
+
     imageUrl?: string;
     createdAt: string;
   };
@@ -493,6 +495,7 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
             firstName: String(appData.user?.firstName ?? ""),
             lastName: String(appData.user?.lastName ?? ""),
             role: String(appData.user?.role ?? ""),
+            phoneNumber: appData.user?.phoneNumber ?? undefined,
             imageUrl: appData.user?.imageUrl ?? undefined,
             createdAt: String(appData.user?.createdAt ?? ""),
           },

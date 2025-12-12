@@ -385,10 +385,10 @@ export default function SellerDetailPage({
               </div>
               <div>
                 <label className="block text-sm font-medium text-muted-foreground">
-                  User ID
+                  Phone Number
                 </label>
                 <Input
-                  value={selectedApplication.user.id}
+                  value={selectedApplication.user.phoneNumber || "N/A"}
                   disabled
                   readOnly
                   className="mt-1"
@@ -463,6 +463,11 @@ export default function SellerDetailPage({
                         src={selectedApplication.documents.governmentId}
                         alt="Government ID"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-gray-500">📄 Document</span>';
+                        }}
                       />
                     ) : (
                       <span className="text-gray-500">📄 Document</span>
@@ -497,6 +502,11 @@ export default function SellerDetailPage({
                         src={selectedApplication.documents.birCertificate}
                         alt="BIR Certificate"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-gray-500">📄 PDF</span>';
+                        }}
                       />
                     ) : (
                       <span className="text-gray-500">📄 PDF</span>
@@ -533,6 +543,11 @@ export default function SellerDetailPage({
                         src={selectedApplication.documents.businessCertificate}
                         alt="Business Certificate"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-gray-500">📄 PDF</span>';
+                        }}
                       />
                     ) : (
                       <span className="text-gray-500">📄 PDF</span>
