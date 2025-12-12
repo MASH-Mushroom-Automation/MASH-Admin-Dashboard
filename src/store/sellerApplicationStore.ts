@@ -70,7 +70,13 @@ export interface SellerApplicationDetail {
     additionalInfo?: string;
     businessAddress?: string;
   };
-  status: "PENDING" | "APPROVED" | "COMPLETED" | "FAILED" | "PROCESSING" | "EXPIRED";
+  status:
+    | "PENDING"
+    | "APPROVED"
+    | "COMPLETED"
+    | "FAILED"
+    | "PROCESSING"
+    | "EXPIRED";
   queuedAt: string;
   processedAt?: string | null;
   completedAt?: string | null;
