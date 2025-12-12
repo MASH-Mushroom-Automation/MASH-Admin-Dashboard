@@ -861,8 +861,18 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         // Extract results from response
         const data = res.data?.data || res.data;
         const results = data.results || [];
-        const approved = data.approved || 0;
-        const failed = data.failed || 0;
+        
+        // If backend doesn't return counts, calculate from requestIds
+        let approved = data.approved || 0;
+        let failed = data.failed || 0;
+        
+        // If counts are 0 but API succeeded, assume all were approved
+        if (approved === 0 && failed === 0 && res.status === 200) {
+          approved = requestIds.length;
+          console.log(
+            `[sellerApplicationStore] Backend didn't return counts, assuming ${approved} approved based on success response`
+          );
+        }
 
         console.log(
           `[sellerApplicationStore] Bulk approval completed: ${approved} approved, ${failed} failed`
@@ -1001,8 +1011,18 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         // Extract results from response
         const data = res.data?.data || res.data;
         const results = data.results || [];
-        const approved = data.approved || 0; // In reject context, this is "rejected" count
-        const failed = data.failed || 0;
+        
+        // If backend doesn't return counts, calculate from requestIds
+        let approved = data.approved || 0; // In reject context, this is "rejected" count
+        let failed = data.failed || 0;
+        
+        // If counts are 0 but API succeeded, assume all were rejected
+        if (approved === 0 && failed === 0 && res.status === 200) {
+          approved = requestIds.length;
+          console.log(
+            `[sellerApplicationStore] Backend didn't return counts, assuming ${approved} rejected based on success response`
+          );
+        }
 
         console.log(
           `[sellerApplicationStore] Bulk rejection completed: ${approved} rejected, ${failed} failed`

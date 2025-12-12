@@ -544,29 +544,47 @@ export default function SellerContent() {
                     toast.error("No sellers selected");
                     return;
                   }
-                  
+
                   try {
-                    toast.loading(`Approving ${ids.length} seller(s)...`, { id: "bulk-approve" });
-                    
-                    const result = await bulkApproveApplications(ids, "Bulk approval");
-                    
+                    toast.loading(`Approving ${ids.length} seller(s)...`, {
+                      id: "bulk-approve",
+                    });
+
+                    const result = await bulkApproveApplications(
+                      ids,
+                      "Bulk approval"
+                    );
+
+                    console.log("Bulk approve result:", result);
+
+                    // Explicitly dismiss loading toast
+                    toast.dismiss("bulk-approve");
+
+                    // Wait a tiny bit for dismiss to process
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+
                     if (result.approved > 0) {
                       toast.success(
-                        `Successfully approved ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
-                        { id: "bulk-approve" }
+                        `Successfully approved ${result.approved} seller(s)${
+                          result.failed > 0 ? `, ${result.failed} failed` : ""
+                        }`,
+                        { duration: 4000 }
+                      );
+                    } else if (result.failed > 0) {
+                      toast.error(
+                        `Failed to approve ${result.failed} seller(s)`
                       );
                     }
-                    
-                    if (result.failed > 0 && result.approved === 0) {
-                      toast.error(`Failed to approve ${result.failed} seller(s)`, { id: "bulk-approve" });
-                    }
-                    
+
                     // Refresh the list
-                    const status = activeTab === "pending" ? "PENDING" : "FAILED";
+                    const status =
+                      activeTab === "pending" ? "PENDING" : "FAILED";
                     await fetchAllApplications({ status });
                   } catch (err) {
                     console.error("Bulk approve failed:", err);
-                    toast.error("Failed to approve sellers", { id: "bulk-approve" });
+                    toast.error("Failed to approve sellers", {
+                      id: "bulk-approve",
+                    });
                   }
                 }}
                 onBulkReject={(ids: string[]) => {
@@ -574,7 +592,7 @@ export default function SellerContent() {
                     toast.error("No sellers selected");
                     return;
                   }
-                  
+
                   // Open reject modal for bulk rejection
                   setBulkRejectIds(ids);
                   setShowBulkRejectModal(true);
@@ -631,17 +649,24 @@ export default function SellerContent() {
                     reason || "Bulk rejection"
                   );
 
+                  console.log("Bulk reject result:", result);
+
+                  // Explicitly dismiss loading toast
+                  toast.dismiss("bulk-reject");
+
+                  // Wait a tiny bit for dismiss to process
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+
                   if (result.approved > 0) {
                     toast.success(
-                      `Successfully rejected ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
-                      { id: "bulk-reject" }
+                      `Successfully rejected ${result.approved} seller(s)${
+                        result.failed > 0 ? `, ${result.failed} failed` : ""
+                      }`,
+                      { duration: 4000 }
                     );
-                  }
-
-                  if (result.failed > 0 && result.approved === 0) {
+                  } else if (result.failed > 0) {
                     toast.error(
-                      `Failed to reject ${result.failed} seller(s)`,
-                      { id: "bulk-reject" }
+                      `Failed to reject ${result.failed} seller(s)`
                     );
                   }
 
