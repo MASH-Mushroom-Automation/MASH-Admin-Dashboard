@@ -101,8 +101,14 @@ interface SellerApplicationState {
   fetchApplicationById: (requestId: string) => Promise<void>;
   approveApplication: (requestId: string, adminNotes?: string) => Promise<void>;
   rejectApplication: (requestId: string, reason?: string) => Promise<void>;
-  bulkApproveApplications: (requestIds: string[], adminNotes?: string) => Promise<{ approved: number; failed: number; results: any[] }>;
-  bulkRejectApplications: (requestIds: string[], adminNotes?: string) => Promise<{ approved: number; failed: number; results: any[] }>;
+  bulkApproveApplications: (
+    requestIds: string[],
+    adminNotes?: string
+  ) => Promise<{ approved: number; failed: number; results: any[] }>;
+  bulkRejectApplications: (
+    requestIds: string[],
+    adminNotes?: string
+  ) => Promise<{ approved: number; failed: number; results: any[] }>;
   clearSelectedApplication: () => void;
 }
 
@@ -775,7 +781,10 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
       }
     },
 
-    bulkApproveApplications: async (requestIds: string[], adminNotes?: string) => {
+    bulkApproveApplications: async (
+      requestIds: string[],
+      adminNotes?: string
+    ) => {
       console.log(
         "[sellerApplicationStore] bulkApproveApplications called with requestIds:",
         requestIds,
@@ -821,13 +830,20 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         );
         console.log(
           "[sellerApplicationStore] requestIds type check:",
-          "isArray:", Array.isArray(requestIds),
-          "length:", requestIds.length,
-          "first item:", requestIds[0], "type:", typeof requestIds[0]
+          "isArray:",
+          Array.isArray(requestIds),
+          "length:",
+          requestIds.length,
+          "first item:",
+          requestIds[0],
+          "type:",
+          typeof requestIds[0]
         );
         console.log(
           "[sellerApplicationStore] adminNotes:",
-          adminNotes, "type:", typeof adminNotes
+          adminNotes,
+          "type:",
+          typeof adminNotes
         );
 
         const res = await api.put(
@@ -837,7 +853,10 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
             headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
           }
         );
-        console.log("[sellerApplicationStore] Bulk approve API response:", res.data);
+        console.log(
+          "[sellerApplicationStore] Bulk approve API response:",
+          res.data
+        );
 
         // Extract results from response
         const data = res.data?.data || res.data;
@@ -891,13 +910,16 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
           (err as Error).message ||
           "Failed to bulk approve seller applications";
 
-        console.error("[sellerApplicationStore] bulkApproveApplications error:", {
-          message: errorMessage,
-          statusCode: err?.response?.status,
-          responseData: err?.response?.data,
-          requestBody: { requestIds, adminNotes },
-          fullError: err,
-        });
+        console.error(
+          "[sellerApplicationStore] bulkApproveApplications error:",
+          {
+            message: errorMessage,
+            statusCode: err?.response?.status,
+            responseData: err?.response?.data,
+            requestBody: { requestIds, adminNotes },
+            fullError: err,
+          }
+        );
 
         // Log backend error details
         if (err?.response?.data) {
@@ -916,7 +938,10 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
       }
     },
 
-    bulkRejectApplications: async (requestIds: string[], adminNotes?: string) => {
+    bulkRejectApplications: async (
+      requestIds: string[],
+      adminNotes?: string
+    ) => {
       console.log(
         "[sellerApplicationStore] bulkRejectApplications called with requestIds:",
         requestIds,
@@ -968,7 +993,10 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
             headers: csrfToken ? { "X-XSRF-TOKEN": csrfToken } : {},
           }
         );
-        console.log("[sellerApplicationStore] Bulk reject API response:", res.data);
+        console.log(
+          "[sellerApplicationStore] Bulk reject API response:",
+          res.data
+        );
 
         // Extract results from response
         const data = res.data?.data || res.data;
@@ -982,7 +1010,9 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
 
         // Update the applications list by removing rejected ones
         const rejectedIds = results
-          .filter((r: any) => r.status === "approved" || r.status === "rejected")
+          .filter(
+            (r: any) => r.status === "approved" || r.status === "rejected"
+          )
           .map((r: any) => r.requestId);
 
         if (rejectedIds.length > 0) {
@@ -1022,13 +1052,16 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
           (err as Error).message ||
           "Failed to bulk reject seller applications";
 
-        console.error("[sellerApplicationStore] bulkRejectApplications error:", {
-          message: errorMessage,
-          statusCode: err?.response?.status,
-          responseData: err?.response?.data,
-          requestBody: { requestIds, adminNotes },
-          fullError: err,
-        });
+        console.error(
+          "[sellerApplicationStore] bulkRejectApplications error:",
+          {
+            message: errorMessage,
+            statusCode: err?.response?.status,
+            responseData: err?.response?.data,
+            requestBody: { requestIds, adminNotes },
+            fullError: err,
+          }
+        );
 
         // Log backend error details
         if (err?.response?.data) {
