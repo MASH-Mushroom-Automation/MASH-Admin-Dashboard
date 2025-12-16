@@ -57,21 +57,25 @@ export const SelectionBar: React.FC<Props> = ({
 
   return (
     <TooltipProvider>
-      <div className="flex items-center justify-between bg-green-50 p-3 border-b border-green-100">
-        <div className="flex items-center gap-3">
-          <div className="text-sm font-semibold">{selectedCount} selected</div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-green-50 p-3 border-b border-green-100 gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="text-sm font-semibold flex-shrink-0">{selectedCount} selected</div>
+
           {hasMixedRoles && (
-            <div className="flex flex-col gap-1">
-              <div className="text-xs text-muted-foreground">
+            <div className="min-w-0">
+              <div
+                className="text-xs text-muted-foreground truncate max-w-[60vw] sm:max-w-[40ch]"
+                title="Some actions are disabled because selected users have different roles."
+              >
                 Some actions are disabled because selected users have different roles.
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-4">
           <button
-            className="text-sm text-muted-foreground underline"
+            className="text-sm text-muted-foreground underline truncate min-w-0"
             onClick={onClear}
             title="Clear selection"
           >
@@ -80,9 +84,9 @@ export const SelectionBar: React.FC<Props> = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="flex items-center">
                 <MoreHorizontal className="h-4 w-4 mr-2" />
-                Bulk Actions
+                <span className="hidden sm:inline">Bulk Actions</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

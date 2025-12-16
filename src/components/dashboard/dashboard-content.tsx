@@ -86,14 +86,14 @@ export default function DashboardContent() {
         </div>
       </div>
 
-      <div className="space-y-6 pt-4">
-        <h1 className="sm:text-xl text-base font-bold text-foreground mb-0">
+      <div className="space-y-6">
+        {/* <h1 className="sm:text-xl text-base font-bold text-foreground mb-0">
           Overview
         </h1>
         <p className="sm:text-base text-sm">
           Monitor sales, user roles, and active chambers.
-        </p>
-        <ECommerceSection />
+        </p> */}
+        {/* <ECommerceSection /> */}
         <ChamberInventorySection />
       </div>
     </div>
