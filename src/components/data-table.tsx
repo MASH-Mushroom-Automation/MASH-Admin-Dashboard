@@ -163,7 +163,6 @@ export function DataTable(props: DataTableProps<any>) {
   const selectedIds = table.getSelectedRowModel().flatRows.map((r) => r.original.id).filter(Boolean) as string[];
   const selectedRows = table.getSelectedRowModel().flatRows.map((r) => r.original);
 
-  // dynamic rows-per-page options based on data length
   const totalRows = (data || []).length;
   const getRowsPerPageOptions = (total: number) => {
     const base = [5, 10, 20, 50];
@@ -187,8 +186,7 @@ export function DataTable(props: DataTableProps<any>) {
     }
   }, [totalRows]);
 
-  // If parent hides internal pagination (parent is controlling paging via props),
-  // ensure the table shows all provided rows by setting pageSize to totalRows
+  
   React.useEffect(() => {
     if (hidePagination) {
       // If there are no rows, keep pageSize at 1 to avoid zero-size
@@ -278,15 +276,31 @@ export function DataTable(props: DataTableProps<any>) {
                   key={row.id}
                   className={`transition-colors duration-150 ${
                     row.getIsSelected()
-                      ? 'bg-primary/5 border-l-4 border-primary shadow-xs hover:bg-primary/15'
+                      ? 'bg-primary/10 border-l-2 shadow-xs hover:bg-primary/15'
                       : 'odd:bg-card hover:bg-muted/50'
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => {
                     return (
-                      <td key={cell.id} className="px-4 py-3 align-middle">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                     <td
+                       key={cell.id}
+                        className={`px-4 py-2 align-middle ${
+                          ['select', 'profile', 'actions'].includes(cell.column.id)
+                            ? ''
+                            : 'max-w-0 whitespace-nowrap overflow-hidden'
+                        }`}
+                      >
+                        <div
+                          className={
+                            ['select', 'profile', 'actions'].includes(cell.column.id)
+                              ? ''
+                              : 'truncate'
+                          }
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
                       </td>
+
                     );
                   })}
                 </tr>
@@ -296,46 +310,7 @@ export function DataTable(props: DataTableProps<any>) {
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      {!hidePagination && (
-        <div className="flex items-center justify-between gap-2 py-3 px-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground">Rows per page:</label>
-            <select
-              className="rounded-md border px-2 py-1 text-sm transition-shadow duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/30"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {rowsPerPageOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-            </div>
-
-            <button
-              className="px-3 py-1 rounded border"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Prev
-            </button>
-            <button
-              className="px-3 py-1 rounded border"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

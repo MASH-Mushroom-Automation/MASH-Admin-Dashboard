@@ -20,7 +20,7 @@ export default function UserAvatar({ initials }: UserAvatarProps) {
 
   return (
     <div
-      className={`flex h-10 w-10 items-center justify-center rounded-full ${colors[colorIndex]} text-sm font-semibold text-white`}
+      className={`flex h-8 w-8 items-center justify-center rounded-full ${colors[colorIndex]} text-sm font-semibold text-white`}
     >
       {displayInitials}
     </div>

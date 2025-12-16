@@ -25,6 +25,8 @@ import { DataTable } from "@/components/data-table";
 
 // Controlled items per page (rows per page selector)
 const DEFAULT_ITEMS_PER_PAGE = 5;
+// Fixed rows-per-page options per requirement
+const FIXED_ROWS_OPTIONS = [5, 10, 25, 50, 100];
 
 export default function UsersManagement() {
   const router = useRouter();
@@ -110,7 +112,6 @@ export default function UsersManagement() {
         // Single status filter selected from dropdown
         matchesStatus = user.status === statusFilter;
       }
-      // If statusFilter === "All" and no selectedStatuses, matchesStatus stays true (show all)
 
       const matchesRegion =
         selectedRegions.length > 0
@@ -121,38 +122,21 @@ export default function UsersManagement() {
     });
   }, [users, searchQuery, statusFilter, selectedStatuses, selectedRegions]);
 
-  // Dynamic rows-per-page options based on amount of filtered data
-  const rowsPerPageOptions = useMemo(() => {
-    const total = filteredUsers.length;
+  const rowsPerPageOptions = FIXED_ROWS_OPTIONS;
 
-    // Helper: build multiples of 5 up to total (5,10,15,...), then include total itself
-    const opts = new Set<number>();
-    // always include current itemsPerPage so the select remains controlled
-    opts.add(itemsPerPage);
-
-    if (total <= 1) {
-      opts.add(Math.max(1, total));
-      return Array.from(opts).sort((a, b) => a - b);
-    }
-
-    // Use multiples of 5 as sensible page sizes based on DB size
-    for (let v = 5; v <= total; v += 5) {
-      opts.add(v);
-    }
-
-    // Also include the total number (so exact-all option exists)
-    opts.add(total);
-
-    // If total is less than 5, we still want a small, sensible option
-    if (total < 5) opts.add(total);
-
-    return Array.from(opts).sort((a, b) => a - b);
-  }, [filteredUsers.length, itemsPerPage]);
-
-  // Reset page to 1 whenever search or filters change to avoid jumping pages
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedStatuses, selectedRegions, statusFilter]);
+    const total = filteredUsers.length;
+    const totalPages = total === 0 ? 0 : Math.ceil(total / itemsPerPage);
+    // if there are no items, reset to page 1 for consistent UI
+    if (totalPages === 0) {
+      setCurrentPage(1);
+      return;
+    }
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+    // keep current page as-is when within bounds
+  }, [filteredUsers.length, itemsPerPage]);
 
   // Pagination logic (controlled by local itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -215,6 +199,32 @@ export default function UsersManagement() {
     }
   };
 
+  // dynamic filter sections (data-driven)
+  const FILTER_SECTIONS = [
+    {
+      key: "statuses",
+      label: "Status",
+      options: ["Active", "Inactive"],
+    },
+    {
+      key: "regions",
+      label: "Region",
+      options: ["Caloocan", "Manila", "Quezon City", "Makati", "Pasig"],
+    },
+  ];
+
+  const activeFiltersCount = selectedStatuses.length + selectedRegions.length;
+
+  // helper to toggle selection generically
+  const toggleFilter = (sectionKey: string, value: string) => {
+    setCurrentPage(1);
+    if (sectionKey === "statuses") {
+      setSelectedStatuses((prev) => (prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]));
+    } else if (sectionKey === "regions") {
+      setSelectedRegions((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto w-full space-y-4">
@@ -263,7 +273,7 @@ export default function UsersManagement() {
                     />
                   </div>
 
-                  {/* Bulk filters as a dropdown - matches requested design */}
+                  {/* Bulk filters as a dropdown - dynamic config-driven */}
                   <div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -271,133 +281,49 @@ export default function UsersManagement() {
                           variant="outline"
                           size="sm"
                           className="flex items-center py-4.5"
+                          aria-label={`Filter${activeFiltersCount ? ` (${activeFiltersCount})` : ""}`}
                         >
                           <Filter className="h-4 w-4" />
-                          <span className="font-medium">Filter</span>
-                          {selectedStatuses.length + selectedRegions.length >
-                            0 && (
-                            <span className="inline-flex items-center justify-center rounded-full bg-emerald-700 px-2 py-0.5 text-xs text-white">
-                              {selectedStatuses.length + selectedRegions.length}
-                            </span>
-                          )}
+                          <span className="font-medium">{activeFiltersCount ? `Filters (${activeFiltersCount})` : "Filter"}</span>
                         </Button>
                       </DropdownMenuTrigger>
 
                       <DropdownMenuContent className="w-64 p-2">
-                        <DropdownMenuLabel>Area / Status</DropdownMenuLabel>
-                        <div className="px-1">
-                          <div className="text-xs mb-1 text-muted-foreground">
-                            Status
+                        {FILTER_SECTIONS.map((section) => (
+                          <div key={section.key} className="mb-2">
+                            <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+                            <div className="px-1">
+                              {section.options.map((opt) => {
+                                const checked =
+                                  section.key === "statuses"
+                                    ? selectedStatuses.includes(opt)
+                                    : selectedRegions.includes(opt);
+                                return (
+                                  <label
+                                    key={opt}
+                                    className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
+                                      checked={checked}
+                                      onChange={() => toggleFilter(section.key, opt)}
+                                    />
+                                    <span className="text-sm">{opt}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <DropdownMenuSeparator />
                           </div>
-                          <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
-                              checked={selectedStatuses.includes("Active")}
-                              onChange={(e) => {
-                                const val = e.target.checked;
-                                setCurrentPage(1);
-                                setSelectedStatuses((prev) =>
-                                  val
-                                    ? Array.from(new Set([...prev, "Active"]))
-                                    : prev.filter((s) => s !== "Active")
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Active</span>
-                          </label>
-                          <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
-                              checked={selectedStatuses.includes("Inactive")}
-                              onChange={(e) => {
-                                const val = e.target.checked;
-                                setCurrentPage(1);
-                                setSelectedStatuses((prev) =>
-                                  val
-                                    ? Array.from(new Set([...prev, "Inactive"]))
-                                    : prev.filter((s) => s !== "Inactive")
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Inactive</span>
-                          </label>
-                        </div>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuLabel>Region</DropdownMenuLabel>
-                        <div className="px-1">
-                          <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
-                              checked={selectedRegions.includes("Caloocan")}
-                              onChange={(e) => {
-                                const val = e.target.checked;
-                                setCurrentPage(1);
-                                setSelectedRegions((prev) =>
-                                  val
-                                    ? Array.from(new Set([...prev, "Caloocan"]))
-                                    : prev.filter((r) => r !== "Caloocan")
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Caloocan</span>
-                          </label>
-                          <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
-                              checked={selectedRegions.includes("Manila")}
-                              onChange={(e) => {
-                                const val = e.target.checked;
-                                setCurrentPage(1);
-                                setSelectedRegions((prev) =>
-                                  val
-                                    ? Array.from(new Set([...prev, "Manila"]))
-                                    : prev.filter((r) => r !== "Manila")
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Manila</span>
-                          </label>
-                          <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent">
-                            <input
-                              type="checkbox"
-                              className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
-                              checked={selectedRegions.includes("Quezon City")}
-                              onChange={(e) => {
-                                const val = e.target.checked;
-                                setCurrentPage(1);
-                                setSelectedRegions((prev) =>
-                                  val
-                                    ? Array.from(
-                                        new Set([...prev, "Quezon City"])
-                                      )
-                                    : prev.filter((r) => r !== "Quezon City")
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Quezon City</span>
-                          </label>
-                        </div>
-
-                        <DropdownMenuSeparator />
+                        ))}
 
                         <div className="px-1">
                           <DropdownMenuItem
                             onSelect={() => {
-                              // select all
-                              setSelectedStatuses(["Active", "Inactive"]);
-                              setSelectedRegions([
-                                "Caloocan",
-                                "Manila",
-                                "Quezon City",
-                                "Makati",
-                                "Pasig",
-                              ]);
+                              // select all for all sections
+                              setSelectedStatuses(FILTER_SECTIONS.find(s=>s.key==="statuses")?.options ?? []);
+                              setSelectedRegions(FILTER_SECTIONS.find(s=>s.key==="regions")?.options ?? []);
                               setCurrentPage(1);
                             }}
                           >
@@ -468,36 +394,19 @@ export default function UsersManagement() {
               </div>
             </Card>
 
-            {/* Rows per page selector + existing pagination */}
             <div className="flex items-center justify-between">
-              <div>
-                {filteredUsers.length > DEFAULT_ITEMS_PER_PAGE && (
-                  <div className="flex items-center">
-                    <label className="text-sm text-muted-foreground mr-2">Rows per page:</label>
-                    <select
-                      className="rounded-md border px-2 py-1 text-sm transition-shadow duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      value={itemsPerPage}
-                      onChange={(e) => {
-                        setItemsPerPage(Number(e.target.value));
-                        setCurrentPage(1);
-                      }}
-                    >
-                      {rowsPerPageOptions.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
               <PaginationWrapper
                 totalItems={filteredUsers.length}
                 itemsPerPage={itemsPerPage}
                 currentPage={currentPage}
                 onPageChange={setCurrentPage}
                 label="users"
+                // pass fixed options
+                rowsPerPageOptions={rowsPerPageOptions}
+                onItemsPerPageChange={(n) => {
+                  setItemsPerPage(n);
+                  setCurrentPage(1);
+                }}
               />
             </div>
 
