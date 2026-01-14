@@ -73,7 +73,6 @@ export interface ForgotPasswordResponse {
 // User Types
 export interface User {
   id: string
-  clerkId?: string
   email: string
   username: string
   firstName: string

@@ -1,5 +1,20 @@
 # MASH Admin Dashboard - AI Coding Guidelines
 
+## Deployment URLs
+
+**Production Deployments:**
+- **Admin Dashboard (Railway)**: https://mash-admin-dashboard-production.up.railway.app
+- **Admin Dashboard (Vercel)**: https://mash-admin-dashboard-ashy.vercel.app
+- **Backend API**: https://mash-backend-production.up.railway.app
+- **Firebase Console**: https://console.firebase.google.com/u/7/project/mash-ddf8d
+- **Sanity Studio**: https://www.sanity.io/organizations/oBQP4vpxm/project/gerattrr
+
+**Test Credentials:**
+- Email: mash.mushroom.automation@gmail.com
+- Password: PP@Namias99
+
+---
+
 ## Architecture Overview
 
 **MASH Admin Dashboard** is a Next.js 15 (App Router) admin interface for mushroom automation systems managing two business domains:
@@ -7,7 +22,7 @@
 - **MASH Market**: E-commerce (users, sellers, orders, products, CMS)
 - **MASH Grow**: Cultivation management (devices, registered users, CMS)
 
-**Critical Architecture Decision**: This is a frontend-only app that proxies ALL backend requests through `/api/proxy/*` to avoid CORS issues. The backend API (`NEXT_PUBLIC_API_URL`) is a separate Railway-hosted service at `https://mash-backend-api-production.up.railway.app`.
+**Critical Architecture Decision**: This is a frontend-only app that proxies ALL backend requests through `/api/proxy/*` to avoid CORS issues. The backend API (`NEXT_PUBLIC_API_URL`) is a separate Railway-hosted service at `https://mash-backend-production.up.railway.app`.
 
 ### Tech Stack
 - **Framework**: Next.js 15 App Router with React 19 (runs on port **3001**, not 3000)
@@ -24,11 +39,11 @@
 
 | File | Purpose | When to Check |
 |------|---------|---------------|
-| `/middleware.ts` | Auth guard for `/dashboard/*` routes - checks `authToken` cookie | Authentication issues, redirect loops |
+| `/src/middleware.ts` | Auth guard for `/dashboard/*` routes - checks `refreshToken` cookie | Authentication issues, redirect loops |
 | `/src/lib/api.ts` | Axios instance pre-configured to use `/api/proxy` endpoint | All API calls must go through this |
 | `/src/store/authStore.ts` | Auth state + login/logout/forgotPassword logic - stores user object only (NOT tokens) | Login flow, logout behavior, password reset |
 | `/src/app/api/proxy/[...path]/route.ts` | Universal proxy handler - extracts `authToken` cookie and forwards as Bearer token | Backend communication, CORS issues |
-| `/src/app/api/auth/login/route.ts` | Login endpoint with hardcoded admin fallback - sets HttpOnly cookies for auth tokens | Login implementation |
+| `/src/app/api/auth/login/route.ts` | Login endpoint - calls backend API and sets HttpOnly cookies for auth tokens | Login implementation |
 | `/components.json` | shadcn/ui config - defines `@/*` path aliases | Import resolution issues |
 | `/src/components/sidebar.tsx` | Navigation structure + user menu (370 lines) | Adding new routes/pages |
 | `/vercel.json` | API route rewrites + CORS headers for deployment | Deployment issues |
@@ -40,11 +55,11 @@
 ### Auth Flow Components
 
 1. **Login** (`/src/app/api/auth/login/route.ts`):
-   - **HARDCODED ADMIN BYPASS**: `mash.mushroom.automation@gmail.com / PP@Namias99` checked FIRST (requirement)
-   - If not admin → forwards to backend `POST /api/v1/auth/login`
-   - Backend response: `{ accessToken, refreshToken, user }`
-   - Sets HttpOnly cookies: `authToken` (1d), `refreshToken` (30d)
-   - Returns ONLY `user` to client (tokens never exposed to JS)
+   - Calls backend `POST /api/v1/auth/login` with email and password
+   - Backend response: `{ success, data: { accessToken, refreshToken, user } }`
+   - Returns access token in response body (stored in memory by client)
+   - Sets refresh token in HttpOnly cookie (secure storage)
+   - Token expiry: Access token 1 hour, Refresh token 7 days
 
 2. **Token Manager** (`/src/lib/tokenManager.ts`):
    - In-memory access token storage with expiry tracking
@@ -54,12 +69,12 @@
    - **NEVER uses localStorage** (XSS vulnerability)
 
 3. **Registration Flow** (`/src/app/register/` + `/verify`):
-   - **6-digit email verification** (10min expiry, 5 attempts max)
+   - Calls backend `POST /api/v1/auth/register` with user details
+   - Backend sends verification email with code
    - Step 1: Register → backend sends code via email
-   - Step 2: Verify code → backend returns JWT token
-   - Auto-login after verification: `setAccessToken(result.token, 3600)`
+   - Step 2: Verify code → backend returns success message
    - Uses `sessionStorage.setItem('registerEmail', email)` between steps
-   - Direct backend calls (bypasses `/api/proxy`)
+   - Direct backend calls to `NEXT_PUBLIC_API_URL`
 
 4. **Forgot Password Flow** (`/src/app/forgot-password/`):
    - **3-step wizard**: `/forgot-pass` → `/verify` → `/reset`
@@ -70,9 +85,9 @@
    - Rate limiting: 3 requests per 5 minutes, 1-minute resend cooldown
    - Enhanced toast notifications with loading states and detailed error messages
 
-5. **Middleware Guard** (`/middleware.ts`):
+5. **Middleware Guard** (`/src/middleware.ts`):
    - Protects `/dashboard/*` routes only
-   - Checks `authToken` cookie existence (HttpOnly → JS can't read it)
+   - Checks `refreshToken` cookie existence (HttpOnly → JS can't read it)
    - No cookie → redirect to `/login`
 
 6. **API Proxy** (`/src/app/api/proxy/[...path]/route.ts`):
@@ -87,7 +102,7 @@
    - ⚠️ Imports non-existent `@/lib/logger` and `@/lib/sentry` (known issue)
 
 **Debugging Auth Issues**:
-- Check both: Zustand state (`useAuthStore`) AND cookie (`authToken` in DevTools → Application → Cookies)
+- Check both: Zustand state (`useAuthStore`) AND cookie (`refreshToken` in DevTools → Application → Cookies)
 - User in store but no cookie = redirect loop
 - Cookie present but no user in store = lost session state (refresh page)
 

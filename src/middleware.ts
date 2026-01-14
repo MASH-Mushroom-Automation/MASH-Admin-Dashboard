@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Middleware to protect dashboard routes
+ * Proxy middleware to protect dashboard routes
  * Checks for refresh token in HttpOnly cookie (not access token)
  * Access tokens are stored in memory only (not accessible to middleware)
+ * 
+ * NOTE: This file replaces the deprecated root-level middleware.ts
  */
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -15,12 +17,12 @@ export function middleware(request: NextRequest) {
 
     if (!refreshToken) {
       console.log(
-        `[middleware] ❌ No refresh token found, redirecting to /login`
+        `[proxy] ❌ No refresh token found, redirecting to /login`
       );
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    console.log(`[middleware] ✅ Refresh token present, allowing access`);
+    console.log(`[proxy] ✅ Refresh token present, allowing access`);
   }
 
   return NextResponse.next();
