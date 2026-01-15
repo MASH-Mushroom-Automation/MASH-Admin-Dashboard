@@ -9,6 +9,7 @@
  */
 
 import { api } from '@/lib/api'
+import { DeviceType } from '@/types/device'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -22,7 +23,7 @@ export interface Device {
   version: number
   location: string
   status: 'Online' | 'Offline'
-  type?: 'MUSHROOM_CHAMBER' | 'LAMINAR_FLOW' | 'INCUBATOR' | 'OTHER'
+  type?: DeviceType
   assigned?: boolean
   archived?: boolean
   description?: string

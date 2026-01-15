@@ -105,10 +105,7 @@ export default function CMSPage() {
         await cmsService.update(editingId, formData);
         toast.success("Article updated successfully");
       } else {
-        await cmsService.create({
-          ...formData,
-          createdAt: new Date().toISOString()
-        });
+        await cmsService.create(formData);
         toast.success("Article created successfully");
       }
       setIsModalOpen(false);
