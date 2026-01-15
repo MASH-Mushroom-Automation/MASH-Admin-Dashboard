@@ -25,104 +25,23 @@ import {
   DEVICE_TYPE_LABELS,
   DEVICE_STATUS_COLORS 
 } from "@/types/device";
+import { deviceService, type Device as ApiDevice } from "@/services/mashGrowService";
 
-type DeviceLocal = {
-  id: string;
-  serialNumber: string;
-  name?: string;
-  model: string;
-  version: number;
-  location: string;
-  status: "Online" | "Offline";
-  type?: DeviceType;
-  assigned?: boolean;
-  archived?: boolean;
-  description?: string;
-  firmware?: string;
-  isActive?: boolean;
-  createdAt?: string;
-};
-
-
-
-type UserLocal = {
-  id: string;
-  name?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  phoneNumber?: string;
-  contactNumber?: string;
-  deviceId?: string;
-  selectedDeviceId?: string;
-  archived?: boolean;
-};
-
-const DEFAULT_DEVICES: DeviceLocal[] = [
-  {
-    id: "d1",
-    serialNumber: "MASH-A1-CAL25-D5A91F",
-    name: "Chamber A",
-    model: "A",
-    version: 1,
-    location: "Caloocan",
-    status: "Offline",
-    type: "MUSHROOM_CHAMBER",
-    assigned: true,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "d2",
-    serialNumber: "MASH-B2-MAN25-8F3C21",
-    name: "Beta Chamber Manila",
-    model: "B",
-    version: 2,
-    location: "Manila",
-    status: "Online",
-    type: "MUSHROOM_CHAMBER",
-    assigned: false,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  // archived mock device(s) for the archive view
-  {
-    id: "d6",
-    serialNumber: "MASH-R1-MAK25-4B7E92",
-    name: "Archived Device",
-    model: "R",
-    version: 1,
-    location: "Makati",
-    status: "Offline",
-    type: "LAMINAR_FLOW",
-    assigned: false,
-    archived: true,
-    isActive: false,
-    createdAt: new Date().toISOString(),
-  },
-];
+// Map API Device to local DeviceLocal type for compatibility with existing components
+type DeviceLocal = ApiDevice;
 
 export default function DevicesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-  const [devices, setDevices] = useState<DeviceLocal[]>(() => DEFAULT_DEVICES);
+  const [devices, setDevices] = useState<DeviceLocal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<DeviceLocal | null>(null);
   const [viewDevice, setViewDevice] = useState<DeviceLocal | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [showRegistered, setShowRegistered] = useState(false);
-  const [users, setUsers] = useState<UserLocal[]>(() => [
-    {
-      id: "1",
-      name: "Ana Santos",
-      firstName: "Ana",
-      lastName: "Santos",
-      email: "ana.santos@example.com",
-      phoneNumber: "+639171234567",
-      deviceId: "MASH-A1-CAL25-D5A91F",
-    },
-  ]);
 
   const [showArchived, setShowArchived] = useState(() => {
     try {
@@ -145,18 +64,63 @@ export default function DevicesPage() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [archivingDevice, setArchivingDevice] = useState<DeviceLocal | null>(null);
 
+  // Fetch devices from backend
+  useEffect(() => {
+    fetchDevices();
+  }, [showArchived, showRegistered]);
+
+  const fetchDevices = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await deviceService.getAll({
+        page: 1,
+        limit: 100, // Get all devices for client-side filtering
+        archived: showArchived ? true : undefined,
+        assigned: showRegistered ? true : undefined
+      });
+      setDevices(response.data);
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to load devices';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [devices, showArchived, showRegistered]);
 
-  const handleCreateSave = (device: DeviceLocal) => {
-    setDevices((prev) => {
-      const exists = prev.find((d) => d.id === device.id);
-      if (exists) return prev.map((p) => (p.id === device.id ? device : p));
-      return [device, ...prev];
-    });
-    toast.success(editDevice ? "Device updated successfully" : "Device created successfully");
-    setEditDevice(null);
+  const handleCreateSave = async (device: DeviceLocal) => {
+    try {
+      if (editDevice) {
+        // Update existing device
+        await deviceService.update(device.id, device);
+        toast.success("Device updated successfully");
+      } else {
+        // Create new device
+        await deviceService.create(device);
+        toast.success("Device created successfully");
+      }
+      setEditDevice(null);
+      fetchDevices(); // Refresh the list
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to save device';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleArchive = async (device: DeviceLocal) => {
+    try {
+      await deviceService.archive(device.id, !showArchived);
+      toast.success(showArchived ? "Device restored" : "Device archived");
+      fetchDevices(); // Refresh the list
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to archive device';
+      toast.error(errorMessage);
+    }
   };
 
   // Filter devices based on view mode
@@ -219,91 +183,96 @@ export default function DevicesPage() {
 
         <Card>
           <CardContent className="overflow-x-auto">
-            <Table className="table-fixed w-full">
-              <TableHeader>
-                <tr>
-                  <TableHead className="w-52">Serial Number</TableHead>
-                  <TableHead className="w-48">Name</TableHead>
-                  <TableHead className="w-32">Model</TableHead>
-                  <TableHead className="w-40">Type</TableHead>
-                  <TableHead className="w-32">Location</TableHead>
-                  <TableHead className="w-24">Status</TableHead>
-                  <TableHead className="w-28">Actions</TableHead>
-                </tr>
-              </TableHeader>
-              <TableBody>
-                {pagedDevices.length === 0 ? (
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Loading devices...
+              </div>
+            ) : error ? (
+              <div className="py-8 text-center text-red-500">
+                {error}
+              </div>
+            ) : (
+              <Table className="w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No devices found
-                    </TableCell>
+                    <TableHead className="w-52">Serial Number</TableHead>
+                    <TableHead className="w-48">Name</TableHead>
+                    <TableHead className="w-32">Model</TableHead>
+                    <TableHead className="w-40">Type</TableHead>
+                    <TableHead className="w-32">Location</TableHead>
+                    <TableHead className="w-24">Status</TableHead>
+                    <TableHead className="w-28">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  pagedDevices.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-mono w-52 overflow-hidden truncate">
-                        {d.serialNumber}
-                      </TableCell>
-                      <TableCell className="w-48">
-                        <div className="truncate">{d.name || "—"}</div>
-                      </TableCell>
-                      <TableCell className="w-32">
-                        <Badge variant="outline">
-                          {d.model}{d.version}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="w-40 max-w-40 overflow-hidden">
-                        <div className="truncate">
-                          {d.type ? DEVICE_TYPE_LABELS[d.type] : "—"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-32 overflow-hidden truncate">
-                        {d.location}
-                      </TableCell>
-                      <TableCell className="w-24">
-                        <Badge 
-                          variant={d.status === "Online" ? "default" : "secondary"}
-                          className={d.status === "Online" ? "bg-green-500" : ""}
-                        >
-                          {d.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex">
-                          <ActionsMenu
-                            id={d.id}
-                            showView={true}
-                            showEdit={true}
-                            onView={() => {
-                              setViewDevice(d);
-                              setViewOpen(true);
-                            }}
-                            onEdit={() => {
-                              setEditDevice(d);
-                              setCreateOpen(true);
-                            }}
-                            onArchive={() => {
-                              if (!showArchived) {
-                                setArchivingDevice(d);
-                                setShowArchiveConfirm(true);
-                              } else {
-                                setDevices((prev) =>
-                                  prev.map((p) =>
-                                    p.id === d.id ? { ...p, archived: false } : p
-                                  )
-                                );
-                                toast.success("Device restored");
-                              }
-                            }}
-                            ArchiveLabel={showArchived ? "Restore" : "Archive"}
-                          />
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {pagedDevices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No devices found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    pagedDevices.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell className="font-mono w-52 overflow-hidden truncate">
+                          {d.serialNumber}
+                        </TableCell>
+                        <TableCell className="w-48">
+                          <div className="truncate">{d.name || "—"}</div>
+                        </TableCell>
+                        <TableCell className="w-32">
+                          <Badge variant="outline">
+                            {d.model}{d.version}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="w-40 max-w-40 overflow-hidden">
+                          <div className="truncate">
+                            {d.type ? DEVICE_TYPE_LABELS[d.type] : "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="w-32 overflow-hidden truncate">
+                          {d.location}
+                        </TableCell>
+                        <TableCell className="w-24">
+                          <Badge 
+                            variant={d.status === "Online" ? "default" : "secondary"}
+                            className={d.status === "Online" ? "bg-green-500" : ""}
+                          >
+                            {d.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex">
+                            <ActionsMenu
+                              id={d.id}
+                              showView={true}
+                              showEdit={true}
+                              onView={() => {
+                                setViewDevice(d);
+                                setViewOpen(true);
+                              }}
+                              onEdit={() => {
+                                setEditDevice(d);
+                                setCreateOpen(true);
+                              }}
+                              onArchive={() => {
+                                if (!showArchived) {
+                                  setArchivingDevice(d);
+                                  setShowArchiveConfirm(true);
+                                } else {
+                                  handleArchive(d);
+                                }
+                              }}
+                              ArchiveLabel={showArchived ? "Restore" : "Archive"}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
         <PaginationWrapper
@@ -345,16 +314,9 @@ export default function DevicesPage() {
           action="Archive"
           entity="Device"
           onConfirm={() => {
-            setDevices((prev) =>
-              prev.map((p) =>
-                p.id === archivingDevice.id
-                  ? { ...p, archived: true, assigned: false }
-                  : p
-              )
-            );
+            handleArchive(archivingDevice);
             setShowArchiveConfirm(false);
             setArchivingDevice(null);
-            toast.success("Device archived");
           }}
           onCancel={() => {
             setShowArchiveConfirm(false);

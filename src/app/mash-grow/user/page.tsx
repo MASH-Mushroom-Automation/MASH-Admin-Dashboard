@@ -14,6 +14,7 @@ import ArchiveConfirmation from "@/components/mash-grow/delete-confirmation"
 import RegisterModal from "@/components/mash-grow/register-modal"
 import { Card } from "@/components/ui/card"
 import ViewUserModal from "@/components/mash-grow/view-user-modal"
+import { growUserService, deviceService, type GrowUser, type Device as ApiDevice } from "@/services/mashGrowService"
 
 interface User {
   id: string
@@ -26,44 +27,69 @@ interface User {
   registrationDate: string
 }
 
+interface Device {
+  id: string
+  deviceId: string
+  status: "Online" | "Offline"
+  assigned?: boolean
+}
+
 export default function RegisterChamber() {
   const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
+  const [devices, setDevices] = useState<Device[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All")
   const [ArchiveUserId, setArchiveUserId] = useState<string | null>(null)
   const [registerModalOpen, setRegisterModalOpen] = useState(false)
-  // mock devices
-  const [devices, setDevices] = useState<{ id: string; deviceId: string; status: "Online" | "Offline"; assigned?: boolean }[]>([])
 
-  // hydrate from localStorage on mount
+  // Fetch data from backend
   useEffect(() => {
-    try {
-      const rawUsers = localStorage.getItem("mash_users")
-      const rawDevices = localStorage.getItem("mash_devices")
-      setUsers(rawUsers ? JSON.parse(rawUsers) : [])
-      setDevices(rawDevices ? JSON.parse(rawDevices) : [
-        { id: "d1", deviceId: "MASH-A1-CAL25-AC2523", status: "Online", assigned: false },
-        { id: "d2", deviceId: "MASH-B2-CAL25-AC2524", status: "Offline", assigned: false },
-      ])
-    } catch {
-      setUsers([])
-    }
+    fetchData()
   }, [])
 
-  // persist changes
-  useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      localStorage.setItem("mash_devices", JSON.stringify(devices))
-    } catch {}
-  }, [devices])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("mash_users", JSON.stringify(users))
-    } catch {}
-  }, [users])
+      const [usersResponse, devicesResponse] = await Promise.all([
+        growUserService.getAll({ archived: false }),
+        deviceService.getAll({ limit: 100 })
+      ])
+      
+      // Map API users to local User type
+      const mappedUsers: User[] = usersResponse.data.map((u: GrowUser) => ({
+        id: u.id,
+        chamberNumber: u.chamberNumber,
+        name: u.name,
+        address: u.address || "",
+        contactNumber: u.contactNumber || "",
+        deviceId: u.deviceId,
+        status: "Active" as const,
+        registrationDate: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      }))
+      
+      // Map devices
+      const mappedDevices: Device[] = devicesResponse.data.map((d: ApiDevice) => ({
+        id: d.id,
+        deviceId: d.serialNumber,
+        status: d.status,
+        assigned: d.assigned
+      }))
+      
+      setUsers(mappedUsers)
+      setDevices(mappedDevices)
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to load data'
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -76,20 +102,23 @@ export default function RegisterChamber() {
     return matchesSearch && matchesStatus
   })
 
-  const handleArchive = (userId: string) => {
-    setUsers(users.filter((user) => user.id !== userId))
-    setArchiveUserId(null)
-    toast.success("User Archived successfully")
+  const handleArchive = async (userId: string) => {
+    try {
+      await growUserService.delete(userId)
+      setArchiveUserId(null)
+      toast.success("User Archived successfully")
+      fetchData() // Refresh data
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to archive user'
+      toast.error(errorMessage)
+    }
   }
 
   const handlePingDevice = async (deviceId: string) => {
     // simulate ping
-    const updating = devices.find((d) => d.deviceId === deviceId)
-    if (!updating) return
     toast(`Pinging ${deviceId}...`)
     await new Promise((r) => setTimeout(r, 800))
     const isOnline = Math.random() > 0.4
-    setDevices((prev) => prev.map((d) => (d.id === updating.id ? { ...d, status: isOnline ? "Online" : "Offline" } : d)))
     toast.success(isOnline ? "Device is Online" : "Device is Offline")
   }
 
@@ -104,22 +133,21 @@ export default function RegisterChamber() {
     selectedDeviceId?: string
   }
 
-  const handleRegisterSaveExtended = (data: RegistrationPayload) => {
-    // data may include chamberName, address, contactNumber, selectedDeviceId, deviceId
-    const newUser: User = {
-      id: String(users.length + 1),
-      chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
-      name: data.chamberName || data.name || "",
-      address: data.address || "",
-      contactNumber: data.contactNumber || "",
-      deviceId: data.deviceId || (data.selectedDeviceId ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId : undefined),
-      status: "Active",
-      registrationDate: new Date().toISOString().split("T")[0],
-    }
-    setUsers((prev) => [...prev, newUser])
-    // mark device assigned if provided
-    if (data.selectedDeviceId) {
-      setDevices((prev) => prev.map((d) => (d.id === data.selectedDeviceId ? { ...d, assigned: true } : d)))
+  const handleRegisterSaveExtended = async (data: RegistrationPayload) => {
+    try {
+      const newUser: Omit<GrowUser, 'id' | 'createdAt' | 'updatedAt'> = {
+        chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
+        name: data.chamberName || data.name || "",
+        address: data.address || "",
+        contactNumber: data.contactNumber || "",
+        deviceId: data.deviceId || (data.selectedDeviceId ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId : undefined)
+      }
+      await growUserService.create(newUser)
+      toast.success("User registered successfully")
+      fetchData() // Refresh data
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to register user'
+      toast.error(errorMessage)
     }
   }
 
@@ -185,45 +213,55 @@ export default function RegisterChamber() {
         {/* Table */}
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <Table className="w-full table-fixed">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Chamber Number</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Contact Number</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Registration Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.chamberNumber}</TableCell>
-                    <TableCell className="truncate">{user.name}</TableCell>
-                    <TableCell className="truncate">{user.address}</TableCell>
-                    <TableCell className="whitespace-nowrap">{user.contactNumber}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={user.status} />
-                    </TableCell>
-                    <TableCell>{user.registrationDate}</TableCell>
-                    <TableCell className="text-center flex items-center justify-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => openView(user)}>View</Button>
-                      <ActionsMenu id={user.id} onArchive={() => setArchiveUserId(user.id)} />
-                    </TableCell>
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Loading users...
+              </div>
+            ) : error ? (
+              <div className="py-8 text-center text-red-500">
+                {error}
+              </div>
+            ) : (
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Chamber Number</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Contact Number</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Registration Date</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7}>
-                    No users found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.length > 0 ? (
+                    filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.chamberNumber}</TableCell>
+                        <TableCell className="truncate">{user.name}</TableCell>
+                        <TableCell className="truncate">{user.address}</TableCell>
+                        <TableCell className="whitespace-nowrap">{user.contactNumber}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={user.status} />
+                        </TableCell>
+                        <TableCell>{user.registrationDate}</TableCell>
+                        <TableCell className="text-center flex items-center justify-center gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => openView(user)}>View</Button>
+                          <ActionsMenu id={user.id} onArchive={() => setArchiveUserId(user.id)} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7}>
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </Card>
       </div>
