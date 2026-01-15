@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,40 +30,13 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, Edit2, Plus } from "lucide-react";
 import { toast } from "sonner";
-
-interface HelpArticle {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  content: string;
-  published: boolean;
-  createdAt: string;
-}
+import { cmsService, type CMSArticle } from "@/services/mashGrowService";
 
 export default function CMSPage() {
-  const [articles, setArticles] = useState<HelpArticle[]>([
-    {
-      id: "1",
-      title: "Getting Started with MashGrow",
-      category: "Getting Started",
-      description: "Learn the basics of MashGrow",
-      content:
-        "MashGrow is a comprehensive platform for managing your business...",
-      published: true,
-      createdAt: "2024-01-15",
-    },
-    {
-      id: "2",
-      title: "How to Create an Account",
-      category: "Account",
-      description: "Step-by-step guide to create your account",
-      content: "To create an account, click on the sign up button...",
-      published: true,
-      createdAt: "2024-01-20",
-    },
-  ]);
-
+  const [articles, setArticles] = useState<CMSArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -74,7 +47,27 @@ export default function CMSPage() {
     published: false,
   });
 
-  const handleOpenModal = (article?: HelpArticle) => {
+  // Fetch articles from backend
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  const fetchArticles = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await cmsService.getAll();
+      setArticles(response.data);
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to load articles';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (article?: CMSArticle) => {
     if (article) {
       setEditingId(article.id);
       setFormData({
@@ -97,7 +90,7 @@ export default function CMSPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (
       !formData.title.trim() ||
       !formData.description.trim() ||
@@ -107,34 +100,34 @@ export default function CMSPage() {
       return;
     }
 
-    if (editingId) {
-      setArticles(
-        articles.map((article) =>
-          article.id === editingId
-            ? {
-                ...article,
-                ...formData,
-              }
-            : article
-        )
-      );
-      toast.success("Article updated successfully");
-    } else {
-      const newArticle: HelpArticle = {
-        id: String(articles.length + 1),
-        ...formData,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setArticles([...articles, newArticle]);
-      toast.success("Article created successfully");
+    try {
+      if (editingId) {
+        await cmsService.update(editingId, formData);
+        toast.success("Article updated successfully");
+      } else {
+        await cmsService.create({
+          ...formData,
+          createdAt: new Date().toISOString()
+        });
+        toast.success("Article created successfully");
+      }
+      setIsModalOpen(false);
+      fetchArticles(); // Refresh the list
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to save article';
+      toast.error(errorMessage);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleArchive = (id: string) => {
-    setArticles(articles.filter((article) => article.id !== id));
-    toast.success("Article archived successfully");
+  const handleArchive = async (id: string) => {
+    try {
+      await cmsService.delete(id);
+      toast.success("Article archived successfully");
+      fetchArticles(); // Refresh the list
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to archive article';
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -162,87 +155,97 @@ export default function CMSPage() {
         {/* Table */}
         <Card className="border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <Table className="w-full table-fixed">
-              <TableHeader className="bg-muted">
-                <TableRow>
-                  <TableHead className="text-foreground font-semibold">
-                    Title
-                  </TableHead>
-                  <TableHead className="text-foreground font-semibold">
-                    Category
-                  </TableHead>
-                  <TableHead className="text-foreground font-semibold">
-                    Description
-                  </TableHead>
-                  <TableHead className="text-foreground font-semibold">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-foreground font-semibold">
-                    Created
-                  </TableHead>
-                  <TableHead className="text-foreground font-semibold text-center">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {articles.length > 0 ? (
-                  articles.map((article) => (
-                    <TableRow key={article.id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium min-w-0 truncate">
-                        {article.title}
-                      </TableCell>
-                      <TableCell className="min-w-0 truncate">
-                        {article.category}
-                      </TableCell>
-                      <TableCell className="min-w-0 truncate">
-                        {article.description}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            article.published
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {article.published ? "Published" : "Draft"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{article.createdAt}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleOpenModal(article)}
-                            className="p-2 hover:bg-muted rounded-md transition-colors"
-                            title="Edit"
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Loading articles...
+              </div>
+            ) : error ? (
+              <div className="py-8 text-center text-red-500">
+                {error}
+              </div>
+            ) : (
+              <Table className="w-full">
+                <TableHeader className="bg-muted">
+                  <TableRow>
+                    <TableHead className="text-foreground font-semibold">
+                      Title
+                    </TableHead>
+                    <TableHead className="text-foreground font-semibold">
+                      Category
+                    </TableHead>
+                    <TableHead className="text-foreground font-semibold">
+                      Description
+                    </TableHead>
+                    <TableHead className="text-foreground font-semibold">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-foreground font-semibold">
+                      Created
+                    </TableHead>
+                    <TableHead className="text-foreground font-semibold text-center">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {articles.length > 0 ? (
+                    articles.map((article) => (
+                      <TableRow key={article.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium min-w-0 truncate">
+                          {article.title}
+                        </TableCell>
+                        <TableCell className="min-w-0 truncate">
+                          {article.category}
+                        </TableCell>
+                        <TableCell className="min-w-0 truncate">
+                          {article.description}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              article.published
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }
                           >
-                            <Edit2 className="w-4 h-4 text-blue-600" />
-                          </button>
-                          <button
-                            onClick={() => handleArchive(article.id)}
-                            className="p-2 hover:bg-muted rounded-md transition-colors"
-                            title="Archive"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        </div>
+                            {article.published ? "Published" : "Draft"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(article.createdAt).toISOString().split("T")[0]}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleOpenModal(article)}
+                              className="p-2 hover:bg-muted rounded-md transition-colors"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4 text-blue-600" />
+                            </button>
+                            <button
+                              onClick={() => handleArchive(article.id)}
+                              className="p-2 hover:bg-muted rounded-md transition-colors"
+                              title="Archive"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        No articles found. Create your first article to get
+                        started.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center py-8 text-muted-foreground"
-                    >
-                      No articles found. Create your first article to get
-                      started.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </Card>
       </div>

@@ -18,22 +18,10 @@ import ViewUserModal from "@/components/mash-grow/view-user-modal";
 import RegisterModal from "@/components/mash-grow/register-modal";
 import AssignDeviceModal from "@/components/mash-grow/assign-device-modal";
 import { toast } from "sonner";
+import { growUserService, deviceService, type GrowUser as ApiGrowUser, type Device as ApiDevice } from "@/services/mashGrowService";
 
-// Types for users/devices used in this page
-type User = {
-  id: string;
-  chamberNumber: string;
-  name: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  phoneNumber?: string;
-  address?: string;
-  contactNumber?: string;
-  deviceId?: string;
-  archived?: boolean;
-};
-
+// Map API types to local types for compatibility with existing components
+type User = ApiGrowUser;
 type Device = {
   id: string;
   deviceId: string;
@@ -62,75 +50,12 @@ type RegisterData = Partial<RegisterInitialData> & {
   selectedDeviceId?: string;
 };
 
-// Default mock users/devices moved to module scope so hooks don't need to include them as deps
-const DEFAULT_USERS: User[] = [
-  {
-    id: "1",
-    chamberNumber: "CH001",
-    name: "Ana Santos",
-    firstName: "Ana",
-    lastName: "Santos",
-    email: "ana.santos@example.com",
-    address: "Blk 2 Lot 5, Caloocan",
-    contactNumber: "+639171234567",
-    phoneNumber: "+639171234567",
-    deviceId: "MASH-A1-CAL25-AC2523",
-  },
-  {
-    id: "2",
-    chamberNumber: "CH002",
-    name: "Chamber A",
-    firstName: "Rico",
-    lastName: "Dela Cruz",
-    email: "rico.delacruz@example.com",
-    address: "123 Rizal St, Manila",
-    contactNumber: "+639172345678",
-    phoneNumber: "+639172345678",
-    deviceId: "MASH-B2-CAL25-AC2524",
-  },
-  // archived mock user for archive view
-  {
-    id: "4",
-    chamberNumber: "CH004",
-    name: "Old Account",
-    address: "Old St, Makati",
-    contactNumber: "+639174567890",
-    deviceId: "MASH-F6-ARCHIVED-AC2528",
-    archived: true,
-  },
-];
-
-const MOCK_DEVICES: Device[] = [
-  {
-    id: "mock-1",
-    deviceId: "MASH-AX1-CALOOCAN-AC2523",
-    name: "Chamber A",
-    model: "AX1",
-    location: "Caloocan",
-    status: "Disconnected",
-    assigned: false,
-  },
-  {
-    id: "mock-2",
-    deviceId: "MASH-BX2-MANILA-AC2524",
-    model: "BX2",
-    location: "Manila",
-    status: "Connected",
-    assigned: false,
-  },
-  {
-    id: "mock-3",
-    deviceId: "MASH-CX3-QUEZONCITY-AC2525",
-    model: "CX3",
-    location: "Quezon City",
-    status: "Disconnected",
-    assigned: false,
-  },
-];
-
 export default function RegisteredUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editUser, setEditUser] = useState<RegisterInitialData | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
@@ -156,174 +81,109 @@ export default function RegisteredUsersPage() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [userToAssign, setUserToAssign] = useState<User | null>(null);
 
+  // Fetch users and devices from backend
   useEffect(() => {
+    fetchData();
+  }, [showArchived]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const raw = localStorage.getItem("mash_users");
-      if (!raw || raw === "null") {
-        setUsers(DEFAULT_USERS);
-      } else {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) setUsers(parsed);
-          else setUsers(DEFAULT_USERS);
-        } catch {
-          setUsers(DEFAULT_USERS);
-        }
-      }
-    } catch {
-      setUsers(DEFAULT_USERS);
+      // Fetch users and devices in parallel
+      const [usersResponse, devicesResponse] = await Promise.all([
+        growUserService.getAll({ archived: showArchived ? true : undefined }),
+        deviceService.getAll({ limit: 100 })
+      ]);
+      
+      setUsers(usersResponse.data);
+      // Map devices to expected format
+      const mappedDevices: Device[] = devicesResponse.data.map((d: ApiDevice) => ({
+        id: d.id,
+        deviceId: d.serialNumber,
+        name: d.name,
+        model: `${d.model}${d.version}`,
+        location: d.location,
+        status: d.status,
+        assigned: d.assigned
+      }));
+      setDevices(mappedDevices);
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to load data';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const rawDevices = localStorage.getItem("mash_devices");
-      setDevices(rawDevices ? JSON.parse(rawDevices) : []);
-    } catch {
-      setDevices([]);
-    }
-  }, []);
-
-  // If there are no persisted devices, seed with mockDevices so register/save is functional
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("mash_devices");
-      let shouldSeed = false;
-      if (!raw || raw === "null") shouldSeed = true;
-      else {
-        try {
-          const parsed = JSON.parse(raw);
-          if (!Array.isArray(parsed) || parsed.length === 0) shouldSeed = true;
-        } catch {
-          shouldSeed = true;
-        }
-      }
-
-      // only seed when there's nothing persisted yet and our in-memory list is empty
-      if (shouldSeed && devices.length === 0) {
-        setDevices(MOCK_DEVICES);
-        try {
-          localStorage.setItem("mash_devices", JSON.stringify(MOCK_DEVICES));
-        } catch {
-          // ignore
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, [devices]);
-
-  // persist users/devices
-  useEffect(() => {
-    try {
-      localStorage.setItem("mash_users", JSON.stringify(users));
-    } catch {}
-  }, [users]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("mash_devices", JSON.stringify(devices));
-    } catch {}
-  }, [devices]);
+  };
 
   const handleView = (u: User) => {
     setSelectedUser(u);
     setViewOpen(true);
   };
 
-  const handleAssignSave = (selectedDeviceId: string | undefined) => {
-    if (!userToAssign) return;
-    if (!selectedDeviceId) return;
+  const handleAssignSave = async (selectedDeviceId: string | undefined) => {
+    if (!userToAssign || !selectedDeviceId) return;
 
-    // If the selected device is a mock (not present in devices state), we can't persist assignment.
-    const isReal = devices.find((d) => d.id === selectedDeviceId);
-    if (!isReal) {
-      toast.error("Selected device is a mock device and cannot be assigned.");
+    try {
+      // Assign device via API
+      await deviceService.assign(selectedDeviceId, userToAssign.id);
+      toast.success("Device assigned");
       setUserToAssign(null);
-      return;
+      fetchData(); // Refresh data
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to assign device';
+      toast.error(errorMessage);
     }
-
-    setDevices((prev) => {
-      const next = prev.map((d) => ({ ...d }));
-      const prevDevice = next.find((d) => d.deviceId === userToAssign.deviceId);
-      if (prevDevice) prevDevice.assigned = false;
-      const newDevice = next.find((d) => d.id === selectedDeviceId);
-      if (newDevice) newDevice.assigned = true;
-      return next;
-    });
-
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === userToAssign.id
-          ? {
-              ...u,
-              deviceId: devices.find((d) => d.id === selectedDeviceId)
-                ?.deviceId,
-            }
-          : u
-      )
-    );
-    setUserToAssign(null);
-    toast.success("Device assigned");
   };
 
-
-  const handleRegisterSave = (data: RegisterData) => {
-    // If editing (id present), update existing entry
-    if (data?.id) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === String(data.id)
-            ? {
-                ...u,
-                // prefer explicit chamberName, fall back to combined first/last or existing name
-                name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name) || u.name,
-                email: data.email ?? u.email,
-                firstName: data.firstName ?? u.firstName,
-                lastName: data.lastName ?? u.lastName,
-                phoneNumber: data.phoneNumber ?? u.phoneNumber ?? data.contactNumber ?? u.phoneNumber,
-                address: data.address || u.address,
-                contactNumber: data.contactNumber || u.contactNumber,
-                deviceId: data.deviceId || u.deviceId,
-              }
-            : u
-        )
-      );
-    } else {
-      // build new user record
-      const newUser = {
-        id: String(users.length + 1),
-        chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
-        name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name) || "",
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phoneNumber: data.phoneNumber ?? data.contactNumber,
-        address: data.address || "",
-        contactNumber: data.contactNumber || data.phoneNumber || "",
-        // support selected device coming from either real devices or mockDevices
-        deviceId:
-          data.deviceId ||
-          (data.selectedDeviceId
-            ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId ??
-              MOCK_DEVICES.find((d: Device) => d.id === data.selectedDeviceId)
-                ?.deviceId
-            : undefined),
-      };
-
-      setUsers((prev) => [newUser, ...prev]);
-
-      // mark device assigned if selected
-      if (data.selectedDeviceId) {
-        // only mark real devices as assigned
-        setDevices((prev) =>
-          prev.map((d) =>
-            d.id === data.selectedDeviceId ? { ...d, assigned: true } : d
-          )
-        );
+  const handleRegisterSave = async (data: RegisterData) => {
+    try {
+      if (data?.id) {
+        // Update existing user
+        const updateData: Partial<User> = {
+          name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name),
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phoneNumber ?? data.contactNumber,
+          address: data.address,
+          contactNumber: data.contactNumber || data.phoneNumber,
+          deviceId: data.deviceId
+        };
+        await growUserService.update(data.id, updateData);
+        toast.success("User updated");
+      } else {
+        // Create new user
+        const newUser: Omit<User, 'id' | 'createdAt' | 'updatedAt'> = {
+          chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
+          name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name) || "",
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phoneNumber ?? data.contactNumber,
+          address: data.address || "",
+          contactNumber: data.contactNumber || data.phoneNumber || "",
+          deviceId: data.deviceId || (data.selectedDeviceId ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId : undefined)
+        };
+        await growUserService.create(newUser);
+        toast.success("User registered");
       }
+      fetchData(); // Refresh data
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to save user';
+      toast.error(errorMessage);
+    }
+  };
 
-      toast.success("User registered");
+  const handleArchive = async (user: User, archive: boolean = true) => {
+    try {
+      await growUserService.archive(user.id, archive);
+      toast.success(archive ? "User archived" : "User restored");
+      fetchData(); // Refresh data
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Failed to archive user';
+      toast.error(errorMessage);
     }
   };
 
@@ -368,77 +228,73 @@ export default function RegisteredUsersPage() {
 
       <Card>
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <tr>
-                <TableHead>Name</TableHead>
-                <TableHead>Chamber</TableHead>
-                <TableHead>Device ID</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Actions</TableHead>
-              </tr>
-            </TableHeader>
-            <TableBody>
-              {users
-                .filter((u) =>
-                  showArchived ? Boolean(u.archived) : !u.archived
-                )
-                .map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.name}</TableCell>
-                    <TableCell>{u.chamberNumber}</TableCell>
-                    <TableCell className="font-mono">{u.deviceId}</TableCell>
-                    <TableCell>{u.contactNumber}</TableCell>
-                    <TableCell className="flex">
-                      <ActionsMenu
-                        id={u.id}
-                        onView={() => handleView(u)}
-                        onEdit={() => {
-                          const selectedDevice = devices.find(
-                            (d) => d.deviceId === u.deviceId
-                          );
-                          setEditUser({
-                            id: u.id,
-                            chamberName: u.name,
-                            contactNumber: u.contactNumber,
-                            address: u.address,
-                            selectedDeviceId: selectedDevice?.id,
-                            email: u.email,
-                            firstName: u.firstName,
-                            lastName: u.lastName,
-                            phoneNumber: u.phoneNumber,
-                          });
-                          setRegisterOpen(true);
-                        }}
-                        onArchive={() => {
-                          if (!showArchived) {
-                            setArchivingUser(u);
-                            setShowArchiveConfirm(true);
-                          } else {
-                            setUsers((prev) =>
-                              prev.map((x) =>
-                                x.id === u.id ? { ...x, archived: false } : x
-                              )
+          {loading ? (
+            <div className="py-8 text-center text-muted-foreground">
+              Loading users...
+            </div>
+          ) : error ? (
+            <div className="py-8 text-center text-red-500">
+              {error}
+            </div>
+          ) : (
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Chamber</TableHead>
+                  <TableHead>Device ID</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users
+                  .filter((u) =>
+                    showArchived ? Boolean(u.archived) : !u.archived
+                  )
+                  .map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell>{u.name}</TableCell>
+                      <TableCell>{u.chamberNumber}</TableCell>
+                      <TableCell className="font-mono">{u.deviceId}</TableCell>
+                      <TableCell>{u.contactNumber}</TableCell>
+                      <TableCell className="flex">
+                        <ActionsMenu
+                          id={u.id}
+                          onView={() => handleView(u)}
+                          onEdit={() => {
+                            const selectedDevice = devices.find(
+                              (d) => d.deviceId === u.deviceId
                             );
-                            if (u.deviceId) {
-                              setDevices((prev) =>
-                                prev.map((d) =>
-                                  d.deviceId === u.deviceId
-                                    ? { ...d, assigned: true }
-                                    : d
-                                )
-                              );
+                            setEditUser({
+                              id: u.id,
+                              chamberName: u.name,
+                              contactNumber: u.contactNumber,
+                              address: u.address,
+                              selectedDeviceId: selectedDevice?.id,
+                              email: u.email,
+                              firstName: u.firstName,
+                              lastName: u.lastName,
+                              phoneNumber: u.phoneNumber,
+                            });
+                            setRegisterOpen(true);
+                          }}
+                          onArchive={() => {
+                            if (!showArchived) {
+                              setArchivingUser(u);
+                              setShowArchiveConfirm(true);
+                            } else {
+                              handleArchive(u, false);
                             }
-                            toast.success("User restored");
-                          }
-                        }}
-                        ArchiveLabel={showArchived ? "Restore" : "Archive"}
-                      ></ActionsMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
+                          }}
+                          ArchiveLabel={showArchived ? "Restore" : "Archive"}
+                        ></ActionsMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </Card>
       <ViewUserModal
@@ -458,21 +314,13 @@ export default function RegisteredUsersPage() {
           setRegisterOpen(false);
           handleRegisterSave(data);
         }}
-        availableDevices={
-          devices.filter((d) => !d.assigned).length > 0
-            ? devices.filter((d) => !d.assigned)
-            : MOCK_DEVICES
-        }
+        availableDevices={devices.filter((d) => !d.assigned)}
         initialData={editUser ?? undefined}
       />
       <AssignDeviceModal
         open={assignOpen}
         onOpenChange={setAssignOpen}
-        availableDevices={
-          devices.filter((d) => !d.assigned).length > 0
-            ? devices.filter((d) => !d.assigned)
-            : MOCK_DEVICES
-        }
+        availableDevices={devices.filter((d) => !d.assigned)}
         onAssign={(id) => handleAssignSave(id)}
       />
       {showArchiveConfirm && archivingUser && (
@@ -480,24 +328,9 @@ export default function RegisteredUsersPage() {
           action="Archive"
           entity="User"
           onConfirm={() => {
-            // unassign device if applicable
-            if (archivingUser.deviceId) {
-              setDevices((prev) =>
-                prev.map((d) =>
-                  d.deviceId === archivingUser.deviceId
-                    ? { ...d, assigned: false }
-                    : d
-                )
-              );
-            }
-            setUsers((prev) =>
-              prev.map((x) =>
-                x.id === archivingUser.id ? { ...x, archived: true } : x
-              )
-            );
+            handleArchive(archivingUser, true);
             setShowArchiveConfirm(false);
             setArchivingUser(null);
-            toast.success("User archived");
           }}
           onCancel={() => {
             setShowArchiveConfirm(false);
