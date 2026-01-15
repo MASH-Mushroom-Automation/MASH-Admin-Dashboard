@@ -12,35 +12,46 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { generateDeviceId, validateLuhn } from "@/lib/luhn";
+import { 
+  DeviceModel, 
+  DeviceType,
+  MODEL_DESCRIPTIONS,
+  DEVICE_TYPE_LABELS 
+} from "@/types/device";
+import { toast } from "sonner";
 
-interface Device {
+interface DeviceLocal {
   id: string;
-  deviceId: string;
+  serialNumber: string;
   model: string;
+  version: number;
   location: string;
   status: "Online" | "Offline";
-  assigned: boolean;
+  assigned?: boolean;
   name?: string;
-  type?: string;
+  type?: DeviceType;
   description?: string;
   firmware?: string;
   archived?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 interface CreateDeviceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (device: Device) => void;
-  // optional: when provided the modal works in edit mode
-  initialDevice?: Device;
+  onSave: (device: DeviceLocal) => void;
+  initialDevice?: DeviceLocal;
 }
 
 export default function CreateDeviceModal({
@@ -49,321 +60,248 @@ export default function CreateDeviceModal({
   onSave,
   initialDevice,
 }: CreateDeviceModalProps) {
-  const [model, setModel] = useState("");
+  // Form fields
   const [name, setName] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState<DeviceType>("MUSHROOM_CHAMBER");
+  const [modelType, setModelType] = useState<DeviceModel>("A");
+  const [version, setVersion] = useState<number>(1);
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [firmware, setFirmware] = useState("");
   
-  const [editingId, setEditingId] = useState<string | undefined>(undefined);
-  const [generatedId, setGeneratedId] = useState<string | null>(null);
-  const [manualEdit, setManualEdit] = useState(false);
-  const [seg1, setSeg1] = useState("MASH");
-  const [seg2, setSeg2] = useState("");
-  const [seg3, setSeg3] = useState("");
-  const [seg4, setSeg4] = useState("");
-  // helper: normalize model (keep alphanumeric, uppercase). Use full model token (e.g., A1, B1)
-  const normalizeModel = (m: string) => {
-    if (!m) return "MODEL";
-    return m.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  };
+  // Generated ID state
+  const [generatedSerialNumber, setGeneratedSerialNumber] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  // generate a random uppercase alphanumeric string of given length
-  const generateUniqueHex = (length = 6) => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let out = "";
-    for (let i = 0; i < length; i++) {
-      out += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return out;
-  };
+  // Generate device ID whenever model, version, or location changes
+  useEffect(() => {
+    if (!open) return;
+    if (isEditMode) return; // Don't regenerate in edit mode
 
-  // build LocationYear: first 3 letters of location (uppercase) + last 2 digits of year
-  const buildLocationYear = (loc: string, year?: number) => {
-    const cleaned = (loc || "").replace(/[^a-zA-Z]/g, "").toUpperCase();
-    const first3 = (cleaned + "XXX").slice(0, 3);
-    const y = year ?? new Date().getFullYear();
-    const last2 = String(y).slice(-2);
-    return `${first3}${last2}`;
-  };
-
-  // generate a full CD Key with uniqueness check against localStorage devices
-  const generateDeviceId = (m: string, loc: string) => {
-    const prefix = "MASH";
-    const modelCode = normalizeModel(m) || "MODEL";
-    const locationYear = buildLocationYear(loc);
-
-    // attempt to generate unique suffix and avoid collisions with stored devices
-    let suffix = generateUniqueHex(6);
-    try {
-      const raw = localStorage.getItem("mash_devices");
-      const parsed = raw ? JSON.parse(raw) : [];
-      const existing = new Set(
-        (Array.isArray(parsed) ? parsed : []).map((d: any) => String(d.deviceId || ""))
-      );
-      let attempts = 0;
-      while (existing.has(`${prefix}-${modelCode}-${locationYear}-${suffix}`) && attempts < 10) {
-        suffix = generateUniqueHex(6);
-        attempts++;
+    if (modelType && version && location) {
+      try {
+        const serialNumber = generateDeviceId(modelType, version, location);
+        setGeneratedSerialNumber(serialNumber);
+      } catch (error) {
+        console.error("Error generating device ID:", error);
+        toast.error("Failed to generate device ID");
       }
-    } catch (e) {
-      // ignore and proceed
     }
+  }, [modelType, version, location, open, isEditMode]);
 
-    return `${prefix}-${modelCode}-${locationYear}-${suffix}`;
-  };
-
-  // previewDeviceId shows a live preview when model/location present
-  const currentYear = new Date().getFullYear();
-  const previewLocationYear = buildLocationYear(location, currentYear);
-  const previewModelCode = normalizeModel(model);
-  const previewDeviceId = `MASH-${previewModelCode}-${previewLocationYear}-XXXXXX`;
-
+  // Initialize form with edit data
   useEffect(() => {
     if (open && initialDevice) {
-      // populate form with initial device for edit
-      setEditingId(initialDevice.id);
-      setName((initialDevice as any).name ?? "");
-      setType((initialDevice as any).type ?? "");
-      setDescription((initialDevice as any).description ?? "");
-      setFirmware((initialDevice as any).firmware ?? "");
-      setModel(initialDevice.model);
-      setLocation(initialDevice.location);
-      // populate segmented ID fields from existing deviceId if present
-      const existingId = initialDevice.deviceId ?? null;
-      if (existingId) {
-        const parts = String(existingId).split("-");
-        setSeg1(parts[0] ?? "MASH");
-        setSeg2(parts[1] ?? normalizeModel(initialDevice.model));
-        setSeg3(parts[2] ?? buildLocationYear(initialDevice.location));
-        setSeg4(parts[3] ?? generateUniqueHex(6));
-      } else {
-        setSeg1("MASH");
-        setSeg2(normalizeModel(initialDevice.model));
-        setSeg3(buildLocationYear(initialDevice.location));
-        setSeg4(generateUniqueHex(6));
-      }
-      setGeneratedId(initialDevice.deviceId ?? null);
-      setManualEdit(false);
-      // when editing, we keep the existing deviceId (not regenerating)
-    }
-
-    if (!open && !initialDevice) {
-      setEditingId(undefined);
+      setIsEditMode(true);
+      setName(initialDevice.name || "");
+      setType((initialDevice.type as DeviceType) || "MUSHROOM_CHAMBER");
+      setModelType((initialDevice.model as DeviceModel) || "A");
+      setVersion(initialDevice.version || 1);
+      setLocation(initialDevice.location || "");
+      setDescription(initialDevice.description || "");
+      setFirmware(initialDevice.firmware || "");
+      setGeneratedSerialNumber(initialDevice.serialNumber || "");
+    } else if (!open) {
+      // Reset form when modal closes
+      resetForm();
     }
   }, [open, initialDevice]);
 
-  // Auto-generate ID when creating (not editing) and when model/location change,
-  // but do not overwrite if user manually edited the ID field.
-  useEffect(() => {
-    if (!open) return;
-    if (editingId) return; // editing existing device -> keep its id unless user edits
-    if (manualEdit) return; // user manually edited -> don't auto overwrite
-    // auto-fill segmented ID
-    setSeg1("MASH");
-    setSeg2(normalizeModel(model));
-    setSeg3(buildLocationYear(location));
-    // generate a unique suffix avoiding collisions
-    let suffix = generateUniqueHex(6);
-    try {
-      const raw = localStorage.getItem("mash_devices");
-      const parsed = raw ? JSON.parse(raw) : [];
-      const existing = new Set(
-        (Array.isArray(parsed) ? parsed : []).map((d: any) => String(d.deviceId || ""))
-      );
-      let attempts = 0;
-      while (existing.has(`${"MASH"}-${normalizeModel(model)}-${buildLocationYear(location)}-${suffix}`) && attempts < 20) {
-        suffix = generateUniqueHex(6);
-        attempts++;
-      }
-    } catch (e) {
-      // ignore
-    }
-    setSeg4(suffix);
-  }, [model, location, open, editingId, manualEdit]);
-
-  // helper to reset the form to defaults
   const resetForm = () => {
     setName("");
-    setType("");
-    setModel("");
+    setType("MUSHROOM_CHAMBER");
+    setModelType("A");
+    setVersion(1);
     setLocation("");
     setDescription("");
     setFirmware("");
-    setGeneratedId(null);
-    setManualEdit(false);
-    setSeg1("MASH");
-    setSeg2("");
-    setSeg3(buildLocationYear("") );
-    setSeg4(generateUniqueHex(6));
-    setEditingId(undefined);
+    setGeneratedSerialNumber("");
+    setIsEditMode(false);
   };
 
-  // when modal closes, reset form so reopening starts empty
-  useEffect(() => {
-    if (!open) {
-      resetForm();
-    }
-  }, [open]);
-
-  // network ping removed — device saves are defaulted to offline
-
   const handleSave = () => {
-    const id = editingId ?? String(Date.now());
+    // Validation
+    if (!name.trim()) {
+      toast.error("Device name is required");
+      return;
+    }
+    if (!location.trim()) {
+      toast.error("Location is required");
+      return;
+    }
+    if (!generatedSerialNumber) {
+      toast.error("Failed to generate device ID");
+      return;
+    }
 
-    // assemble deviceId from segments; fallback to generator if any segment is missing
-    const assembled = `${seg1}-${seg2}-${seg3}-${seg4}`;
-    const deviceIdGenerated = seg1 && seg2 && seg3 && seg4 ? assembled : generateDeviceId(model, location);
+    // Validate Luhn check digit
+    const hexPart = generatedSerialNumber.split("-")[3];
+    if (hexPart && !validateLuhn(hexPart)) {
+      toast.error("Generated device ID has invalid check digit");
+      return;
+    }
 
-    const device: Device = {
-      id,
-      deviceId: deviceIdGenerated,
-      model,
-      name,
+    const device: DeviceLocal = {
+      id: initialDevice?.id || String(Date.now()),
+      serialNumber: generatedSerialNumber,
+      name: name.trim(),
       type,
-      description,
-      firmware,
-      location,
+      model: modelType,
+      version,
+      location: location.trim(),
+      description: description.trim(),
+      firmware: firmware.trim(),
       status: "Offline",
       assigned: false,
     };
+
     onSave(device);
-    // always close modal after saving
     onOpenChange(false);
-    // reset form so next open is empty
     resetForm();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-auto">
+      <DialogContent className="max-h-[80vh] overflow-auto max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {editingId ? "Edit Device" : "Create Device"}
+            {isEditMode ? "Edit Device" : "Create New Device"}
           </DialogTitle>
           <DialogDescription>
-            Generate a new chamber device and check network configuration.
+            Generate a unique device ID using Luhn Modulo N algorithm
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <Card>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {/* Device Name */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Name</Label>
+                  <Label htmlFor="name">Device Name *</Label>
                   <Input
+                    id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., Chamber Controller 01"
                   />
                 </div>
 
+                {/* Device Type */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Type</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full text-left justify-start font-normal">
-                        <span className={`${type ? "font-normal" : "text-muted-foreground font-normal"}`}>{type || "Select type"}</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-full">
-                      <DropdownMenuItem onClick={() => setType("Mushroom Chamber")}>Mushroom Chamber</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setType("Laminar Flow hood")}>Laminar Flow hood</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Label htmlFor="type">Device Type *</Label>
+                  <Select value={type} onValueChange={(value) => setType(value as DeviceType)}>
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Select device type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DEVICE_TYPE_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
+                {/* Model Type */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Model</Label>
+                  <Label htmlFor="model">Model Type *</Label>
+                  <Select 
+                    value={modelType} 
+                    onValueChange={(value) => setModelType(value as DeviceModel)}
+                    disabled={isEditMode}
+                  >
+                    <SelectTrigger id="model">
+                      <SelectValue placeholder="Select model type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(MODEL_DESCRIPTIONS).map(([key, description]) => (
+                        <SelectItem key={key} value={key}>
+                          {key} - {description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isEditMode && (
+                    <p className="text-xs text-muted-foreground">
+                      Model type cannot be changed in edit mode
+                    </p>
+                  )}
+                </div>
+
+                {/* Version */}
+                <div className="space-y-2">
+                  <Label htmlFor="version">Version Number *</Label>
                   <Input
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder="e.g., A1"
+                    id="version"
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={version}
+                    onChange={(e) => setVersion(parseInt(e.target.value) || 1)}
+                    disabled={isEditMode}
+                    placeholder="e.g., 1"
                   />
+                  {isEditMode && (
+                    <p className="text-xs text-muted-foreground">
+                      Version cannot be changed in edit mode
+                    </p>
+                  )}
                 </div>
 
+                {/* Location */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Location</Label>
+                  <Label htmlFor="location">Location *</Label>
                   <Input
+                    id="location"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g., Caloocan"
+                    disabled={isEditMode}
+                    placeholder="e.g., Caloocan, Manila, Cebu"
                   />
+                  {isEditMode && (
+                    <p className="text-xs text-muted-foreground">
+                      Location cannot be changed in edit mode
+                    </p>
+                  )}
                 </div>
 
+                {/* Firmware */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Firmware</Label>
+                  <Label htmlFor="firmware">Firmware Version</Label>
                   <Input
+                    id="firmware"
                     value={firmware}
                     onChange={(e) => setFirmware(e.target.value)}
                     placeholder="e.g., v1.0.0"
                   />
                 </div>
 
+                {/* Description */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Description</Label>
+                  <Label htmlFor="description">Description</Label>
                   <Input
+                    id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description"
+                    placeholder="Optional device description"
                   />
                 </div>
 
-                <div>
-                  <Label className="text-sm">Device ID</Label>
-                  <div className="flex items-center gap-2 flex-nowrap">
-                    <Input
-                      value={seg1}
-                      onChange={() => {}}
-                      readOnly
-                      className="w-16 text-center text-sm font-mono"
-                    />
-                    <div className="text-lg font-mono">-</div>
-                    <Input
-                      value={seg2}
-                      onChange={(e) => {
-                        if (!editingId) {
-                          setSeg2(e.target.value.toUpperCase().slice(0, 4));
-                          setManualEdit(true);
-                        }
-                      }}
-                      className="w-20 text-center text-sm font-mono"
-                      maxLength={4}
-                      readOnly={Boolean(editingId)}
-                    />
-                    <div className="text-lg font-mono">-</div>
-                    <Input
-                      value={seg3}
-                      onChange={(e) => {
-                        if (!editingId) {
-                          setSeg3(e.target.value.toUpperCase().slice(0, 5));
-                          setManualEdit(true);
-                        }
-                      }}
-                      className="w-20 text-center text-sm font-mono"
-                      maxLength={5}
-                      readOnly={Boolean(editingId)}
-                    />
-                    <div className="text-lg font-mono">-</div>
-                    <Input
-                      value={seg4}
-                      onChange={(e) => {
-                        if (!editingId) {
-                          setSeg4(e.target.value.toUpperCase().slice(0, 6));
-                          setManualEdit(true);
-                        }
-                      }}
-                      className="w-24 text-center text-sm font-mono"
-                      maxLength={6}
-                      readOnly={Boolean(editingId)}
-                    />
+                {/* Generated Device ID */}
+                <div className="space-y-2">
+                  <Label>Generated Device ID</Label>
+                  <div className="p-3 bg-muted rounded-md font-mono text-sm break-all">
+                    {generatedSerialNumber || "MASH-XX-XXXXX-XXXXXX"}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{editingId ? "Device ID cannot be changed when editing" : "Format: MASH - MODEL - LOCYY - UNIQUE (e.g. MASH - B1 - CAL25 - H3JSA4)"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Format: MASH-{modelType}{version}-{location.slice(0, 3).toUpperCase() || "XXX"}{new Date().getFullYear().toString().slice(-2)}-[6-digit HEX with Luhn check]
+                  </p>
+                  <p className="text-xs text-green-600">
+                    ✓ ID validated with Luhn Modulo N algorithm
+                  </p>
                 </div>
-
-                
               </div>
             </CardContent>
           </Card>
@@ -373,18 +311,11 @@ export default function CreateDeviceModal({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={![
-            name,
-            type,
-            model,
-            location,
-            firmware,
-            description,
-            seg2,
-            seg3,
-            seg4,
-          ].every((v) => String(v || "").trim().length > 0)}>
-            {editingId ? "Save Changes" : "Create Device"}
+          <Button 
+            onClick={handleSave}
+            disabled={!name.trim() || !location.trim() || !generatedSerialNumber}
+          >
+            {isEditMode ? "Save Changes" : "Create Device"}
           </Button>
         </DialogFooter>
       </DialogContent>
