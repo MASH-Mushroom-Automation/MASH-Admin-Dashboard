@@ -84,8 +84,8 @@ export default function SellerContent() {
       status: app.isApproved
         ? "approved"
         : activeTab === "rejected"
-        ? "rejected"
-        : "pending",
+          ? "rejected"
+          : "pending",
       rejectReason: undefined, // Will be fetched from detail view if needed
       address: app.address,
       username: app.user.username,
@@ -149,8 +149,7 @@ export default function SellerContent() {
       // Navigate to seller detail page with requestId
       // URL shows username for better UX, but requestId is passed via query
       router.push(
-        `/mash-market/seller/${seller.username || seller.id}?requestId=${
-          seller.id
+        `/mash-market/seller/${seller.username || seller.id}?requestId=${seller.id
         }`
       );
     } catch (err) {
@@ -198,8 +197,8 @@ export default function SellerContent() {
       bulkArchiveIds && bulkArchiveIds.length
         ? bulkArchiveIds
         : deletingId
-        ? [deletingId]
-        : [];
+          ? [deletingId]
+          : [];
     if (idsToArchive.length === 0) {
       toast.error("No seller selected for archiving");
       setShowArchiveConfirm(false);
@@ -356,35 +355,35 @@ export default function SellerContent() {
       },
       activeTab === "rejected"
         ? {
-            accessorKey: "rejectReason",
-            header: "Reason",
-            cell: ({ getValue }: any) => (
-              <div
-                className="max-w-[300px] truncate"
-                title={String(getValue() ?? "—")}
-              >
-                {getValue() ?? "—"}
-              </div>
-            ),
-          }
+          accessorKey: "rejectReason",
+          header: "Reason",
+          cell: ({ getValue }: any) => (
+            <div
+              className="max-w-[300px] truncate"
+              title={String(getValue() ?? "—")}
+            >
+              {getValue() ?? "—"}
+            </div>
+          ),
+        }
         : {
-            accessorKey: "status",
-            header: "Status",
-            cell: ({ getValue }: any) => (
-              <div
-                className="max-w-[160px] truncate"
-                title={String(getValue() ?? "")}
+          accessorKey: "status",
+          header: "Status",
+          cell: ({ getValue }: any) => (
+            <div
+              className="max-w-[160px] truncate"
+              title={String(getValue() ?? "")}
+            >
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
+                  getValue() ?? ""
+                )}`}
               >
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
-                    getValue() ?? ""
-                  )}`}
-                >
-                  {getValue() === "pending" ? "For Approval" : getValue()}
-                </span>
-              </div>
-            ),
-          },
+                {getValue() === "pending" ? "For Approval" : getValue()}
+              </span>
+            </div>
+          ),
+        },
       {
         id: "actions",
         header: "Actions",
@@ -525,6 +524,8 @@ export default function SellerContent() {
                 hidePagination
                 columns={columns}
                 mode="sellers"
+                showAcceptReject={activeTab === 'pending'}
+                activeTab={activeTab}
                 onArchive={(ids: string[]) => {
                   const idsArr = ids && ids.length ? ids : null;
                   setBulkArchiveIds(idsArr);
@@ -565,8 +566,7 @@ export default function SellerContent() {
 
                     if (result.approved > 0) {
                       toast.success(
-                        `Successfully approved ${result.approved} seller(s)${
-                          result.failed > 0 ? `, ${result.failed} failed` : ""
+                        `Successfully approved ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""
                         }`,
                         { duration: 4000 }
                       );
@@ -585,7 +585,7 @@ export default function SellerContent() {
                     toast.error("Failed to approve sellers", {
                       id: "bulk-approve",
                     });
-                  }
+                  } 
                 }}
                 onBulkReject={(ids: string[]) => {
                   if (!ids || ids.length === 0) {
@@ -659,8 +659,7 @@ export default function SellerContent() {
 
                   if (result.approved > 0) {
                     toast.success(
-                      `Successfully rejected ${result.approved} seller(s)${
-                        result.failed > 0 ? `, ${result.failed} failed` : ""
+                      `Successfully rejected ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""
                       }`,
                       { duration: 4000 }
                     );

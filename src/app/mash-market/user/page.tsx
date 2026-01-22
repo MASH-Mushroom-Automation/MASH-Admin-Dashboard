@@ -264,8 +264,8 @@ export default function UsersManagement() {
             {/* Search and Filters */}
             <div className="flex items-center">
               <div className="flex-1">
-                <div className="flex items-center">
-                  <div className="flex-1 -mb-6">
+                <div className="flex items-center gap-1">
+                  <div className="flex-1 sm:-mb-6 -mb-9">
                     <SearchFilterBar
                       searchQuery={searchQuery}
                       onSearchChange={setSearchQuery}

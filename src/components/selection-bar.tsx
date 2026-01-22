@@ -29,6 +29,9 @@ interface Props {
   onBulkAccept?: (ids: string[]) => void;
   onBulkReject?: (ids: string[], reason?: string) => void;
   mode?: 'users' | 'sellers';
+  onExport?: (rows: any[]) => void;
+  showAcceptReject?: boolean;
+  activeTab?: string;
 }
 
 export const SelectionBar: React.FC<Props> = ({
@@ -42,6 +45,7 @@ export const SelectionBar: React.FC<Props> = ({
   onBulkAccept,
   onBulkReject,
   mode = 'users'
+  , onExport, showAcceptReject = true, activeTab
 }) => {
   const [pendingBulkAction, setPendingBulkAction] = useState<{
     type: 'accept' | 'reject' | 'archive' | 'changeRole' | 'changeStatus';
@@ -59,12 +63,12 @@ export const SelectionBar: React.FC<Props> = ({
     <TooltipProvider>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-green-50 p-3 border-b border-green-100 gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="text-sm font-semibold flex-shrink-0">{selectedCount} selected</div>
+          <div className="text-sm font-semibold text-muted-foreground shrink-0">{selectedCount} selected</div>
 
           {hasMixedRoles && (
             <div className="min-w-0">
               <div
-                className="text-xs text-muted-foreground truncate max-w-[60vw] sm:max-w-[40ch]"
+                className="text-xs text-muted-foreground truncate max-w-[80vw] sm:max-w-[60ch]"
                 title="Some actions are disabled because selected users have different roles."
               >
                 Some actions are disabled because selected users have different roles.
@@ -85,22 +89,49 @@ export const SelectionBar: React.FC<Props> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center">
-                <MoreHorizontal className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Bulk Actions</span>
+                <MoreHorizontal className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span className="hidden sm:inline text-muted-foreground font-semibold">Bulk Actions</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               {mode === 'sellers' ? (
                 <>
-                  <DropdownMenuItem onClick={() => setPendingBulkAction({ type: 'accept' })}>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Accept Selected
+                  <DropdownMenuItem onClick={() => {
+                    // Trigger export using provided handler or default
+                    if (onExport) onExport(selectedRows);
+                    else {
+                      // default CSV export for sellers
+                      const headers = ['id', 'name', 'storeName', 'email', 'status', 'rejectReason'];
+                      const rows = selectedRows.map(r => headers.map(h => String(r[h] ?? '')));
+                      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${mode}-export-${Date.now()}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }
+                  }}>
+                    <Activity className="h-4 w-4 mr-2" />
+                    Export Selected
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPendingBulkAction({ type: 'reject' })}>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject Selected
-                  </DropdownMenuItem>
+
+                  {showAcceptReject && activeTab !== 'rejected' && (
+                    <>
+                      <DropdownMenuItem onClick={() => setPendingBulkAction({ type: 'accept' })}>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Accept Selected
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPendingBulkAction({ type: 'reject' })}>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject Selected
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
                     <Archive className="h-4 w-4 mr-2 text-destructive" />
                     Archive Selected
@@ -168,6 +199,7 @@ export const SelectionBar: React.FC<Props> = ({
           </DropdownMenu>
         </div>
       </div>
+
 
       {/* Bulk Action Confirmation Modals */}
       {pendingBulkAction?.type === 'reject' && (

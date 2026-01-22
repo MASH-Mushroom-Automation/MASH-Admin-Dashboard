@@ -14,6 +14,7 @@ import {
   useUserManagementStore,
   type UserItem,
 } from "@/store/userManagementStore";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 
 export default function ChamberInventorySection() {
   const {
@@ -164,50 +165,50 @@ export default function ChamberInventorySection() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
                     Name
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                  </TableHead>
+                  <TableHead>
                     Email
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                  </TableHead>
+                  <TableHead>
                     Role
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {actualUsers.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="py-6 text-center text-muted-foreground"
-                    >
+                  <TableRow>
+                    <TableCell
+                        colSpan={3}
+                        className="py-6 text-center text-muted-foreground"
+                      >
                       No users found.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   actualUsers.slice(0, 5).map((user: UserItem) => (
-                    <tr
+                    <TableRow
                       key={user.id}
                       className="border-b border-border hover:bg-secondary/50"
                     >
-                      <td className="py-3 px-4 text-foreground">{user.name}</td>
-                      <td className="py-3 px-4 text-foreground">
+                      <TableCell className="py-3 px-4 text-foreground">{user.name}</TableCell>
+                      <TableCell className="py-3 px-4 text-foreground">
                         {user.email}
-                      </td>
-                      <td className="py-3 px-4 text-foreground">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-foreground">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-foreground">
                           {roleLabelMap[user.role || ""] || user.role}
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>

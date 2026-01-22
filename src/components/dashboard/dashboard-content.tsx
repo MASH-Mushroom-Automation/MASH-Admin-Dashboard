@@ -10,6 +10,8 @@ import {
   Package,
   Warehouse,
   ArrowRight,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
 import ECommerceSection from "./ecommerce-section";
@@ -34,6 +36,22 @@ export default function DashboardContent() {
     sellerApplications,
   });
 
+  // Helper to compute simple percent delta between two numeric strings
+  const computeDelta = (a: string | number, b: string | number) => {
+    const na = Number(a ?? 0);
+    const nb = Number(b ?? 0);
+    if (isNaN(na) || isNaN(nb) || nb === 0) return 0;
+    return Math.round(((na - nb) / Math.abs(nb)) * 100);
+  };
+
+  const chambersDelta = computeDelta(chambers.active, chambers.inactive);
+  const ordersDelta = computeDelta(orders.completed, orders.pending);
+  const productsDelta = computeDelta(products.pending, products.approved);
+  const sellerApplicationsDelta = computeDelta(
+    sellerApplications.pending,
+    sellerApplications.approved
+  );
+
   return (
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
@@ -46,7 +64,7 @@ export default function DashboardContent() {
         </p>
 
         {/* Stats Cards - Using Real Data from API */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ">
           <StatCard
             title="Chambers"
             primaryValue={String(chambers.active)}
@@ -55,8 +73,9 @@ export default function DashboardContent() {
             secondaryLabel="Inactive"
             icon={<Warehouse className="w-5 h-5" />}
             viewMorePath="/mash-grow/devices"
+            delta={chambersDelta}
           />
-          <StatCard
+          {/* <StatCard
             title="Orders"
             primaryValue={String(orders.completed)}
             primaryLabel="Completed"
@@ -64,7 +83,7 @@ export default function DashboardContent() {
             secondaryLabel="Pending"
             icon={<Users className="w-5 h-5" />}
             viewMorePath="/mash-market/order"
-          />
+          /> */}
           <StatCard
             title="Products"
             primaryValue={String(products.pending)}
@@ -73,6 +92,7 @@ export default function DashboardContent() {
             secondaryLabel="Approved"
             icon={<Package className="w-5 h-5" />}
             viewMorePath="/mash-market/product"
+            delta={productsDelta}
           />
           <StatCard
             title="Seller Applications"
@@ -82,6 +102,7 @@ export default function DashboardContent() {
             secondaryLabel="Approved"
             icon={<AlertCircle className="w-5 h-5" />}
             viewMorePath="/mash-market/seller"
+            delta={sellerApplicationsDelta}
           />
         </div>
       </div>
@@ -108,6 +129,7 @@ interface StatCardProps {
   secondaryLabel: string;
   icon: React.ReactNode;
   viewMorePath?: string;
+  delta?: number | null;
 }
 
 function StatCard({
@@ -118,6 +140,7 @@ function StatCard({
   secondaryLabel,
   icon,
   viewMorePath,
+  delta = null,
 }: StatCardProps) {
   const router = useRouter();
 
@@ -146,6 +169,32 @@ function StatCard({
             <p className="text-xs text-muted-foreground">{secondaryLabel}</p>
           </div>
         </div>
+
+        {/* Delta indicator */}
+        {delta !== null && (
+          <div className="pt-1">
+            <div className="flex items-center gap-2 text-sm">
+              {delta > 0 ? (
+                <div className="inline-flex items-center gap-1 text-emerald-600">
+                  <TrendingUp className="w-3 h-3" />
+                  <span className="font-medium">{Math.abs(delta)}%</span>
+                  <span className="text-muted-foreground">vs previous months</span>
+                </div>
+              ) : delta < 0 ? (
+                <div className="inline-flex items-center gap-1 text-destructive">
+                  <TrendingDown className="w-3 h-3" />
+                  <span className="font-medium">{Math.abs(delta)}%</span>
+                  <span className="text-muted-foreground">vs previous months</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1 text-muted-foreground">
+                  <span className="font-medium">0%</span>
+                  <span className="text-muted-foreground">vs previous months</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* View more button */}
         <div className="border-t pt-3">
