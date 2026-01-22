@@ -587,7 +587,7 @@ export default function SellerContent() {
                     toast.error("Failed to approve sellers", {
                       id: "bulk-approve",
                     });
-                  } 
+                  }
                 }}
                 onBulkReject={(ids: string[]) => {
                   if (!ids || ids.length === 0) {
