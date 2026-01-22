@@ -396,6 +396,26 @@ export default function UsersManagement() {
                       initialPageSize={itemsPerPage}
                       hidePagination
                       mode="users"
+                      onExport={(rows) => {
+                        try {
+                          const headers = ['id', 'name', 'username', 'email', 'role', 'region', 'status'];
+                          const csvRows = rows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+                          const csv = [headers.join(','), ...csvRows.map(r => r.map(c => `"${(c||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+                          const blob = new Blob([csv], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `users-export-${Date.now()}.csv`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                          toast.success(`Exported ${rows.length} user(s)`);
+                        } catch (err) {
+                          console.error('Export failed', err);
+                          toast.error('Export failed');
+                        }
+                      }}
                       onArchive={(ids) => {
                         // open confirmation for bulk archive
                         const idsArr = ids && ids.length ? ids : null;

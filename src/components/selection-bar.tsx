@@ -139,6 +139,27 @@ export const SelectionBar: React.FC<Props> = ({
                 </>
               ) : (
                 <>
+                  <DropdownMenuItem onClick={() => {
+                    if (onExport) onExport(selectedRows);
+                    else {
+                      const headers = ['id', 'name', 'username', 'email', 'role', 'region', 'status'];
+                      const rows = selectedRows.map(r => headers.map(h => String(r[h] ?? '')));
+                      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${mode}-export-${Date.now()}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }
+                  }}>
+                    <Activity className="h-4 w-4 mr-2" />
+                    Export Selected
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
                     <Archive className="h-4 w-4 mr-2 text-destructive" />
                     Archive Selected
