@@ -400,7 +400,7 @@ export default function UsersManagement() {
                         try {
                           const headers = ['id', 'name', 'username', 'email', 'role', 'region', 'status'];
                           const csvRows = rows.map(r => headers.map(h => String((r as any)[h] ?? '')));
-                          const csv = [headers.join(','), ...csvRows.map(r => r.map(c => `"${(c||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+                          const csv = [headers.join(','), ...csvRows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
                           const blob = new Blob([csv], { type: 'text/csv' });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');

@@ -144,7 +144,7 @@ export const SelectionBar: React.FC<Props> = ({
                     else {
                       const headers = ['id', 'name', 'username', 'email', 'role', 'region', 'status'];
                       const rows = selectedRows.map(r => headers.map(h => String(r[h] ?? '')));
-                      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+                      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
                       const blob = new Blob([csv], { type: 'text/csv' });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
