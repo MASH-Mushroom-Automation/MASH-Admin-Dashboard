@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
 import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
+import TableSkeleton from "@/components/ui/table-skeleton";
+import CardSkeleton from "@/components/ui/card-skeleton";
+import InlineSpinner from "@/components/ui/inline-spinner";
 
 // Local Seller type (matches SellerTable component expectations)
 interface Seller {
@@ -435,22 +438,21 @@ export default function SellerContent() {
                           Back
                         </Button> */}
         </div>
-        <h1 className="text-3xl font-bold">Seller Management</h1>
-        <p className="text-muted-foreground mt-1">
-          ADMIN Role Accounts (Sellers)
-        </p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold">Seller Management</h1>
+          {isLoading && <InlineSpinner />}
+        </div>
+        <p className="text-muted-foreground mt-1">ADMIN Role Accounts (Sellers)</p>
       </div>
 
       {/* Loading State */}
       {isLoading && (
-        <Card className="p-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="ml-3 text-muted-foreground">
-              Loading sellers...
-            </span>
-          </div>
-        </Card>
+        <div className="space-y-6">
+          <CardSkeleton />
+          <Card className="p-4">
+            <TableSkeleton rows={5} />
+          </Card>
+        </div>
       )}
 
       {/* Error State */}

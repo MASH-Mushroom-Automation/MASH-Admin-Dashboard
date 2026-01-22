@@ -22,6 +22,10 @@ import { Archive, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserManagementStore } from "@/store/userManagementStore";
 import { DataTable } from "@/components/data-table";
+import TableSkeleton from "@/components/ui/table-skeleton";
+import CardSkeleton from "@/components/ui/card-skeleton";
+import InlineSpinner from "@/components/ui/inline-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Controlled items per page (rows per page selector)
 const DEFAULT_ITEMS_PER_PAGE = 5;
@@ -71,6 +75,19 @@ export default function UsersManagement() {
 
   const loading = storeLoading.users ?? false;
   const error = storeError.users ?? null;
+
+  // Control content visibility to allow a smooth transition from skeleton -> content
+  const [contentVisible, setContentVisible] = useState(false);
+
+  useEffect(() => {
+    if (loading) {
+      setContentVisible(false);
+    } else {
+      // small delay to allow skeleton fade-out then show content
+      const t = setTimeout(() => setContentVisible(true), 80);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
 
   // Fetch users from API on mount
   useEffect(() => {
@@ -230,22 +247,31 @@ export default function UsersManagement() {
       <div className="mx-auto w-full space-y-4">
         {/* Header */}
         <header>
-          <h1 className="sm:text-3xl text-2xl font-bold">User Management</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="sm:text-3xl text-2xl font-bold">User Management</h1>
+            {loading && <InlineSpinner />}
+          </div>
           <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
             Buyers & Sellers Overview
           </p>
         </header>
 
-        {/* Loading State */}
+        {/* Page-level loading skeleton (header + table) */}
         {loading && (
-          <Card className="p-8">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-3 text-muted-foreground">
-                Loading users...
-              </span>
+          <div className="space-y-4">
+            <div>
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-72 mt-2" />
             </div>
-          </Card>
+
+            <div>
+              <CardSkeleton />
+            </div>
+
+            <div>
+              <TableSkeleton rows={itemsPerPage} />
+            </div>
+          </div>
         )}
 
         {/* Error State */}
@@ -322,8 +348,8 @@ export default function UsersManagement() {
                           <DropdownMenuItem
                             onSelect={() => {
                               // select all for all sections
-                              setSelectedStatuses(FILTER_SECTIONS.find(s=>s.key==="statuses")?.options ?? []);
-                              setSelectedRegions(FILTER_SECTIONS.find(s=>s.key==="regions")?.options ?? []);
+                              setSelectedStatuses(FILTER_SECTIONS.find(s => s.key === "statuses")?.options ?? []);
+                              setSelectedRegions(FILTER_SECTIONS.find(s => s.key === "regions")?.options ?? []);
                               setCurrentPage(1);
                             }}
                           >
@@ -363,34 +389,42 @@ export default function UsersManagement() {
             {/* Users Table (TanStack DataTable) - we pass paginated users and hide internal pagination */}
             <Card className="overflow-hidden">
               <div className="p-4">
-                <DataTable
-                  data={paginatedUsers}
-                  initialPageSize={itemsPerPage}
-                  hidePagination
-                  mode="users"
-                  onArchive={(ids) => {
-                    // open confirmation for bulk archive
-                    const idsArr = ids && ids.length ? ids : null;
-                    setBulkArchiveIds(idsArr);
-                    if (idsArr) {
-                      const names = idsArr.map((id) => filteredUsers.find((u) => u.id === id)?.name || id);
-                      setBulkArchiveNames(names.length ? names : null);
-                    } else {
-                      setBulkArchiveNames(null);
-                    }
-                    setShowArchiveConfirm(true);
-                  }}
-                  onBulkChangeRole={(ids, newRole) => {
-                    // TODO: Implement bulk role change
-                    console.log('Bulk change role:', ids, newRole);
-                    toast.success(`Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`);
-                  }}
-                  onBulkChangeStatus={(ids, newStatus) => {
-                    // TODO: Implement bulk status change
-                    console.log('Bulk change status:', ids, newStatus);
-                    toast.success(`Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`);
-                  }}
-                />
+                {!loading ? (
+                  <div className={`transition-all duration-200 ease-in-out ${contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+                    <DataTable
+                      data={paginatedUsers}
+                      initialPageSize={itemsPerPage}
+                      hidePagination
+                      mode="users"
+                      onArchive={(ids) => {
+                        // open confirmation for bulk archive
+                        const idsArr = ids && ids.length ? ids : null;
+                        setBulkArchiveIds(idsArr);
+                        if (idsArr) {
+                          const names = idsArr.map((id) => filteredUsers.find((u) => u.id === id)?.name || id);
+                          setBulkArchiveNames(names.length ? names : null);
+                        } else {
+                          setBulkArchiveNames(null);
+                        }
+                        setShowArchiveConfirm(true);
+                      }}
+                      onBulkChangeRole={(ids, newRole) => {
+                        // TODO: Implement bulk role change
+                        console.log('Bulk change role:', ids, newRole);
+                        toast.success(`Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`);
+                      }}
+                      onBulkChangeStatus={(ids, newStatus) => {
+                        // TODO: Implement bulk status change
+                        console.log('Bulk change status:', ids, newStatus);
+                        toast.success(`Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <TableSkeleton rows={itemsPerPage} />
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -418,8 +452,8 @@ export default function UsersManagement() {
                   bulkArchiveNames && bulkArchiveNames.length > 1
                     ? `${bulkArchiveNames.length} Users (${bulkArchiveNames.join(", ")})`
                     : bulkArchiveNames && bulkArchiveNames.length === 1
-                    ? `User (${bulkArchiveNames[0]})`
-                    : "User"
+                      ? `User (${bulkArchiveNames[0]})`
+                      : "User"
                 }
                 onConfirm={handleArchive}
                 onCancel={() => {
