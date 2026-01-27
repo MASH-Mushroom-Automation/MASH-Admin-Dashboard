@@ -68,7 +68,7 @@ export default function AppSidebar() {
     { label: "Users", href: "/mash-market/user" },
     { label: "Sellers", href: "/mash-market/seller" },
 
-    { label: "Products", href: "/mash-market/product" },
+    // { label: "Products", href: "/mash-market/product" },
   ];
 
   const mashGrowItems = [

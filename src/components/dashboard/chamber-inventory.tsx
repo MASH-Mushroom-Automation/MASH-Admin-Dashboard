@@ -1,4 +1,3 @@
-// src/components/chamber-inventory.tsx
 "use client";
 
 import {
@@ -119,7 +118,7 @@ export default function ChamberInventorySection() {
           <CardHeader>
             <CardTitle className="text-lg">Users Distribution</CardTitle>
             <CardDescription>
-              User list by role (from users data)
+              User list by role
             </CardDescription>
           </CardHeader>
           <CardContent>

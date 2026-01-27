@@ -41,6 +41,7 @@ export default function SellerContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [contentVisible, setContentVisible] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
@@ -99,6 +100,15 @@ export default function SellerContent() {
 
   const isLoading = loading.allApplications;
   const fetchError = error.allApplications;
+
+  useEffect(() => {
+    if (isLoading) {
+      setContentVisible(false);
+    } else {
+      const t = setTimeout(() => setContentVisible(true), 80);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading]);
 
   // Filter sellers by active tab
   const tabFilteredSellers = sellers.filter((seller) => {
@@ -190,7 +200,6 @@ export default function SellerContent() {
   };
 
   const handleArchive = (id: string) => {
-    // TODO: Implement API call to archive seller
     toast.success("Seller archived successfully — opening archive page");
     router.push(`/mash-market/seller/archive?id=${id}`);
   };
@@ -213,8 +222,6 @@ export default function SellerContent() {
       // Run all in parallel but keep frontend-only behavior (no backend changes)
       const results = await Promise.allSettled(
         idsToArchive.map(async (id) => {
-          // For now, call the single-archive handler for each id but avoid navigating for each.
-          // We will simulate by waiting a tick and returning success.
           await new Promise((res) => setTimeout(res, 50));
           return { id, status: "ok" };
         })
@@ -236,7 +243,6 @@ export default function SellerContent() {
       setDeletingId(null);
       setBulkArchiveIds(null);
       setBulkArchiveNames(null);
-      // navigate to archive page for review (preserve previous behavior by navigating to archive root)
       router.push(`/mash-market/seller/archive`);
     } catch (err) {
       console.error(err);
@@ -442,7 +448,7 @@ export default function SellerContent() {
           <h1 className="text-3xl font-bold">Seller Management</h1>
           {isLoading && <InlineSpinner />}
         </div>
-        <p className="text-muted-foreground mt-1">ADMIN Role Accounts (Sellers)</p>
+        <p className="text-muted-foreground mt-1">Review and manage seller applications</p>
       </div>
 
       {/* Loading State */}
@@ -515,91 +521,90 @@ export default function SellerContent() {
           {/* Table Section */}
           <Card className="overflow-hidden">
             <div className="p-4">
-              {/** Build columns for DataTable to match SellerTable layout */}
-              {/* eslint-disable react-hooks/rules-of-hooks */}
-              {/** Columns memoized for stability */}
-              <DataTable
-                data={paginatedSellers.filter(
-                  (seller) => seller.status === activeTab
-                )}
-                initialPageSize={itemsPerPage}
-                hidePagination
-                columns={columns}
-                mode="sellers"
-                showAcceptReject={activeTab === 'pending'}
-                activeTab={activeTab}
-                onArchive={(ids: string[]) => {
-                  const idsArr = ids && ids.length ? ids : null;
-                  setBulkArchiveIds(idsArr);
-                  if (idsArr) {
-                    const names = idsArr.map(
-                      (id) =>
-                        filteredSellers.find((s) => s.id === id)?.name || id
-                    );
-                    setBulkArchiveNames(names.length ? names : null);
-                  } else {
-                    setBulkArchiveNames(null);
-                  }
-                  setShowArchiveConfirm(true);
-                }}
-                onBulkAccept={async (ids: string[]) => {
-                  if (!ids || ids.length === 0) {
-                    toast.error("No sellers selected");
-                    return;
-                  }
-
-                  try {
-                    toast.loading(`Approving ${ids.length} seller(s)...`, {
-                      id: "bulk-approve",
-                    });
-
-                    const result = await bulkApproveApplications(
-                      ids,
-                      "Bulk approval"
-                    );
-
-                    console.log("Bulk approve result:", result);
-
-                    // Explicitly dismiss loading toast
-                    toast.dismiss("bulk-approve");
-
-                    // Wait a tiny bit for dismiss to process
-                    await new Promise((resolve) => setTimeout(resolve, 100));
-
-                    if (result.approved > 0) {
-                      toast.success(
-                        `Successfully approved ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""
-                        }`,
-                        { duration: 4000 }
+              <div className={`transition-all duration-200 ease-in-out ${contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+                <DataTable
+                  data={paginatedSellers.filter(
+                    (seller) => seller.status === activeTab
+                  )}
+                  initialPageSize={itemsPerPage}
+                  hidePagination
+                  columns={columns}
+                  mode="sellers"
+                  showAcceptReject={activeTab === 'pending'}
+                  activeTab={activeTab}
+                  onArchive={(ids: string[]) => {
+                    const idsArr = ids && ids.length ? ids : null;
+                    setBulkArchiveIds(idsArr);
+                    if (idsArr) {
+                      const names = idsArr.map(
+                        (id) =>
+                          filteredSellers.find((s) => s.id === id)?.name || id
                       );
-                    } else if (result.failed > 0) {
-                      toast.error(
-                        `Failed to approve ${result.failed} seller(s)`
-                      );
+                      setBulkArchiveNames(names.length ? names : null);
+                    } else {
+                      setBulkArchiveNames(null);
+                    }
+                    setShowArchiveConfirm(true);
+                  }}
+                  onBulkAccept={async (ids: string[]) => {
+                    if (!ids || ids.length === 0) {
+                      toast.error("No sellers selected");
+                      return;
                     }
 
-                    // Refresh the list
-                    const status =
-                      activeTab === "pending" ? "PENDING" : "FAILED";
-                    await fetchAllApplications({ status });
-                  } catch (err) {
-                    console.error("Bulk approve failed:", err);
-                    toast.error("Failed to approve sellers", {
-                      id: "bulk-approve",
-                    });
-                  }
-                }}
-                onBulkReject={(ids: string[]) => {
-                  if (!ids || ids.length === 0) {
-                    toast.error("No sellers selected");
-                    return;
-                  }
+                    try {
+                      toast.loading(`Approving ${ids.length} seller(s)...`, {
+                        id: "bulk-approve",
+                      });
 
-                  // Open reject modal for bulk rejection
-                  setBulkRejectIds(ids);
-                  setShowBulkRejectModal(true);
-                }}
-              />
+                      const result = await bulkApproveApplications(
+                        ids,
+                        "Bulk approval"
+                      );
+
+                      console.log("Bulk approve result:", result);
+
+                      // Explicitly dismiss loading toast
+                      toast.dismiss("bulk-approve");
+
+                      // Wait a tiny bit for dismiss to process
+                      await new Promise((resolve) => setTimeout(resolve, 100));
+
+                      if (result.approved > 0) {
+                        toast.success(
+                          `Successfully approved ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""
+                          }`,
+                          { duration: 4000 }
+                        );
+                      } else if (result.failed > 0) {
+                        toast.error(
+                          `Failed to approve ${result.failed} seller(s)`
+                        );
+                      }
+
+                      // Refresh the list
+                      const status =
+                        activeTab === "pending" ? "PENDING" : "FAILED";
+                      await fetchAllApplications({ status });
+                    } catch (err) {
+                      console.error("Bulk approve failed:", err);
+                      toast.error("Failed to approve sellers", {
+                        id: "bulk-approve",
+                      });
+                    }
+                  }}
+                  onBulkReject={(ids: string[]) => {
+                    if (!ids || ids.length === 0) {
+                      toast.error("No sellers selected");
+                      return;
+                    }
+
+                    // Open reject modal for bulk rejection
+                    setBulkRejectIds(ids);
+                    setShowBulkRejectModal(true);
+                  }}
+                />
+              </div>
             </div>
           </Card>
 
@@ -609,7 +614,7 @@ export default function SellerContent() {
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-            label="Pending"
+            label={activeTab === 'pending' ? 'Pending' : 'Rejected'}
           />
 
           {/* Confirm / Reject Modals */}

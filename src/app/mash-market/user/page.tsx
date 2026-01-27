@@ -3,9 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
-import UserAvatar from "@/components/ecommerce/user-avatar";
 import { ConfirmationPopover } from "@/components/confirmation-popover";
-import { ActionsMenu } from "@/components/user-actions-menu";
 import { SearchFilterBar } from "@/components/search-filter-bar";
 import {
   DropdownMenu,
@@ -38,6 +36,7 @@ export default function UsersManagement() {
   // Multi-select bulk filters (checkboxes) - Role filter removed since we only show USER role
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<
     "All" | "Active" | "Inactive"
   >("All");
@@ -48,7 +47,6 @@ export default function UsersManagement() {
   const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
   const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(null);
 
-  // Use Zustand store for users data
   const {
     users: allUsers,
     loading: storeLoading,
@@ -118,15 +116,12 @@ export default function UsersManagement() {
           String(field ?? "").toLowerCase().includes(q)
         );
 
-      // Status filter: If no status filters selected, show all users (including those without status)
       let matchesStatus = true;
       if (selectedStatuses.length > 0) {
-        // Only filter if user has a status and it matches one of the selected statuses
         matchesStatus = user.status
           ? selectedStatuses.includes(user.status)
           : false;
       } else if (statusFilter !== "All") {
-        // Single status filter selected from dropdown
         matchesStatus = user.status === statusFilter;
       }
 
@@ -135,11 +130,25 @@ export default function UsersManagement() {
           ? selectedRegions.includes(user.region || "")
           : true;
 
-      return matchesSearch && matchesStatus && matchesRegion;
-    });
-  }, [users, searchQuery, statusFilter, selectedStatuses, selectedRegions]);
+      const matchesRole =
+        selectedRoles.length > 0
+          ? selectedRoles.includes(user.role || "")
+          : true;
 
+      return matchesSearch && matchesStatus && matchesRegion && matchesRole;
+    });
+  }, [users, searchQuery, statusFilter, selectedStatuses, selectedRegions, selectedRoles]);
   const rowsPerPageOptions = FIXED_ROWS_OPTIONS;
+
+  // Falls back to a sensible static list if there are no regions yet.
+  const regionOptions = useMemo(() => {
+    const set = new Set<string>();
+    (allUsers || []).forEach((u) => {
+      if (u.region) set.add(String(u.region));
+    });
+    const arr = Array.from(set).filter(Boolean).sort();
+    return arr;
+  }, [allUsers]);
 
   useEffect(() => {
     const total = filteredUsers.length;
@@ -152,14 +161,11 @@ export default function UsersManagement() {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
-    // keep current page as-is when within bounds
   }, [filteredUsers.length, itemsPerPage]);
 
-  // Pagination logic (controlled by local itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-  // Debug logging for filtered/paginated results
   useEffect(() => {
     console.log("[UserPage] After all filters:", filteredUsers.length, "users");
     console.log(
@@ -226,11 +232,21 @@ export default function UsersManagement() {
     {
       key: "regions",
       label: "Region",
-      options: ["Caloocan", "Manila", "Quezon City", "Makati", "Pasig"],
+      options: regionOptions,
+    },
+    {
+      key: "roles",
+      label: "Role",
+      // value = backend role code, label = friendly text shown in UI
+      options: [
+        { value: "ADMIN", label: "Seller" },
+        { value: "USER", label: "Buyer" },
+        { value: "GROWER", label: "Grower" },
+      ],
     },
   ];
 
-  const activeFiltersCount = selectedStatuses.length + selectedRegions.length;
+  const activeFiltersCount = selectedStatuses.length + selectedRegions.length + selectedRoles.length;
 
   // helper to toggle selection generically
   const toggleFilter = (sectionKey: string, value: string) => {
@@ -239,6 +255,8 @@ export default function UsersManagement() {
       setSelectedStatuses((prev) => (prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]));
     } else if (sectionKey === "regions") {
       setSelectedRegions((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
+    } else if (sectionKey === "roles") {
+      setSelectedRoles((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
     }
   };
 
@@ -319,23 +337,27 @@ export default function UsersManagement() {
                           <div key={section.key} className="mb-2">
                             <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
                             <div className="px-1">
-                              {section.options.map((opt) => {
+                              {section.options.map((opt: any) => {
+                                const optValue = typeof opt === "string" ? opt : opt.value;
+                                const optLabel = typeof opt === "string" ? opt : opt.label;
                                 const checked =
                                   section.key === "statuses"
-                                    ? selectedStatuses.includes(opt)
-                                    : selectedRegions.includes(opt);
+                                    ? selectedStatuses.includes(optValue)
+                                    : section.key === "regions"
+                                      ? selectedRegions.includes(optValue)
+                                      : selectedRoles.includes(String(optValue));
                                 return (
                                   <label
-                                    key={opt}
+                                    key={String(optValue)}
                                     className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer"
                                   >
                                     <input
                                       type="checkbox"
                                       className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                                       checked={checked}
-                                      onChange={() => toggleFilter(section.key, opt)}
+                                      onChange={() => toggleFilter(section.key, String(optValue))}
                                     />
-                                    <span className="text-sm">{opt}</span>
+                                    <span className="text-sm">{optLabel}</span>
                                   </label>
                                 );
                               })}
@@ -348,8 +370,13 @@ export default function UsersManagement() {
                           <DropdownMenuItem
                             onSelect={() => {
                               // select all for all sections
-                              setSelectedStatuses(FILTER_SECTIONS.find(s => s.key === "statuses")?.options ?? []);
-                              setSelectedRegions(FILTER_SECTIONS.find(s => s.key === "regions")?.options ?? []);
+                              const statuses = FILTER_SECTIONS.find(s => s.key === "statuses")?.options as string[] | undefined;
+                              const regions = FILTER_SECTIONS.find(s => s.key === "regions")?.options as string[] | undefined;
+                              // roles are objects with {value,label}
+                              const roles = FILTER_SECTIONS.find(s => s.key === "roles")?.options as any[] | undefined;
+                              setSelectedStatuses(statuses ?? []);
+                              setSelectedRegions(regions ?? []);
+                              setSelectedRoles((roles ?? []).map((o: any) => (typeof o === 'string' ? o : o.value)));
                               setCurrentPage(1);
                             }}
                           >
@@ -360,6 +387,7 @@ export default function UsersManagement() {
                               // clear
                               setSelectedStatuses([]);
                               setSelectedRegions([]);
+                              setSelectedRoles([]);
                               setStatusFilter("All");
                               setCurrentPage(1);
                             }}

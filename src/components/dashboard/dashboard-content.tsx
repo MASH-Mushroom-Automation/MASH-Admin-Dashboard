@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
-  Users,
   Package,
   Warehouse,
   ArrowRight,
@@ -14,7 +13,6 @@ import {
   TrendingDown,
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
-import ECommerceSection from "./ecommerce-section";
 import { useDashboardStore } from "@/store/dashboardStore";
 
 export default function DashboardContent() {
@@ -75,15 +73,6 @@ export default function DashboardContent() {
             viewMorePath="/mash-grow/devices"
             delta={chambersDelta}
           />
-          {/* <StatCard
-            title="Orders"
-            primaryValue={String(orders.completed)}
-            primaryLabel="Completed"
-            secondaryValue={String(orders.pending)}
-            secondaryLabel="Pending"
-            icon={<Users className="w-5 h-5" />}
-            viewMorePath="/mash-market/order"
-          /> */}
           <StatCard
             title="Products"
             primaryValue={String(products.pending)}
@@ -108,13 +97,6 @@ export default function DashboardContent() {
       </div>
 
       <div className="space-y-6">
-        {/* <h1 className="sm:text-xl text-base font-bold text-foreground mb-0">
-          Overview
-        </h1>
-        <p className="sm:text-base text-sm">
-          Monitor sales, user roles, and active chambers.
-        </p> */}
-        {/* <ECommerceSection /> */}
         <ChamberInventorySection />
       </div>
     </div>

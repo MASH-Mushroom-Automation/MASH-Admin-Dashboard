@@ -9,7 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown, UserX } from "lucide-react";
 import UserAvatar from "@/components/ecommerce/user-avatar";
 import { ActionsMenu } from "@/components/user-actions-menu";
 import SelectionBar from "@/components/selection-bar";
@@ -271,6 +271,7 @@ export function DataTable(props: DataTableProps<any>) {
             {table.getRowModel().rows.length === 0 && (
               <tr>
                 <td colSpan={100} className="px-6 py-12 text-center text-muted-foreground">
+                  <UserX className="mx-auto mb-4 h-12 w-12 opacity-50" />
                   There is no user yet
                 </td>
               </tr>

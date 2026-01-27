@@ -7,7 +7,7 @@ import RejectReasonModal from "@/components/ecommerce/reject-reason-modal";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Check, X } from "lucide-react";
+import { ArrowLeft, Check, X } from "lucide-react";
 import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
 
 interface Seller {
@@ -35,72 +35,6 @@ interface Seller {
   accountNumber?: string;
   accountHolderName?: string;
 }
-
-const mockSellers: Seller[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    username: "johndoe",
-    storeName: "Smith Mushrooms",
-    businessName: "Smith Mushrooms",
-    businessType: "company",
-    taxIdNumber: "TAX-0012345",
-    email: "john@smithmushrooms.com",
-    phone: "+63 912 345 6789",
-    city: "Caloocan City",
-    region: "NCR",
-    completeAddress: "1234 Mushroom St, Barangay 1, Caloocan",
-    status: "pending",
-    typesOfMushroom: ["White oyster mushroom", "Shiitake", "Enoki"],
-    monthlyProductionCapacity: "2,000 kg",
-    certifications: ["Good Agricultural Practices"],
-    bankName: "Bank of Manila",
-    accountNumber: "1234567890",
-    accountHolderName: "Smith Mushrooms Inc",
-  },
-  {
-    id: "2",
-    name: "Karen Smith",
-    username: "karen_s",
-    storeName: "Karen Boutique",
-    businessName: "Karen Boutique",
-    businessType: "individual",
-    taxIdNumber: "TAX-987654",
-    email: "karen@boutique.com",
-    phone: "+63 912 000 1111",
-    city: "Quezon City",
-    region: "NCR",
-    completeAddress: "56 Fashion Ave, Quezon City",
-    status: "approved",
-    typesOfMushroom: ["Button mushroom"],
-    monthlyProductionCapacity: "500 kg",
-    certifications: ["Organic"],
-    bankName: "First National Bank",
-    accountNumber: "0987654321",
-    accountHolderName: "Karen S",
-  },
-  {
-    id: "3",
-    name: "Anne Curtis",
-    username: "annec",
-    storeName: "Anne Beauty Hub",
-    businessName: "Anne Beauty Hub",
-    businessType: "company",
-    taxIdNumber: "TAX-555666",
-    email: "anne@beautyhub.com",
-    phone: "+63 912 222 3333",
-    city: "Makati City",
-    region: "NCR",
-    completeAddress: "78 Beauty Rd, Makati",
-    status: "rejected",
-    typesOfMushroom: ["Lion’s mane"],
-    monthlyProductionCapacity: "200 kg",
-    certifications: [],
-    bankName: "Metro Bank",
-    accountNumber: "555666777",
-    accountHolderName: "Anne C",
-  },
-];
 
 export default function SellerDetailPage({
   params,
@@ -278,9 +212,8 @@ export default function SellerDetailPage({
   // Map application data to seller format
   const seller: Seller = {
     id: selectedApplication!.requestId,
-    name: `${selectedApplication!.user.firstName} ${
-      selectedApplication!.user.lastName
-    }`,
+    name: `${selectedApplication!.user.firstName} ${selectedApplication!.user.lastName
+      }`,
     username: selectedApplication!.user.username,
     email: selectedApplication!.user.email,
     phone: undefined, // Not in application response
@@ -332,19 +265,19 @@ export default function SellerDetailPage({
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-4xl">
+      <div>
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/mash-market/seller")}
+        > <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      </div>
+      <div>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">{seller.name}</h1>
             <p className="text-muted-foreground mt-1">Seller profile</p>
-          </div>
-          <div>
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/mash-market/seller")}
-            >
-              Back
-            </Button>
           </div>
         </div>
 

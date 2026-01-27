@@ -4,11 +4,11 @@ import { use, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import UserAvatar from "@/components/ecommerce/user-avatar";
-import StatusBadge from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUserManagementStore } from "@/store/userManagementStore";
+import { ArrowLeft } from "lucide-react";
 
 interface User {
   id: string;
@@ -41,149 +41,14 @@ interface User {
   accountHolderName?: string;
 }
 
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    username: "sarahjohn",
-    email: "sarah@example.com",
-    phone: "+63 917 123 4567 123-4567",
-    role: "Seller",
-    status: "Active",
-    avatar: "SJ",
-    businessName: "Sarah's Store",
-    businessAddress: "123 Main St, Anytown, USA",
-    businessType: "company",
-    taxId: "123-45-6789",
-    businessDocuments: ["license.pdf", "tax_certificate.pdf"],
-    city: "Anytown",
-    region: "Region 1",
-    completeAddress: "123 Main St, Anytown, USA",
-    typesOfMushroom: ["White oyster mushroom", "Shiitake"],
-    monthlyProductionCapacity: "1,000 kg",
-    certifications: ["GAP"],
-    bankName: "Bank A",
-    accountNumber: "111222333",
-    accountHolderName: "Sarah's Store",
-  },
-  {
-    id: "2",
-    name: "Emma Davis",
-    username: "emmadavis",
-    email: "emma@example.com",
-    phone: "+63 917 123 4567 345-6789",
-    role: "Customer",
-    status: "Inactive",
-    avatar: "ED",
-    preferredPaymentMethod: "Credit Card",
-    addressBook: ["Home: 456 Elm St, Manila, Philippines"],
-    city: "Manila",
-    region: "NCR",
-    completeAddress: "456 Elm St, Manila, Philippines",
-  },
-  {
-    id: "3",
-    name: "Sophie Brown",
-    username: "sophieb",
-    email: "sophie@example.com",
-    phone: "+63 917 123 4567 789-0123",
-    role: "Customer",
-    status: "Active",
-    avatar: "SB",
-    preferredPaymentMethod: "PayPal",
-    addressBook: ["Work: 789 Oak St, Quezon City, Philippines"],
-    city: "Quezon City",
-    region: "NCR",
-    completeAddress: "789 Oak St, Quezon City, Philippines",
-  },
-  {
-    id: "4",
-    name: "Liam Carter",
-    username: "liamc",
-    email: "liam@example.com",
-    phone: "+63 917 123 4567 111-2222",
-    role: "Seller",
-    status: "Active",
-    avatar: "LC",
-    businessName: "Liam's Shop",
-    businessAddress: "456 Maple St, Anytown, USA",
-    businessType: "individual",
-    taxId: "987-65-4321",
-    businessDocuments: ["business_license.pdf"],
-    city: "Anytown",
-    region: "Region 2",
-    completeAddress: "456 Maple St, Anytown, USA",
-    typesOfMushroom: ["Button mushroom"],
-    monthlyProductionCapacity: "300 kg",
-    certifications: [],
-    bankName: "Bank B",
-    accountNumber: "444555666",
-    accountHolderName: "Liam Carter",
-  },
-  {
-    id: "5",
-    name: "Ava Thompson",
-    username: "avath",
-    email: "ava@example.com",
-    phone: "+63 917 123 4567 333-4444",
-    role: "Customer",
-    status: "Inactive",
-    avatar: "AT",
-    preferredPaymentMethod: "Credit Card",
-    addressBook: ["Home: 123 Pine St, Makati, Philippines"],
-    city: "Makati",
-    region: "NCR",
-    completeAddress: "123 Pine St, Makati, Philippines",
-  },
-  {
-    id: "6",
-    name: "Noah Walker",
-    username: "noahw",
-    email: "noah@example.com",
-    phone: "+63 917 123 4567 555-6666",
-    role: "Customer",
-    status: "Active",
-    avatar: "NW",
-    preferredPaymentMethod: "Credit Card",
-    addressBook: ["Home: 123 Birch St, Pasig, Philippines"],
-    city: "Pasig",
-    region: "NCR",
-    completeAddress: "123 Birch St, Pasig, Philippines",
-  },
-  {
-    id: "7",
-    name: "Olivia Martin",
-    username: "oliviam",
-    email: "olivia@example.com",
-    phone: "+63 917 123 4567 777-8888",
-    role: "Seller",
-    status: "Active",
-    avatar: "OM",
-    businessName: "Olivia's Boutique",
-    businessAddress: "789 Cedar St, Anytown, USA",
-    businessType: "company",
-    taxId: "456-78-9012",
-    businessDocuments: ["business_license.pdf"],
-    city: "Anytown",
-    region: "Region 3",
-    completeAddress: "789 Cedar St, Anytown, USA",
-    typesOfMushroom: ["Lion’s mane"],
-    monthlyProductionCapacity: "150 kg",
-    certifications: ["Organic"],
-    bankName: "Bank C",
-    accountNumber: "777888999",
-    accountHolderName: "Olivia Martin",
-  },
-];
-
 export default function UserViewPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: username } = use(params); // This is the username from URL path
+  const { id: username } = use(params); 
   const searchParams = useSearchParams();
-  const userId = searchParams.get("id"); // This is the actual ID from query param
+  const userId = searchParams.get("id"); 
 
   const { selectedUser, loading, error, fetchUserById, clearSelectedUser } =
     useUserManagementStore();
@@ -300,12 +165,18 @@ export default function UserViewPage({
     user.role?.toLowerCase() === "user"
       ? "Customer"
       : user.role === "ADMIN"
-      ? "Seller"
-      : user.role || "Customer";
+        ? "Seller"
+        : user.role || "Customer";
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-4xl">
+    <div className="bg-background p-6 ">
+      <div className="mb-6">
+        <Link href="/mash-market/user">
+          <Button variant="ghost">
+            <ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
+        </Link>
+      </div>
+      <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="shrink-0">
@@ -321,11 +192,6 @@ export default function UserViewPage({
                 {role === "Seller" ? "Seller profile" : "Customer profile"}
               </div>
             </div>
-          </div>
-          <div>
-            <Link href="/mash-market/user">
-              <Button variant="ghost">Back</Button>
-            </Link>
           </div>
         </div>
 
@@ -722,7 +588,7 @@ export default function UserViewPage({
                     </div>
                   </div>
                 </div>
-        
+
 
                 {/* Business Documents */}
                 <div className="border rounded-lg p-4">
