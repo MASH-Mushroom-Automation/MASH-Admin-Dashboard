@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
 import { useDashboardStore } from "@/store/dashboardStore";
+import PromoCarousel from "./promo-carousel";
 
 export default function DashboardContent() {
   const { overview } = useDashboardStore();
@@ -51,7 +52,7 @@ export default function DashboardContent() {
   );
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       {/* Header */}
       <div>
         <h1 className="sm:text-3xl text-2xl font-bold text-primary">
@@ -63,6 +64,7 @@ export default function DashboardContent() {
 
         {/* Stats Cards - Using Real Data from API */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ">
+          <PromoCarousel />
           <StatCard
             title="Chambers"
             primaryValue={String(chambers.active)}
@@ -74,16 +76,6 @@ export default function DashboardContent() {
             delta={chambersDelta}
           />
           <StatCard
-            title="Products"
-            primaryValue={String(products.pending)}
-            primaryLabel="Pending"
-            secondaryValue={String(products.approved)}
-            secondaryLabel="Approved"
-            icon={<Package className="w-5 h-5" />}
-            viewMorePath="/mash-market/product"
-            delta={productsDelta}
-          />
-          <StatCard
             title="Seller Applications"
             primaryValue={String(sellerApplications.pending)}
             primaryLabel="Pending"
@@ -93,6 +85,8 @@ export default function DashboardContent() {
             viewMorePath="/mash-market/seller"
             delta={sellerApplicationsDelta}
           />
+
+
         </div>
       </div>
 
