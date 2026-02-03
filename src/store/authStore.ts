@@ -11,6 +11,9 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  role?: string; // User role for RBAC: SUPER_ADMIN, ADMIN, GROWER, BUYER, etc.
+  isActive?: boolean;
+  phoneNumber?: string;
 }
 
 interface AuthState {
@@ -62,7 +65,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           logger.info("Attempting login", { email });
 
-          // Step 1: Fetch CSRF token from backend
+          // Step 1: Fetch CSRF token from backend (optional)
           logger.info("Fetching CSRF token");
           const csrfResponse = await fetch("/api/auth/csrf", {
             method: "GET",
@@ -72,13 +75,17 @@ export const useAuthStore = create<AuthState>()(
           let csrfToken: string | null = null;
           if (csrfResponse.ok) {
             const csrfData = await csrfResponse.json();
-            csrfToken = csrfData.csrfToken;
-            logger.info("CSRF token fetched successfully");
+            if (csrfData.optional) {
+              logger.info("CSRF token not available (backend not implemented) - proceeding without it");
+            } else if (csrfData.csrfToken) {
+              csrfToken = csrfData.csrfToken;
+              logger.info("CSRF token fetched successfully");
+            }
           } else {
             logger.warn("Failed to fetch CSRF token, proceeding without it");
           }
 
-          // Step 2: Call Next.js login API route with CSRF token
+          // Step 2: Call Next.js login API route with CSRF token (if available)
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
             Accept: "application/json",

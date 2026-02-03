@@ -87,12 +87,12 @@ async function handler(
   }
 
   // Forward CSRF token if present (required by backend for POST/PUT/DELETE/PATCH)
-  // Backend expects X-XSRF-TOKEN header (case-sensitive)
-  // Check both lowercase and uppercase variants since Next.js normalizes headers
+  // Backend expects x-csrf-token header (lowercase, NestJS CSRF guard standard)
+  // Check both common header variants
   const csrfToken =
-    req.headers.get("x-xsrf-token") || req.headers.get("X-XSRF-TOKEN");
+    req.headers.get("x-csrf-token") || req.headers.get("X-CSRF-Token") || req.headers.get("x-xsrf-token");
   if (csrfToken) {
-    headers["X-XSRF-TOKEN"] = csrfToken;
+    headers["x-csrf-token"] = csrfToken;
     console.log(
       `[PROXY] ✓ Forwarding CSRF token to backend:`,
       csrfToken.substring(0, 20) + "..."
@@ -141,15 +141,53 @@ async function handler(
 
     const response = NextResponse.json(json, { status: res.status });
 
-    const setCookie = res.headers.get("set-cookie");
-    if (setCookie) {
-      const [first] = setCookie.split(";");
-      const eq = first.indexOf("=");
-      if (eq !== -1) {
-        response.cookies.set(first.slice(0, eq), first.slice(eq + 1), {
-          path: "/",
-          httpOnly: true,
-        });
+    // Forward ALL Set-Cookie headers from backend to client
+    // The backend may set multiple cookies (e.g., XSRF-TOKEN and _csrf_secret)
+    let setCookieHeaders: string[] = [];
+    
+    // Try to use getSetCookie() if available (Node 19.7+)
+    if (typeof res.headers.getSetCookie === 'function') {
+      setCookieHeaders = res.headers.getSetCookie();
+    } else {
+      // Fallback for older Node versions - get all set-cookie headers manually
+      const setCookieHeader = res.headers.get("set-cookie");
+      if (setCookieHeader) {
+        // Multiple Set-Cookie headers may be concatenated with newlines
+        setCookieHeaders = setCookieHeader.split(/\n/).filter(Boolean);
+      }
+    }
+    
+    if (setCookieHeaders.length > 0) {
+      console.log(`[PROXY] Forwarding ${setCookieHeaders.length} cookie(s) from backend`);
+      
+      for (const setCookie of setCookieHeaders) {
+        const [nameValue, ...attributes] = setCookie.trim().split(";");
+        const [name, value] = nameValue.split("=");
+        
+        if (name && value) {
+          // Parse cookie attributes
+          const cookieOptions: Record<string, unknown> = { path: "/" };
+          
+          for (const attr of attributes) {
+            const [attrName, attrValue] = attr.trim().split("=");
+            const lowerAttrName = attrName?.toLowerCase();
+            
+            if (lowerAttrName === "httponly") {
+              cookieOptions.httpOnly = true;
+            } else if (lowerAttrName === "secure") {
+              cookieOptions.secure = true;
+            } else if (lowerAttrName === "samesite") {
+              cookieOptions.sameSite = attrValue?.toLowerCase() as "strict" | "lax" | "none";
+            } else if (lowerAttrName === "max-age") {
+              cookieOptions.maxAge = parseInt(attrValue || "0", 10);
+            } else if (lowerAttrName === "path") {
+              cookieOptions.path = attrValue || "/";
+            }
+          }
+          
+          response.cookies.set(name.trim(), value.trim(), cookieOptions);
+          console.log(`[PROXY] ✓ Cookie: ${name.trim()} (httpOnly: ${cookieOptions.httpOnly || false})`);
+        }
       }
     }
 

@@ -12,14 +12,27 @@ export const dynamic = "force-dynamic";
 export async function POST() {
   const response = NextResponse.json({ success: true, message: "Logged out" });
 
-  // Clear refresh token (only cookie we store)
+  const isProd = process.env.NODE_ENV === "production";
+
+  // Clear auth token cookie
+  response.cookies.set({
+    name: "authToken",
+    value: "",
+    maxAge: 0,
+    path: "/",
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+  });
+
+  // Clear refresh token cookie
   response.cookies.set({
     name: "refreshToken",
     value: "",
     maxAge: 0,
     path: "/",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProd,
     sameSite: "lax",
   });
 

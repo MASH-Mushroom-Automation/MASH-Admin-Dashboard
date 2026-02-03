@@ -128,6 +128,14 @@ export async function POST(request: NextRequest) {
     const backendData = backendRes.data?.data || backendRes.data;
     const { accessToken, refreshToken, user } = backendData;
 
+    // Log user details (including role for debugging RBAC issues)
+    console.log('[login] User data from backend:', {
+      id: user?.id,
+      email: user?.email,
+      role: user?.role,
+      isActive: user?.isActive,
+    });
+
     if (!accessToken || !refreshToken || !user) {
       console.error(
         "[login] Invalid backend response structure:",
@@ -142,7 +150,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[login] Authentication successful for user: ${user.id}`);
+    // ⚠️ CRITICAL: Verify user has SUPER_ADMIN role for admin dashboard access
+    if (user.role !== 'SUPER_ADMIN') {
+      console.warn(`[login] Access denied for user ${user.id} with role: ${user.role}`);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Access denied. This dashboard is only available to Super Administrators.",
+          action: "insufficient-permissions",
+        },
+        { status: 403 }
+      );
+    }
+
+    console.log(`[login] Authentication successful for SUPER_ADMIN user: ${user.id}`);
 
     // Return access token in response body (stored in memory by client)
     // Return user data for immediate use
@@ -153,8 +174,20 @@ export async function POST(request: NextRequest) {
       expiresIn: 3600, // ← 1 hour (matches backend token expiry)
     });
 
-    // Set ONLY refresh token in HttpOnly cookie (secure storage)
     const isProd = process.env.NODE_ENV === "production";
+
+    // Set access token in HttpOnly cookie for proxy to use
+    response.cookies.set({
+      name: "authToken",
+      value: accessToken,
+      httpOnly: true,
+      path: "/",
+      maxAge: 60 * 60, // 1 hour (matches access token expiry)
+      sameSite: "lax",
+      secure: isProd,
+    });
+
+    // Set ONLY refresh token in HttpOnly cookie (secure storage)
     response.cookies.set({
       name: "refreshToken",
       value: refreshToken,

@@ -6,7 +6,19 @@ import { Button } from "@/components/ui/button"
 interface ViewDeviceModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  device?: { id: string; deviceId: string; model?: string; type?: string; location?: string; status?: string; assigned?: boolean; archived?: boolean; name?: string; description?: string }
+  device?: { 
+    id: string; 
+    serialNumber?: string;
+    name?: string;
+    model?: string; 
+    type?: string; 
+    location?: string; 
+    status?: string; 
+    assigned?: boolean; 
+    archived?: boolean; 
+    description?: string;
+    firmware?: string;
+  }
 }
 
 export default function ViewDeviceModal({ open, onOpenChange, device }: ViewDeviceModalProps) {
@@ -22,8 +34,8 @@ export default function ViewDeviceModal({ open, onOpenChange, device }: ViewDevi
 
         <div className="space-y-3">
           <div>
-            <div className="text-sm text-muted-foreground">Device ID</div>
-            <div className="font-mono">{device.deviceId ?? '—'}</div>
+            <div className="text-sm text-muted-foreground">Serial Number</div>
+            <div className="font-mono">{device.serialNumber ?? '—'}</div>
           </div>
 
           <div>
@@ -38,7 +50,7 @@ export default function ViewDeviceModal({ open, onOpenChange, device }: ViewDevi
 
           <div>
             <div className="text-sm text-muted-foreground">Type</div>
-            <div>{device.type ?? (device.model ? 'Mushroom Chamber' : '—')}</div>
+            <div>{device.type ?? '—'}</div>
           </div>
 
           <div>
@@ -48,8 +60,15 @@ export default function ViewDeviceModal({ open, onOpenChange, device }: ViewDevi
 
           <div>
             <div className="text-sm text-muted-foreground">Status</div>
-            <div>{device.status ?? 'Offline'}</div>
+            <div>{device.status ?? 'OFFLINE'}</div>
           </div>
+
+          {device.firmware && (
+            <div>
+              <div className="text-sm text-muted-foreground">Firmware</div>
+              <div className="font-mono">{device.firmware}</div>
+            </div>
+          )}
 
           <div>
             <div className="text-sm text-muted-foreground">Assigned</div>

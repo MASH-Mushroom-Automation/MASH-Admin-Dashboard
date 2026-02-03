@@ -100,12 +100,22 @@ export async function POST() {
       user: backendData.user,
     });
 
-    // ✅ ONLY set refresh token in HttpOnly cookie (secure storage)
-    // ✅ Access token returned in response body (stored in memory by client)
+    const isProd = process.env.NODE_ENV === "production";
+
+    // Set access token in HttpOnly cookie for proxy to use
+    successResponse.cookies.set("authToken", backendData.accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 60 * 60, // 1 hour (matches access token expiry)
+      path: "/",
+    });
+
+    // Set refresh token in HttpOnly cookie (secure storage)
     if (backendData.refreshToken) {
       successResponse.cookies.set("refreshToken", backendData.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: isProd,
         sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60, // 7 days
         path: "/",

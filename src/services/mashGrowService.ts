@@ -25,6 +25,7 @@ export interface Device {
   status: 'Online' | 'Offline'
   type?: DeviceType
   assigned?: boolean
+  userId?: string
   archived?: boolean
   description?: string
   firmware?: string
@@ -81,11 +82,28 @@ export const deviceService = {
     assigned?: boolean
     archived?: boolean
   }): Promise<PaginatedResponse<Device>> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<Device>>>(
-      'v1/super-admin/devices',
-      { params }
-    )
-    return response.data.data
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<Device>>>(
+        'v1/devices',
+        { params }
+      )
+      return response.data.data
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.warn('[MASH Grow] Devices endpoint not implemented yet - returning empty list')
+        // Return empty paginated response
+        return {
+          data: [],
+          pagination: {
+            page: params?.page || 1,
+            limit: params?.limit || 10,
+            total: 0,
+            totalPages: 0
+          }
+        }
+      }
+      throw error
+    }
   },
 
   /**
@@ -93,7 +111,7 @@ export const deviceService = {
    */
   getById: async (id: string): Promise<Device> => {
     const response = await api.get<ApiResponse<Device>>(
-      `v1/super-admin/devices/${id}`
+      `v1/devices/${id}`
     )
     return response.data.data
   },
@@ -103,7 +121,7 @@ export const deviceService = {
    */
   create: async (device: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device> => {
     const response = await api.post<ApiResponse<Device>>(
-      'v1/super-admin/devices',
+      'v1/devices',
       device
     )
     return response.data.data
@@ -113,41 +131,45 @@ export const deviceService = {
    * Update an existing device
    */
   update: async (id: string, data: Partial<Device>): Promise<Device> => {
-    const response = await api.patch<ApiResponse<Device>>(
-      `v1/super-admin/devices/${id}`,
+    const response = await api.put<ApiResponse<Device>>(
+      `v1/devices/${id}`,
       data
     )
     return response.data.data
   },
 
   /**
+   * Archive/unarchive a device (soft delete)
+   * Note: Uses activate endpoint from backend API
+   */
+  archive: async (id: string, archive: boolean = true): Promise<Device> => {
+    const response = await api.post<ApiResponse<Device>>(
+      `v1/devices/${id}/activate`,
+      { isActive: !archive }
+    )
+    return response.data.data
+  },
+
+  /**
    * Assign device to a user
+   * Note: Uses device update endpoint since backend doesn't have dedicated assign endpoint
    */
   assign: async (deviceId: string, userId: string): Promise<Device> => {
-    const response = await api.post<ApiResponse<Device>>(
-      `v1/super-admin/devices/${deviceId}/assign`,
-      { userId }
+    const response = await api.put<ApiResponse<Device>>(
+      `v1/devices/${deviceId}`,
+      { userId, assigned: true }
     )
     return response.data.data
   },
 
   /**
    * Unassign device from user
+   * Note: Uses device update endpoint since backend doesn't have dedicated unassign endpoint
    */
   unassign: async (deviceId: string): Promise<Device> => {
-    const response = await api.post<ApiResponse<Device>>(
-      `v1/super-admin/devices/${deviceId}/unassign`
-    )
-    return response.data.data
-  },
-
-  /**
-   * Archive/unarchive a device (soft delete)
-   */
-  archive: async (id: string, archive: boolean = true): Promise<Device> => {
-    const response = await api.patch<ApiResponse<Device>>(
-      `v1/super-admin/devices/${id}`,
-      { archived: archive }
+    const response = await api.put<ApiResponse<Device>>(
+      `v1/devices/${deviceId}`,
+      { userId: null, assigned: false }
     )
     return response.data.data
   },
@@ -156,7 +178,7 @@ export const deviceService = {
    * Delete a device permanently
    */
   delete: async (id: string): Promise<void> => {
-    await api.delete(`v1/super-admin/devices/${id}`)
+    await api.delete(`v1/devices/${id}`)
   },
 
   /**
@@ -184,11 +206,27 @@ export const growUserService = {
     search?: string
     archived?: boolean
   }): Promise<PaginatedResponse<GrowUser>> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<GrowUser>>>(
-      'v1/super-admin/grow-users',
-      { params }
-    )
-    return response.data.data
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<GrowUser>>>(
+        'v1/users',
+        { params }
+      )
+      return response.data.data
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.warn('[MASH Grow] Users endpoint not found - returning empty list')
+        return {
+          data: [],
+          pagination: {
+            page: params?.page || 1,
+            limit: params?.limit || 10,
+            total: 0,
+            totalPages: 0
+          }
+        }
+      }
+      throw error
+    }
   },
 
   /**
@@ -196,7 +234,7 @@ export const growUserService = {
    */
   getById: async (id: string): Promise<GrowUser> => {
     const response = await api.get<ApiResponse<GrowUser>>(
-      `v1/super-admin/grow-users/${id}`
+      `v1/users/${id}`
     )
     return response.data.data
   },
@@ -206,7 +244,7 @@ export const growUserService = {
    */
   create: async (user: Omit<GrowUser, 'id' | 'createdAt' | 'updatedAt'>): Promise<GrowUser> => {
     const response = await api.post<ApiResponse<GrowUser>>(
-      'v1/super-admin/grow-users',
+      'v1/users',
       user
     )
     return response.data.data
@@ -217,7 +255,7 @@ export const growUserService = {
    */
   update: async (id: string, data: Partial<GrowUser>): Promise<GrowUser> => {
     const response = await api.patch<ApiResponse<GrowUser>>(
-      `v1/super-admin/grow-users/${id}`,
+      `v1/users/${id}`,
       data
     )
     return response.data.data
@@ -228,7 +266,7 @@ export const growUserService = {
    */
   archive: async (id: string, archive: boolean = true): Promise<GrowUser> => {
     const response = await api.patch<ApiResponse<GrowUser>>(
-      `v1/super-admin/grow-users/${id}`,
+      `v1/users/${id}`,
       { archived: archive }
     )
     return response.data.data
@@ -238,7 +276,7 @@ export const growUserService = {
    * Delete a grow user permanently
    */
   delete: async (id: string): Promise<void> => {
-    await api.delete(`v1/super-admin/grow-users/${id}`)
+    await api.delete(`v1/users/${id}`)
   }
 }
 

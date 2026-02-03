@@ -215,14 +215,17 @@ export default function DevicesPage() {
                     pagedDevices.map((d) => (
                       <TableRow key={d.id}>
                         <TableCell className="font-mono w-52 overflow-hidden truncate">
-                          {d.serialNumber}
+                          {d.serialNumber || "—"}
                         </TableCell>
                         <TableCell className="w-48">
                           <div className="truncate">{d.name || "—"}</div>
                         </TableCell>
                         <TableCell className="w-32">
                           <Badge variant="outline">
-                            {d.model}{d.version}
+                            {d.serialNumber ? (
+                              // Parse model/version from serialNumber (MASH-B2-CAL26-######)
+                              d.serialNumber.split("-")[1] || d.serialNumber
+                            ) : "—"}
                           </Badge>
                         </TableCell>
                         <TableCell className="w-40 max-w-40 overflow-hidden">
@@ -231,7 +234,7 @@ export default function DevicesPage() {
                           </div>
                         </TableCell>
                         <TableCell className="w-32 overflow-hidden truncate">
-                          {d.location}
+                          {d.location || "—"}
                         </TableCell>
                         <TableCell className="w-24">
                           <Badge 
@@ -248,11 +251,19 @@ export default function DevicesPage() {
                               showView={true}
                               showEdit={true}
                               onView={() => {
-                                setViewDevice(d);
+                                setViewDevice({
+                                  ...d,
+                                  serialNumber: d.serialNumber || "—",
+                                  location: d.location || "—"
+                                });
                                 setViewOpen(true);
                               }}
                               onEdit={() => {
-                                setEditDevice(d);
+                                setEditDevice({
+                                  ...d,
+                                  serialNumber: d.serialNumber || "",
+                                  location: d.location || ""
+                                });
                                 setCreateOpen(true);
                               }}
                               onArchive={() => {
@@ -298,14 +309,18 @@ export default function DevicesPage() {
         onOpenChange={setViewOpen}
         device={viewDevice ? {
           id: viewDevice.id,
-          deviceId: viewDevice.serialNumber,
+          serialNumber: viewDevice.serialNumber,
           name: viewDevice.name,
-          model: `${viewDevice.model}${viewDevice.version}`,
+          model: viewDevice.serialNumber ? (
+            // Parse model/version from serialNumber (MASH-B2-CAL26-######)
+            viewDevice.serialNumber.split("-")[1] || viewDevice.serialNumber
+          ) : undefined,
           type: viewDevice.type ? DEVICE_TYPE_LABELS[viewDevice.type] : undefined,
-          location: viewDevice.location,
+          location: viewDevice.location || undefined,
           status: viewDevice.status,
-          assigned: viewDevice.assigned,
-          description: viewDevice.description,
+          assigned: viewDevice.assigned || !!viewDevice.userId,
+          description: viewDevice.description || undefined,
+          firmware: viewDevice.firmware || undefined,
         } : undefined}
       />
       

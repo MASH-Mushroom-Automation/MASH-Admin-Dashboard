@@ -73,6 +73,9 @@ export default function CreateDeviceModal({
   const [generatedSerialNumber, setGeneratedSerialNumber] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Track if form has changes (for edit mode)
+  const [hasChanges, setHasChanges] = useState(false);
+
   // Generate device ID whenever model, version, or location changes
   useEffect(() => {
     if (!open) return;
@@ -95,12 +98,25 @@ export default function CreateDeviceModal({
       setIsEditMode(true);
       setName(initialDevice.name || "");
       setType((initialDevice.type as DeviceType) || "MUSHROOM_CHAMBER");
-      setModelType((initialDevice.model as DeviceModel) || "A");
-      setVersion(initialDevice.version || 1);
+      
+      // Parse model and version from serialNumber (format: MASH-B2-CAL26-######)
+      const serialParts = initialDevice.serialNumber?.split("-") || [];
+      if (serialParts.length >= 2) {
+        const modelVersion = serialParts[1]; // e.g., "B2"
+        const parsedModel = modelVersion.charAt(0) as DeviceModel; // "B"
+        const parsedVersion = parseInt(modelVersion.substring(1)) || 1; // "2"
+        setModelType(parsedModel);
+        setVersion(parsedVersion);
+      } else {
+        setModelType("A");
+        setVersion(1);
+      }
+      
       setLocation(initialDevice.location || "");
       setDescription(initialDevice.description || "");
       setFirmware(initialDevice.firmware || "");
       setGeneratedSerialNumber(initialDevice.serialNumber || "");
+      setHasChanges(false); // Reset change tracking
     } else if (!open) {
       // Reset form when modal closes
       resetForm();
@@ -313,7 +329,11 @@ export default function CreateDeviceModal({
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={!name.trim() || !location.trim() || !generatedSerialNumber}
+            disabled={
+              !name.trim() || 
+              !location.trim() || 
+              !generatedSerialNumber
+            }
           >
             {isEditMode ? "Save Changes" : "Create Device"}
           </Button>
