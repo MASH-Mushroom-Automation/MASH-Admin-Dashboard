@@ -146,8 +146,8 @@ function StatCard({
           </div>
         </div>
 
-        {/* Delta indicator */}
-        {delta !== null && (
+        {/* Delta indicator - Temporarily hidden */}
+        {/* {delta !== null && (
           <div className="pt-1">
             <div className="flex items-center gap-2 text-sm">
               {delta > 0 ? (
@@ -170,7 +170,7 @@ function StatCard({
               )}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* View more button */}
         <div className="border-t pt-3">
