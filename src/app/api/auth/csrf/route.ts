@@ -72,6 +72,19 @@ export async function GET() {
       code?: string;
     };
 
+    // If backend doesn't have CSRF endpoint (404), return success since CSRF is optional
+    if (axiosError.response?.status === 404) {
+      console.log("[CSRF] Backend CSRF endpoint not found (404) - CSRF protection is optional");
+      return NextResponse.json(
+        {
+          success: false,
+          message: "CSRF endpoint not implemented on backend",
+          optional: true,
+        },
+        { status: 200 } // Return 200 since CSRF is optional
+      );
+    }
+
     console.error("[CSRF] Failed to fetch CSRF token:", {
       message: axiosError.message,
       code: axiosError.code,

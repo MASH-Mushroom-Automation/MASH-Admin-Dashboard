@@ -1,6 +1,8 @@
 // src/lib/api.ts
 import axios from "axios";
 import { getAccessToken, clearAccessToken } from "./tokenManager";
+import { handleSessionExpiration } from "./sessionManager";
+import { getCsrfToken } from "./csrfService";
 
 export const api = axios.create({
   baseURL: "/api/proxy",
@@ -10,9 +12,9 @@ export const api = axios.create({
   },
 });
 
-// Request interceptor - add access token from memory
+// Request interceptor - add access token and CSRF token
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Add access token if available
     const token = getAccessToken();
     if (token) {
@@ -24,6 +26,18 @@ api.interceptors.request.use(
       console.warn(
         "[API Request] ⚠️ NO ACCESS TOKEN FOUND - Request will likely fail with 401"
       );
+    }
+
+    // Add CSRF token for state-changing operations (POST, PUT, DELETE, PATCH)
+    const method = config.method?.toUpperCase();
+    if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = await getCsrfToken();
+      if (csrfToken) {
+        config.headers['x-csrf-token'] = csrfToken;
+        console.log("[API Request] ✓ CSRF token added to request");
+      } else {
+        console.warn("[API Request] ⚠️ No CSRF token available - backend may reject request");
+      }
     }
 
     // Debug log in development
@@ -46,11 +60,9 @@ api.interceptors.request.use(
 
         // Additional authentication check
         if (!token && !hasRefreshToken) {
-          console.error(
-            "[API] ❌ AUTHENTICATION FAILURE - No tokens found. User must log in first!"
-          );
+          // Silent log - the 401 response interceptor will handle user notification
           console.log(
-            "[API] 💡 Tip: Check if login was successful and tokens were stored"
+            "[API] ℹ️ No tokens found. Request will likely fail with 401 (handled gracefully)"
           );
         }
       } catch {
@@ -110,14 +122,8 @@ api.interceptors.response.use(
       }
 
       // Refresh failed - clear tokens and redirect to login
-      console.log("[API] Refresh failed, redirecting to login");
-      clearAccessToken();
-
-      if (typeof window !== "undefined") {
-        // Clear user state from authStore
-        const { useAuthStore } = await import("@/store/authStore");
-        useAuthStore.getState().logout();
-      }
+      console.log("[API] Refresh failed, handling session expiration");
+      await handleSessionExpiration();
     }
 
     return Promise.reject(error);

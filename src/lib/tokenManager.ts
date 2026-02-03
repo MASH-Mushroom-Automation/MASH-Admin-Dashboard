@@ -26,7 +26,10 @@ export const setAccessToken = (token: string, expiresIn: number) => {
 export const getAccessToken = (): string | null => {
   // Check if token expired
   if (tokenExpiry && Date.now() >= tokenExpiry) {
-    console.warn('[TokenManager] Access token expired')
+    if (process.env.NODE_ENV === 'development') {
+      const minutesExpired = Math.floor((Date.now() - tokenExpiry) / (1000 * 60))
+      console.log(`[TokenManager] ℹ️ Access token expired ${minutesExpired} minute(s) ago - will attempt refresh`)
+    }
     accessToken = null
     tokenExpiry = null
     return null

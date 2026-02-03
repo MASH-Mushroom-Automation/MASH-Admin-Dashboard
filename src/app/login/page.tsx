@@ -1,8 +1,21 @@
 "use client";
 
 import Image from "next/image";
+import { Suspense } from "react";
 import { LoginForm } from "./login-form";
 import { Footer } from "./footer";
+
+function LoginFormWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
 
 export default function LoginPage() {
   return (
@@ -14,16 +27,13 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center">
               <Image src="/pictures/logo.png" alt="M" width={40} height={36} />
             </div>
-            <span className="text-lg font-bold text-green-600 mt-6">
-              M.A.S.H.
-            </span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <LoginForm />
+        <LoginFormWrapper />
       </main>
 
       {/* Footer */}
