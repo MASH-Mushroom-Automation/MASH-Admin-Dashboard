@@ -33,8 +33,8 @@ import { toast } from "sonner";
 interface DeviceLocal {
   id: string;
   serialNumber: string;
-  model: string;
-  version: number;
+  model?: string;
+  version?: number;
   location: string;
   status: "Online" | "Offline";
   assigned?: boolean;
