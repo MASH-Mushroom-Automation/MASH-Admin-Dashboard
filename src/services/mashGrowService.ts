@@ -19,8 +19,8 @@ export interface Device {
   id: string
   serialNumber: string
   name?: string
-  model: string
-  version: number
+  // model: string // Removing as backend doesn't support
+  // version: number // Removing as backend doesn't support
   location: string
   status: 'Online' | 'Offline'
   type?: DeviceType
@@ -217,9 +217,16 @@ export const growUserService = {
     archived?: boolean
   }): Promise<PaginatedResponse<GrowUser>> => {
     try {
+      // Map archived to isActive (archived=true -> isActive=false)
+      const queryParams: any = { ...params };
+      if (params?.archived !== undefined) {
+         queryParams.isActive = !params.archived;
+         delete queryParams.archived;
+      }
+
       const response = await api.get<ApiResponse<PaginatedResponse<GrowUser>>>(
         'v1/users',
-        { params }
+        { params: queryParams }
       )
       return response.data.data
     } catch (error: any) {
@@ -277,7 +284,7 @@ export const growUserService = {
   archive: async (id: string, archive: boolean = true): Promise<GrowUser> => {
     const response = await api.patch<ApiResponse<GrowUser>>(
       `v1/users/${id}`,
-      { archived: archive }
+      { isActive: !archive }
     )
     return response.data.data
   },

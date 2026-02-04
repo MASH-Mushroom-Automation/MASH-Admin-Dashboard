@@ -96,13 +96,34 @@ export default function RegisteredUsersPage() {
         deviceService.getAll({ limit: 100 })
       ]);
       
-      setUsers(usersResponse.data);
+      // Map users to local format, populating device info from the nested devices array
+      const mappedUsers = usersResponse.data.map((u: any) => ({
+        id: u.id,
+        // Frontend local type expects 'name', 'chamberNumber', etc.
+        name: (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.username || u.email),
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        // Map phone from backend 'phone' field
+        contactNumber: u.phone || u.phoneNumber || '',
+        phoneNumber: u.phone || u.phoneNumber || '',
+        address: u.address || '',
+        // Use first device as the primary one for data table display
+        deviceId: u.devices?.[0]?.serialNumber,
+        // If chamberNumber is not in DB, use device name or generate a fallback
+        chamberNumber: u.devices?.[0]?.name || (u.devices?.length ? `Device ${u.devices.length}` : '—'),
+        archived: !u.isActive,
+        createdAt: u.createdAt
+      }));
+
+      setUsers(mappedUsers);
+      
       // Map devices to expected format
       const mappedDevices: Device[] = devicesResponse.data.map((d: ApiDevice) => ({
         id: d.id,
         deviceId: d.serialNumber,
         name: d.name,
-        model: `${d.model}${d.version}`,
+        model: d.type || 'Generic Device', // Fallback since model/version removed
         location: d.location,
         status: d.status,
         assigned: d.assigned

@@ -27,8 +27,9 @@ import {
 } from "@/types/device";
 import { deviceService, type Device as ApiDevice } from "@/services/mashGrowService";
 
-// Map API Device to local DeviceLocal type for compatibility with existing components
-type DeviceLocal = ApiDevice;
+type DeviceLocal = ApiDevice & {
+  model?: string; // Add optional model for UI display compatibility
+};
 
 export default function DevicesPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,7 +80,12 @@ export default function DevicesPage() {
         archived: showArchived ? true : undefined,
         assigned: showRegistered ? true : undefined
       });
-      setDevices(response.data);
+      // Map response to local type, handling missing model/version
+      const mappedDevices = response.data.map(d => ({
+        ...d,
+        model: d.type || 'Standard Device', // Fallback for model
+      }));
+      setDevices(mappedDevices);
     } catch (err) {
       const errorMessage = (err as Error).message || 'Failed to load devices';
       setError(errorMessage);

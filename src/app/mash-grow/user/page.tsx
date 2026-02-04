@@ -61,14 +61,17 @@ export default function RegisterChamber() {
       ])
       
       // Map API users to local User type
-      const mappedUsers: User[] = usersResponse.data.map((u: GrowUser) => ({
+      const mappedUsers: User[] = usersResponse.data.map((u: any) => ({
         id: u.id,
-        chamberNumber: u.chamberNumber,
-        name: u.name,
+        // Map chamberNumber from first device name or generate fallback
+        chamberNumber: u.devices?.[0]?.name || (u.devices?.length ? `Device ${u.devices.length}` : '—'),
+        name: (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.username || u.email),
         address: u.address || "",
-        contactNumber: u.contactNumber || "",
-        deviceId: u.deviceId,
-        status: "Active" as const,
+        // Map contact info
+        contactNumber: u.phoneNumber || u.phone || "",
+        // Map deviceId from first device
+        deviceId: u.devices?.[0]?.serialNumber,
+        status: u.isActive ? "Active" : "Inactive",
         registrationDate: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       }))
       
