@@ -98,12 +98,16 @@ async function handler(
       csrfToken.substring(0, 20) + "..."
     );
   } else {
-    // Debug: Log all headers to see what's being sent
-    console.warn(
-      `[PROXY] ⚠️ No CSRF token in request headers - backend may reject`
-    );
-    if (process.env.NODE_ENV === "development") {
-      console.log("[PROXY] Available headers:", Array.from(req.headers.keys()));
+    // Only warn for state-changing methods where CSRF is typically required
+    const safeMethods = ["GET", "HEAD", "OPTIONS"];
+    if (!safeMethods.includes(req.method.toUpperCase())) {
+      // Debug: Log all headers to see what's being sent
+      console.warn(
+        `[PROXY] ⚠️ No CSRF token in request headers - backend may reject`
+      );
+      if (process.env.NODE_ENV === "development") {
+        console.log("[PROXY] Available headers:", Array.from(req.headers.keys()));
+      }
     }
   }
 
@@ -111,7 +115,8 @@ async function handler(
   const cookieHeader = req.headers.get("cookie");
   if (cookieHeader) {
     headers["Cookie"] = cookieHeader;
-    console.log(`[PROXY] Forwarding cookies to backend`);
+    const cookieNames = cookieHeader.split(';').map(c => c.trim().split('=')[0]);
+    console.log(`[PROXY] Forwarding cookies to backend: ${cookieNames.join(', ')}`);
   }
 
   const body = ["GET", "HEAD"].includes(req.method)
@@ -175,6 +180,11 @@ async function handler(
             if (lowerAttrName === "httponly") {
               cookieOptions.httpOnly = true;
             } else if (lowerAttrName === "secure") {
+              // In development, respect the flag but allow it to be disabled if needed
+              // Usually backend sets Secure=true in prod. In dev (localhost), browsers allow Secure cookies.
+              // But if accessing via IP (http://192.168...), Secure cookies fail.
+              // We'll keep it simple: Trust the backend, but if in dev, maybe we should relax it?
+              // Let's stick to mirroring the backend for now, but log it.
               cookieOptions.secure = true;
             } else if (lowerAttrName === "samesite") {
               cookieOptions.sameSite = attrValue?.toLowerCase() as "strict" | "lax" | "none";

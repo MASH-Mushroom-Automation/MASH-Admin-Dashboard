@@ -139,7 +139,7 @@ export default function AppSidebar() {
               </SidebarMenuItem>
 
               {/* MashGrow - Temporarily hidden */}
-              {/* <SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsMashGrowOpen((p) => !p)}
                   isActive={pathname?.startsWith("/mash-grow")}
@@ -168,7 +168,7 @@ export default function AppSidebar() {
                     ))}
                   </SidebarMenuSub>
                 )}
-              </SidebarMenuItem> */}
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
