@@ -120,9 +120,19 @@ export const deviceService = {
    * Create a new device
    */
   create: async (device: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Promise<Device> => {
+    // Backend only accepts specific fields. Strip UI-only fields (model, version, etc.)
+    const payload = {
+      name: device.name,
+      type: device.type,
+      serialNumber: device.serialNumber,
+      description: device.description,
+      location: device.location,
+      firmware: device.firmware
+    };
+
     const response = await api.post<ApiResponse<Device>>(
       'v1/devices',
-      device
+      payload
     )
     return response.data.data
   },
