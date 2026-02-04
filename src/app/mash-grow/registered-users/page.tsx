@@ -92,7 +92,14 @@ export default function RegisteredUsersPage() {
     try {
       // Fetch users and devices in parallel
       const [usersResponse, devicesResponse] = await Promise.all([
-        growUserService.getAll({ archived: showArchived ? true : undefined }),
+        growUserService.getAll({ 
+          archived: showArchived ? true : undefined,
+          // Only show users who have a device in the "Registered Users" view
+          // If viewing archives (showArchived=true), we show matching archived users regardless of device status
+          // But based on user request "Registered Users page shows all users instead of showing only the users that has a device", 
+          // we should apply hasDevice filter when not searching/archived or as a general rule for this page context.
+          hasDevice: !showArchived 
+        }),
         deviceService.getAll({ limit: 100 })
       ]);
       

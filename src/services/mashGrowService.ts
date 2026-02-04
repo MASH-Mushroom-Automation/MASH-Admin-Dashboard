@@ -215,6 +215,7 @@ export const growUserService = {
     limit?: number
     search?: string
     archived?: boolean
+    hasDevice?: boolean
   }): Promise<PaginatedResponse<GrowUser>> => {
     try {
       // Map archived to isActive (archived=true -> isActive=false)

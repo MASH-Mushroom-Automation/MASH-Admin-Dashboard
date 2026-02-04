@@ -80,10 +80,11 @@ export default function DevicesPage() {
         archived: showArchived ? true : undefined,
         assigned: showRegistered ? true : undefined
       });
-      // Map response to local type, handling missing model/version
+      // Map response to local type, handling missing model/version and mapping isActive to archived
       const mappedDevices = response.data.map(d => ({
         ...d,
         model: d.type || 'Standard Device', // Fallback for model
+        archived: !d.isActive, // key fix: map isActive from backend to archived for frontend logic
       }));
       setDevices(mappedDevices);
     } catch (err) {
