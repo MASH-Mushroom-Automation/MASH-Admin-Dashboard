@@ -100,15 +100,30 @@ export default function DevicesPage() {
     setCurrentPage(1);
   }, [devices, showArchived, showRegistered]);
 
-  const handleCreateSave = async (device: DeviceLocal) => {
+  const handleCreateSave = async (device: Partial<DeviceLocal>) => {
     try {
+      // Prepare payload with only allowed fields to avoid 400 Bad Request
+      const payload: any = {
+        name: device.name,
+        type: device.type,
+        description: device.description,
+        location: device.location,
+        serialNumber: device.serialNumber,
+        firmware: device.firmware,
+        configuration: device.configuration,
+      };
+
+      // Clean undefined values
+      Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
       if (editDevice) {
-        // Update existing device
-        await deviceService.update(device.id, device);
+        // Update existing device - userId is not allowed in update (OmitType)
+        await deviceService.update(editDevice.id, payload);
         toast.success("Device updated successfully");
       } else {
-        // Create new device
-        await deviceService.create(device);
+        // Create new device - userId is allowed if assigning initially
+        if (device.userId) payload.userId = device.userId;
+        await deviceService.create(payload as any);
         toast.success("Device created successfully");
       }
       setEditDevice(null);

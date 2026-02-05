@@ -32,6 +32,7 @@ export interface Device {
   isActive?: boolean
   createdAt?: string
   updatedAt?: string
+  configuration?: any
 }
 
 export interface GrowUser {
@@ -162,12 +163,12 @@ export const deviceService = {
 
   /**
    * Assign device to a user
-   * Note: Uses device update endpoint since backend doesn't have dedicated assign endpoint
+   * Uses dedicated backend endpoint
    */
   assign: async (deviceId: string, userId: string): Promise<Device> => {
     const response = await api.put<ApiResponse<Device>>(
-      `v1/devices/${deviceId}`,
-      { userId, assigned: true }
+      `v1/devices/${deviceId}/assign`,
+      { userId }
     )
     return response.data.data
   },

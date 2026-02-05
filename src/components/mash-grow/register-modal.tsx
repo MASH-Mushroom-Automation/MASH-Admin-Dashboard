@@ -50,8 +50,9 @@ interface RegisterData {
 interface RegisterModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (data: RegisterData & { selectedDeviceId?: string }) => void;
+  onSave?: (data: RegisterData & { selectedDeviceId?: string; selectedUserId?: string }) => void;
   availableDevices?: { id: string; deviceId: string; status?: string }[];
+  availableUsers?: { id: string; name: string; email?: string; firstName?: string; lastName?: string; contactNumber?: string; phoneNumber?: string }[];
   // optional initial data for edit
   initialData?: Partial<
     RegisterData & { id?: string; selectedDeviceId?: string }
@@ -68,11 +69,13 @@ type RegisterInitialData = Partial<{
   model: string;
   selectedDeviceId: string;
 }>;
+
 export default function RegisterModal({
   open,
   onOpenChange,
   onSave,
   availableDevices,
+  availableUsers = [],
   initialData,
 }: RegisterModalProps) {
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
@@ -97,33 +100,7 @@ export default function RegisterModal({
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(
     undefined
   );
-
-  type UserLocal = {
-    id: string
-    name?: string
-    email?: string
-    firstName?: string
-    lastName?: string
-    contactNumber?: string
-    phoneNumber?: string
-    address?: string
-    deviceId?: string
-    archived?: boolean
-  }
-  const [users, setUsers] = useState<UserLocal[]>([])
-  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined)
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("mash_users")
-      if (!raw) return setUsers([])
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) setUsers(parsed.filter((u) => !u.archived))
-      else setUsers([])
-    } catch {
-      setUsers([])
-    }
-  }, [open])
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
 
   const locationYear = "";
   const deviceId = `MASH-${formData.model || "---"}-${
@@ -132,13 +109,12 @@ export default function RegisterModal({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-      // If an existing user is selected, skip requiring user info inputs (they're read-only)
-      if (!selectedUserId) {
-        if (!formData.email.trim()) newErrors.email = "Email is required";
-        if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
-        if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-        if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
-      }
+    
+    // Require user selection
+    if (!selectedUserId) {
+      newErrors.user = "You must select a user";
+    }
+
     // If the user selected an existing device, model is not required (device already exists).
     if (!selectedDeviceId && !formData.model.trim())
       newErrors.model = "Model is required";
@@ -196,6 +172,7 @@ export default function RegisterModal({
     uniqueDecimal: string;
     deviceId: string;
     selectedDeviceId?: string;
+    selectedUserId?: string;
   };
 
   const handleSave = () => {
@@ -222,11 +199,13 @@ export default function RegisterModal({
         uniqueDecimal,
         deviceId: payloadDeviceId,
         ...(selectedDeviceId ? { selectedDeviceId } : {}),
+        selectedUserId, // Include selectedUserId in payload
       };
 
-      console.log("Chamber and Device registered:", registrationData);
+      console.log("Device assignment registered:", registrationData);
+      // @ts-ignore
       onSave?.(registrationData);
-      toast.success("User registered");
+      toast.success("Device assigned to user");
       handleCancel();
     }
   };
@@ -259,18 +238,14 @@ export default function RegisterModal({
       setSelectedUserId(undefined)
       setEditingId(undefined)
       setFormData({ email: "", firstName: "", lastName: "", phoneNumber: "", model: "" })
-      setSelectedDeviceId(undefined)
       return
     }
-    const u = users.find((x) => x.id === id)
+    const u = availableUsers.find((x) => x.id === id)
     if (!u) return
     setSelectedUserId(id)
     // treat this as editing existing record
     setEditingId(u.id)
     setFormData({ email: u.email ?? "", firstName: u.firstName ?? "", lastName: u.lastName ?? "", phoneNumber: u.phoneNumber ?? u.contactNumber ?? "", model: "" })
-    // try to map deviceId string to availableDevices id
-    const match = availableDevices?.find((d) => d.deviceId === u.deviceId)
-    setSelectedDeviceId(match?.id)
   }
 
   const handleCancel = () => {
@@ -284,15 +259,8 @@ export default function RegisterModal({
 
   // lightweight validity check (does not set errors) used to disable Save button
   const isFormValid = () => {
-    if (!selectedUserId) {
-      if (!formData.email.trim()) return false
-      if (!formData.firstName.trim()) return false
-      if (!formData.lastName.trim()) return false
-      if (!formData.phoneNumber.trim()) return false
-    }
-
+    if (!selectedUserId) return false
     if (!selectedDeviceId && !formData.model.trim()) return false
-
     return true
   }
 
@@ -300,50 +268,46 @@ export default function RegisterModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Register Chamber</DialogTitle>
+          <DialogTitle>Assign Device</DialogTitle>
           <DialogDescription>
-            Enter chamber information and device registration details
+            Assign a device to an existing user
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Select existing user (optional) */}
+          {/* Select existing user */}
           <div>
-            <Label className="text-foreground font-medium">Select existing user</Label>
+            <Label className="text-foreground font-medium">Select existing user *</Label>
             <div className="mt-2">
               <Select
-                value={selectedUserId ?? "new"}
-                onValueChange={(v) => handleSelectUser(v === "new" ? undefined : v)}
+                value={selectedUserId || ""}
+                onValueChange={(v) => handleSelectUser(v)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
-                    placeholder={
-                      selectedUserId
-                        ? users.find((u) => u.id === selectedUserId)?.name ?? ""
-                        : "-- New registration --"
-                    }
+                    placeholder="Select a user..."
                   />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">-- New registration --</SelectItem>
-                  {users.map((u) => (
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {availableUsers.map((u) => (
                     <SelectItem key={u.id} value={u.id}>{u.name ?? u.email ?? `User ${u.id}`}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {errors.user && <p className="text-sm text-destructive mt-1">{errors.user}</p>}
             </div>
           </div>
 
-          {/* If an existing user is selected, show read-only details */}
+          {/* Show read-only details for selected user */}
           {selectedUserId && (
             (() => {
-              const u = users.find((x) => x.id === selectedUserId)
+              const u = availableUsers.find((x) => x.id === selectedUserId)
               if (!u) return null
               return (
                 <Card>
                   <CardHeader>
                     <CardTitle>Selected User</CardTitle>
-                    <CardDescription>Existing user details</CardDescription>
+                    <CardDescription>User confirmation</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div>
@@ -351,12 +315,8 @@ export default function RegisterModal({
                       <div className="font-medium">{u.email ?? '—'}</div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground">First name</div>
-                      <div className="font-medium">{u.firstName ?? '—'}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Last name</div>
-                      <div className="font-medium">{u.lastName ?? '—'}</div>
+                      <div className="text-sm text-muted-foreground">Name</div>
+                      <div className="font-medium">{u.name ?? '—'}</div>
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">Phone</div>
@@ -366,52 +326,6 @@ export default function RegisterModal({
                 </Card>
               )
             })()
-          )}
-          {/* User Information Section (hidden when an existing user is selected) */}
-          {!selectedUserId && (
-            <Card>
-            <CardHeader>
-              <CardTitle>User Information</CardTitle>
-              <CardDescription>Enter contact details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground font-medium">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  placeholder="user@example.com"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-foreground font-medium">First name</Label>
-                  <Input id="firstName" name="firstName" placeholder="First" value={formData.firstName} onChange={handleInputChange} inputMode="text" className={errors.firstName ? "border-destructive" : ""} />
-                  {errors.firstName && <p className="text-sm text-destructive">{errors.firstName}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-foreground font-medium">Last name</Label>
-                  <Input id="lastName" name="lastName" placeholder="Last" value={formData.lastName} onChange={handleInputChange} inputMode="text" className={errors.lastName ? "border-destructive" : ""} />
-                  {errors.lastName && <p className="text-sm text-destructive">{errors.lastName}</p>}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="text-foreground font-medium">Phone number</Label>
-                <Input id="phoneNumber" name="phoneNumber" placeholder="e.g. +63917..." value={formData.phoneNumber} onChange={handleInputChange} inputMode="tel" className={errors.phoneNumber ? "border-destructive" : ""} />
-                {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber}</p>}
-              </div>
-            </CardContent>
-            </Card>
           )}
 
           {/* Device Registration Section */}

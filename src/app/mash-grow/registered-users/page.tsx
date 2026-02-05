@@ -46,15 +46,14 @@ type RegisterInitialData = {
   phoneNumber?: string;
 };
 
-type RegisterData = Partial<RegisterInitialData> & {
-  selectedDeviceId?: string;
-};
+type RegisterData = any;
 
 export default function RegisteredUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editUser, setEditUser] = useState<RegisterInitialData | null>(null);
@@ -90,40 +89,37 @@ export default function RegisteredUsersPage() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch users and devices in parallel
-      const [usersResponse, devicesResponse] = await Promise.all([
+      // Fetch users (with device filter), devices, and all users (for dropdown) in parallel
+      const [usersResponse, devicesResponse, allUsersResponse] = await Promise.all([
         growUserService.getAll({ 
           archived: showArchived ? true : undefined,
-          // Only show users who have a device in the "Registered Users" view
-          // If viewing archives (showArchived=true), we show matching archived users regardless of device status
-          // But based on user request "Registered Users page shows all users instead of showing only the users that has a device", 
-          // we should apply hasDevice filter when not searching/archived or as a general rule for this page context.
           hasDevice: !showArchived 
         }),
-        deviceService.getAll({ limit: 100 })
+        deviceService.getAll({ limit: 100 }),
+        growUserService.getAll({}) // fetch all users for dropdown
       ]);
       
-      // Map users to local format, populating device info from the nested devices array
-      const mappedUsers = usersResponse.data.map((u: any) => ({
+      // Map users to local format
+      const mapUserAPI = (u: any) => ({
         id: u.id,
-        // Frontend local type expects 'name', 'chamberNumber', etc.
         name: (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.username || u.email),
         email: u.email,
         firstName: u.firstName,
         lastName: u.lastName,
-        // Map phone from backend 'phone' field
         contactNumber: u.phone || u.phoneNumber || '',
         phoneNumber: u.phone || u.phoneNumber || '',
         address: u.address || '',
-        // Use first device as the primary one for data table display
         deviceId: u.devices?.[0]?.serialNumber,
-        // If chamberNumber is not in DB, use device name or generate a fallback
         chamberNumber: u.devices?.[0]?.name || (u.devices?.length ? `Device ${u.devices.length}` : '—'),
         archived: !u.isActive,
         createdAt: u.createdAt
-      }));
+      });
 
+      const mappedUsers = usersResponse.data.map(mapUserAPI);
       setUsers(mappedUsers);
+
+      const mappedAllUsers = allUsersResponse.data.map(mapUserAPI);
+      setAllUsers(mappedAllUsers);
       
       // Map devices to expected format
       const mappedDevices: Device[] = devicesResponse.data.map((d: ApiDevice) => ({
@@ -167,39 +163,29 @@ export default function RegisteredUsersPage() {
 
   const handleRegisterSave = async (data: RegisterData) => {
     try {
-      if (data?.id) {
-        // Update existing user
-        const updateData: Partial<User> = {
-          name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name),
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phoneNumber: data.phoneNumber ?? data.contactNumber,
-          address: data.address,
-          contactNumber: data.contactNumber || data.phoneNumber,
-          deviceId: data.deviceId
-        };
-        await growUserService.update(data.id, updateData);
-        toast.success("User updated");
-      } else {
-        // Create new user
-        const newUser: Omit<User, 'id' | 'createdAt' | 'updatedAt'> = {
-          chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
-          name: data.chamberName || (data.firstName || data.lastName ? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() : data.name) || "",
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phoneNumber: data.phoneNumber ?? data.contactNumber,
-          address: data.address || "",
-          contactNumber: data.contactNumber || data.phoneNumber || "",
-          deviceId: data.deviceId || (data.selectedDeviceId ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId : undefined)
-        };
-        await growUserService.create(newUser);
-        toast.success("User registered");
+      const uId = data.selectedUserId || data.id;
+      const dId = data.selectedDeviceId;
+
+      if (!uId) {
+        toast.error("No user selected");
+        return;
       }
+      
+      if (dId) {
+        // Assign device via API
+        await deviceService.assign(dId, uId);
+        toast.success("Device assigned successfully");
+      } else {
+         // Maybe they want to unassign? But currently API supports 'assign'.
+         // If no device selected, we assume nothing to do or unassign if supported.
+         // For now, warn if no device selected, as this is "Assign Device".
+         toast.error("No device selected for assignment");
+         return;
+      }
+
       fetchData(); // Refresh data
     } catch (err) {
-      const errorMessage = (err as Error).message || 'Failed to save user';
+      const errorMessage = (err as Error).message || 'Failed to assign device';
       toast.error(errorMessage);
     }
   };
@@ -331,7 +317,7 @@ export default function RegisteredUsersPage() {
         user={selectedUser ?? undefined}
       />
 
-      {/* pass a fallback mock devices list when none exist in localStorage */}
+      {/* Register / Assign Modal */}
       <RegisterModal
         open={registerOpen}
         onOpenChange={(open) => {
@@ -342,7 +328,8 @@ export default function RegisteredUsersPage() {
           setRegisterOpen(false);
           handleRegisterSave(data);
         }}
-        availableDevices={devices.filter((d) => !d.assigned)}
+        availableDevices={devices.filter((d) => !d.assigned || (editUser && d.id === editUser.selectedDeviceId))}
+        availableUsers={allUsers}
         initialData={editUser ?? undefined}
       />
       <AssignDeviceModal
