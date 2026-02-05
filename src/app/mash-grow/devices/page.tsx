@@ -200,7 +200,7 @@ export default function DevicesPage() {
       },
       {
         accessorKey: 'location',
-        header: 'Location',
+        header: 'Municipality',
         cell: ({ getValue }) => getValue() || '—',
       },
       {
