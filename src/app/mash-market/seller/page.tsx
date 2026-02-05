@@ -615,6 +615,11 @@ export default function SellerContent() {
             currentPage={currentPage}
             onPageChange={handlePageChange}
             label={activeTab === 'pending' ? 'Pending' : 'Rejected'}
+            rowsPerPageOptions={[5, 10, 25, 50, 100]}
+            onItemsPerPageChange={(n) => {
+              setItemsPerPage(n);
+              setCurrentPage(1);
+            }}
           />
 
           {/* Confirm / Reject Modals */}

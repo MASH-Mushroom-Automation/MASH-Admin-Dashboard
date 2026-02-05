@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -30,10 +30,18 @@ interface DataTableProps<TData extends AnyRow> {
   hidePagination?: boolean;
   showAcceptReject?: boolean;
   activeTab?: string;
+  /** When true, selection bar shows only archive action */
+  archiveOnly?: boolean;
+  /** Custom entity name for selection confirmations (e.g. 'device') */
+  entityName?: string;
+  /** When true, selection bar shows only Export and Archive actions */
+  simpleActions?: boolean;
+  /** When true, selection bar is in archived view and should show Unarchive actions */
+  archivedView?: boolean;
 }
 
 export function DataTable(props: DataTableProps<any>) {
-  const { data, initialPageSize = 10, columns, onArchive, onBulkChangeRole, onBulkChangeStatus, onBulkAccept, onBulkReject, onExport, mode = 'users', hidePagination, showAcceptReject = true, activeTab } = props;
+  const { data, initialPageSize = 10, columns, onArchive, onBulkChangeRole, onBulkChangeStatus, onBulkAccept, onBulkReject, onExport, mode = 'users', hidePagination, showAcceptReject = true, activeTab, archiveOnly = false, entityName, simpleActions = false, archivedView = false } = props;
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<any[]>([]);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
@@ -218,6 +226,10 @@ export function DataTable(props: DataTableProps<any>) {
         onExport={onExport}
         showAcceptReject={showAcceptReject}
         activeTab={activeTab}
+        archiveOnly={archiveOnly}
+        entityName={entityName}
+        simpleActions={simpleActions}
+        archivedView={archivedView}
       />
 
       <div className="overflow-x-auto bg-card">
@@ -282,8 +294,8 @@ export function DataTable(props: DataTableProps<any>) {
                 <tr
                   key={row.id}
                   className={`transition-colors duration-150 ${row.getIsSelected()
-                      ? 'bg-primary/10 border-l-2 shadow-xs hover:bg-primary/15'
-                      : 'odd:bg-card hover:bg-muted/50'
+                    ? 'bg-primary/10 border-l-2 shadow-xs hover:bg-primary/15'
+                    : 'odd:bg-card hover:bg-muted/50'
                     }`}
                 >
                   {row.getVisibleCells().map((cell) => {
@@ -291,8 +303,8 @@ export function DataTable(props: DataTableProps<any>) {
                       <td
                         key={cell.id}
                         className={`px-4 py-2 align-middle ${['select', 'profile', 'actions'].includes(cell.column.id)
-                            ? ''
-                            : 'max-w-0 whitespace-nowrap overflow-hidden'
+                          ? ''
+                          : 'max-w-0 whitespace-nowrap overflow-hidden'
                           }`}
                       >
                         <div
