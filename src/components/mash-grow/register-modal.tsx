@@ -27,6 +27,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { User, Search, X } from "lucide-react";
+import UserSelectionModal from "./user-selection-modal";
 
 function generateUniqueDecimal(): string {
   const chars = "0123456789ABCDEF";
@@ -97,10 +99,10 @@ export default function RegisterModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uniqueDecimal] = useState(generateUniqueDecimal());
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(
-    undefined
-  );
+  // Initialize with empty strings or undefined to prevent uncontrolled/controlled warnings
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(undefined);
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
+  const [userSelectionOpen, setUserSelectionOpen] = useState(false);
 
   const locationYear = "";
   const deviceId = `MASH-${formData.model || "---"}-${
@@ -248,55 +250,75 @@ export default function RegisterModal({
     setFormData({ email: u.email ?? "", firstName: u.firstName ?? "", lastName: u.lastName ?? "", phoneNumber: u.phoneNumber ?? u.contactNumber ?? "", model: "" })
   }
 
+  const selectedUser = availableUsers.find(u => u.id === selectedUserId);
+
   const handleCancel = () => {
     setFormData({ email: "", firstName: "", lastName: "", phoneNumber: "", model: "" });
-    setSelectedUserId(undefined)
-    setSelectedDeviceId(undefined)
-    setEditingId(undefined)
+    setSelectedUserId(undefined);
+    setSelectedDeviceId(undefined);
+    setEditingId(undefined);
     setErrors({});
     onOpenChange(false);
   };
 
-  // lightweight validity check (does not set errors) used to disable Save button
   const isFormValid = () => {
-    if (!selectedUserId) return false
-    if (!selectedDeviceId && !formData.model.trim()) return false
-    return true
-  }
+    if (!selectedUserId) return false;
+    return true;
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Assign Device</DialogTitle>
-          <DialogDescription>
-            Assign a device to an existing user
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {initialData ? "Edit Registration" : "Assign Device"}
+            </DialogTitle>
+            <DialogDescription>
+              {initialData
+                ? "Update registration details."
+                : "Select a user and assign a device to them."}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Select existing user */}
-          <div>
-            <Label className="text-foreground font-medium">Select existing user *</Label>
-            <div className="mt-2">
-              <Select
-                value={selectedUserId || ""}
-                onValueChange={(v) => handleSelectUser(v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue
-                    placeholder="Select a user..."
-                  />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {availableUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name ?? u.email ?? `User ${u.id}`}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.user && <p className="text-sm text-destructive mt-1">{errors.user}</p>}
+          <div className="grid gap-4 py-4">
+            {/* 1. User Selection */}
+            <div className="space-y-2">
+              <Label className="text-foreground font-medium">Select existing user *</Label>
+              {!selectedUser ? (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-muted-foreground font-normal"
+                  onClick={() => setUserSelectionOpen(true)}
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Select a user...
+                </Button>
+              ) : (
+                <div className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{selectedUser.name}</p>
+                      <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={() => handleSelectUser(undefined)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {errors.user && (
+                <p className="text-sm text-destructive">{errors.user}</p>
+              )}
             </div>
-          </div>
 
           {/* Show read-only details for selected user */}
           {selectedUserId && (
@@ -463,10 +485,18 @@ export default function RegisterModal({
             onClick={handleSave}
             disabled={!isFormValid()}
           >
-            Save
+            {initialData ? "Update" : "Assign Device"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <UserSelectionModal 
+        open={userSelectionOpen}
+        onOpenChange={setUserSelectionOpen}
+        users={availableUsers}
+        onSelect={handleSelectUser}
+      />
+    </>
   );
 }

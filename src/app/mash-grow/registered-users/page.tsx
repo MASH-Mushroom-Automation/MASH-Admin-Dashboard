@@ -96,7 +96,7 @@ export default function RegisteredUsersPage() {
           hasDevice: !showArchived 
         }),
         deviceService.getAll({ limit: 100 }),
-        growUserService.getAll({}) // fetch all users for dropdown
+        growUserService.getAll({ limit: 1000 }) // fetch all users for dropdown (up to 1000)
       ]);
       
       // Map users to local format
@@ -262,12 +262,19 @@ export default function RegisteredUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users
-                  .filter((u) =>
-                    showArchived ? Boolean(u.archived) : !u.archived
-                  )
-                  .map((u) => (
-                    <TableRow key={u.id}>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No registered users found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users
+                    .filter((u) =>
+                      showArchived ? Boolean(u.archived) : !u.archived
+                    )
+                    .map((u) => (
+                      <TableRow key={u.id}>
                       <TableCell>{u.name}</TableCell>
                       <TableCell>{u.chamberNumber}</TableCell>
                       <TableCell className="font-mono">{u.deviceId}</TableCell>
@@ -305,7 +312,7 @@ export default function RegisteredUsersPage() {
                         ></ActionsMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))}
               </TableBody>
             </Table>
           )}
