@@ -268,17 +268,28 @@ export default function CreateDeviceModal({
 
                 {/* Location */}
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location *</Label>
+                  <Label htmlFor="location">Municipality *</Label>
                   <Input
                     id="location"
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow only letters and spaces
+                      if (/^[a-zA-Z\s]*$/.test(value) || value === "") {
+                        setLocation(value);
+                      }
+                    }}
                     disabled={isEditMode}
                     placeholder="e.g., Caloocan, Manila, Cebu"
                   />
                   {isEditMode && (
                     <p className="text-xs text-muted-foreground">
                       Location cannot be changed in edit mode
+                    </p>
+                  )}
+                  {location && !/^[a-zA-Z\s]+$/.test(location) && (
+                    <p className="text-xs text-red-500">
+                      Location must contain only letters and spaces
                     </p>
                   )}
                 </div>

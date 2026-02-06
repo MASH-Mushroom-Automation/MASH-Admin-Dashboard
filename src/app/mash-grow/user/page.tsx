@@ -169,12 +169,6 @@ export default function RegisterChamber() {
         <div className="flex items-center justify-end mb-4 gap-4">
           <div className="flex items-center gap-3">
             <Button onClick={() => router.push('/mash-grow/devices')} className="gap-2">Create Device</Button>
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => setRegisterModalOpen(true)}
-            >
-              Register User
-            </Button>
           </div>
 
           {/* Device quick info: show first available device id and ping */}

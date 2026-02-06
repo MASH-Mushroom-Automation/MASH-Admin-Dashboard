@@ -1,27 +1,26 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { DataTable } from "@/components/data-table";
+import PaginationWrapper from "@/components/pagination";
 import { useUserManagementStore } from "@/store/userManagementStore";
-import UserAvatar from "@/components/ecommerce/user-avatar";
+import { toast } from "sonner";
 
 export default function UserArchivePage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
   // Use Zustand store for users data
   const {
     users: allUsers,
     loading: storeLoading,
     error: storeError,
     fetchUsers,
+    archiveUser,
   } = useUserManagementStore();
 
   // Filter to show only archived users (isActive === false), excluding SUPER_ADMIN
@@ -46,18 +45,67 @@ export default function UserArchivePage() {
   useEffect(() => {
     console.log("[ArchivePage] useEffect triggered - calling fetchUsers()");
     fetchUsers();
+    setCurrentPage(1);
   }, [fetchUsers]);
+
+  // Pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = archivedUsers.slice(startIndex, endIndex);
+
+  // Handle bulk unarchive
+  const handleUnarchive = async (ids: string[]) => {
+    if (ids.length === 0) {
+      toast.error("No users selected for unarchiving");
+      return;
+    }
+
+    try {
+      toast.loading(`Unarchiving ${ids.length} user(s)...`, { id: "unarchive-users" });
+      await Promise.all(ids.map((id) => archiveUser(id, false)));
+      toast.success(`${ids.length} user(s) unarchived successfully`, { id: "unarchive-users" });
+      // Refresh the list
+      fetchUsers();
+    } catch (err) {
+      const errorMessage = (err as Error).message || "Failed to unarchive users";
+      toast.error(errorMessage, { id: "unarchive-users" });
+      console.error("[ArchivePage] Unarchive error:", err);
+    }
+  };
+
+  // Handle export
+  const handleExport = (rows: any[]) => {
+    const csv = [
+      ["Name", "Username", "Email", "Phone", "Role"],
+      ...rows.map((r) => [
+        r.name || "",
+        r.username || "",
+        r.email || "",
+        r.phone || "",
+        r.role || "",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `archived-users-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
-          <div className="flex items-center justify-end mb-2">
-            <div className="shrink-0">
-              <Link href="/mash-market/user">
-                <Button variant="ghost">Back</Button>
-              </Link>
-            </div>
-          </div>
+          <Link href="/mash-market/user">
+            <Button variant="ghost" size="sm" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
 
           <div>
             <h1 className="text-2xl font-bold">Archived Users</h1>
@@ -89,53 +137,31 @@ export default function UserArchivePage() {
 
         {/* Main Content */}
         {!loading && !error && (
-          <Card>
-            <div className="overflow-x-auto p-4">
-              <Table>
-                <TableHeader>
-                  <tr>
-                    <TableHead>Profile</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Role</TableHead>
-                  </tr>
-                </TableHeader>
-                <TableBody>
-                  {archivedUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="px-6 py-12 text-center text-muted-foreground"
-                      >
-                        No archived users found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    archivedUsers.map((u) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="px-6 py-4">
-                          <UserAvatar initials={u.avatar || "U"} />
-                        </TableCell>
-                        <TableCell>{u.name || "N/A"}</TableCell>
-                        <TableCell>{u.username || "N/A"}</TableCell>
-                        <TableCell>{u.email || "N/A"}</TableCell>
-                        <TableCell>{u.phone || "N/A"}</TableCell>
-                        <TableCell>
-                          {u.role?.toUpperCase() === "USER"
-                            ? "Buyer"
-                            : u.role?.toUpperCase() === "ADMIN"
-                            ? "Seller"
-                            : u.role || "N/A"}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+          <>
+            <Card>
+              <DataTable
+                data={paginatedUsers}
+                mode="users"
+                onArchive={handleUnarchive}
+                onExport={handleExport}
+                archivedView={true}
+                simpleActions={true}
+                entityName="user"
+              />
+            </Card>
+            <PaginationWrapper
+              totalItems={archivedUsers.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              label="users"
+              rowsPerPageOptions={[5, 10, 25, 50, 100]}
+              onItemsPerPageChange={(n) => {
+                setItemsPerPage(n);
+                setCurrentPage(1);
+              }}
+            />
+          </>
         )}
       </div>
     </div>

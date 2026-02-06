@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 
 interface ConfirmationPopoverProps {
-  action: "accept" | "reject" | "Archive" | "logout"
+  action: "accept" | "reject" | "Archive" | "Unarchive" | "logout"
   entity?: string
   // onConfirm may receive an optional reason for actions like 'reject'
   onConfirm: (reason?: string) => void
@@ -18,7 +18,7 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
   const [selectedReason, setSelectedReason] = useState<string>("")
   const [customReason, setCustomReason] = useState<string>("")
 
-// keep a simple static list - will be memoized inside the component to satisfy lint
+  // keep a simple static list - will be memoized inside the component to satisfy lint
 
   // preselect first reason for UX
   const presetReasons = useMemo(
@@ -66,6 +66,11 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
     title = `Archive ${entity || "Item"}`
     message = `Are you sure you want to Archive this ${target}? This action cannot be undone.`
     confirmText = "Archive"
+  } else if (action === "Unarchive") {
+    const target = entity ? entity.toLowerCase() : "this item"
+    title = `Unarchive ${entity || "Item"}`
+    message = `Are you sure you want to unarchive this ${target}?`
+    confirmText = "Unarchive"
   } else if (action === "logout") {
     title = "Logout?"
     message = "Are you sure you want to logout?"
@@ -131,7 +136,7 @@ export function ConfirmationPopover({ action, entity, onConfirm, onCancel }: Con
                   Cancel
                 </Button>
 
-                {action === "accept" ? (
+                {action === "accept" || action === "Unarchive" ? (
                   <Button
                     onClick={() => {
                       setIsOpen(false)

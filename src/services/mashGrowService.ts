@@ -222,8 +222,8 @@ export const growUserService = {
       // Map archived to isActive (archived=true -> isActive=false)
       const queryParams: any = { ...params };
       if (params?.archived !== undefined) {
-         queryParams.isActive = !params.archived;
-         delete queryParams.archived;
+        queryParams.isActive = !params.archived;
+        delete queryParams.archived;
       }
 
       const response = await api.get<ApiResponse<PaginatedResponse<GrowUser>>>(
@@ -284,7 +284,7 @@ export const growUserService = {
    * Archive/unarchive a grow user (soft delete)
    */
   archive: async (id: string, archive: boolean = true): Promise<GrowUser> => {
-    const response = await api.patch<ApiResponse<GrowUser>>(
+    const response = await api.put<ApiResponse<GrowUser>>(
       `v1/users/${id}`,
       { isActive: !archive }
     )

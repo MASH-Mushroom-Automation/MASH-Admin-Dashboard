@@ -1,26 +1,100 @@
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/ui/button"
-
-const ARCHIVED_SELLERS = [
-  { id: "3", name: "Anne Curtis", storeName: "Anne Beauty Hub", email: "anne@beautyhub.com", phone: "+63 912 222 3333", status: "rejected" },
-]
+import PaginationWrapper from "@/components/pagination"
+import { useUserManagementStore } from "@/store/userManagementStore"
+import { toast } from "sonner"
 
 export default function SellerArchivePage() {
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(5)
+
+  const {
+    users: allUsers,
+    loading: storeLoading,
+    error: storeError,
+    fetchUsers,
+    archiveUser,
+  } = useUserManagementStore()
+
+  // Filter to show only archived sellers (isActive === false, role contains SELLER)
+  const archivedSellers = useMemo(() => {
+    return (allUsers || []).filter(
+      (user) =>
+        user.isActive === false &&
+        (user.role?.toUpperCase() === "SELLER" || user.role?.toUpperCase() === "BUYER")
+    )
+  }, [allUsers])
+
+  const loading = storeLoading.users ?? false
+  const error = storeError.users ?? null
+
+  useEffect(() => {
+    fetchUsers()
+    setCurrentPage(1)
+  }, [fetchUsers])
+
+  // Pagination
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedSellers = archivedSellers.slice(startIndex, endIndex)
+
+  // Handle bulk unarchive
+  const handleUnarchive = async (ids: string[]) => {
+    if (ids.length === 0) {
+      toast.error("No sellers selected for unarchiving")
+      return
+    }
+
+    try {
+      toast.loading(`Unarchiving ${ids.length} seller(s)...`, { id: "unarchive-seller" })
+      await Promise.all(ids.map((id) => archiveUser(id, false)))
+      toast.success(`${ids.length} seller(s) unarchived successfully`, { id: "unarchive-seller" })
+      fetchUsers()
+    } catch (err) {
+      const errorMessage = (err as Error).message || "Failed to unarchive sellers"
+      toast.error(errorMessage, { id: "unarchive-seller" })
+    }
+  }
+
+  // Handle export
+  const handleExport = (rows: any[]) => {
+    const csv = [
+      ["Name", "Email", "Phone", "Role"],
+      ...rows.map((r) => [
+        r.name || "",
+        r.email || "",
+        r.phone || "",
+        r.role || "",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n")
+
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `archived-sellers-${new Date().toISOString().split("T")[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
-          <div className="flex items-center justify-end mb-2">
-            <div className="shrink-0">
-              <Link href="/mash-market/seller">
-                <Button variant="ghost">Back</Button>
-              </Link>
-            </div>
-          </div>
+          <Link href="/mash-market/seller">
+            <Button variant="ghost" size="sm" className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
 
           <div>
             <h1 className="text-2xl font-bold">Archived Sellers</h1>
@@ -28,30 +102,54 @@ export default function SellerArchivePage() {
           </div>
         </div>
 
-        <Card>
-          <div className="overflow-x-auto p-4">
-            <Table>
-              <TableHeader>
-                <tr>
-                  <TableHead> Name </TableHead>
-                  <TableHead> Store </TableHead>
-                  <TableHead> Email </TableHead>
-                  <TableHead> Phone </TableHead>
-                </tr>
-              </TableHeader>
-              <TableBody>
-                {ARCHIVED_SELLERS.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.name}</TableCell>
-                    <TableCell>{s.storeName}</TableCell>
-                    <TableCell>{s.email}</TableCell>
-                    <TableCell>{s.phone}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+        {/* Loading State */}
+        {loading && (
+          <Card className="p-8">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Loading archived sellers...</span>
+            </div>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card className="p-8">
+            <div className="text-center">
+              <p className="text-destructive mb-4">Error: {error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Main Content */}
+        {!loading && !error && (
+          <>
+            <Card>
+              <DataTable
+                data={paginatedSellers}
+                mode="sellers"
+                onArchive={handleUnarchive}
+                onExport={handleExport}
+                archivedView={true}
+                simpleActions={true}
+                entityName="seller"
+              />
+            </Card>
+            <PaginationWrapper
+              totalItems={archivedSellers.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              label="sellers"
+              rowsPerPageOptions={[5, 10, 25, 50, 100]}
+              onItemsPerPageChange={(n) => {
+                setItemsPerPage(n)
+                setCurrentPage(1)
+              }}
+            />
+          </>
+        )}
       </div>
     </div>
   )

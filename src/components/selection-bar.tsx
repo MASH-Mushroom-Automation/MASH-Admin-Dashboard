@@ -32,6 +32,14 @@ interface Props {
   onExport?: (rows: any[]) => void;
   showAcceptReject?: boolean;
   activeTab?: string;
+  /** When true, only show Archive bulk action (used by devices table) */
+  archiveOnly?: boolean;
+  /** Custom entity name for confirmation messages (e.g. 'device') */
+  entityName?: string;
+  /** When true, show only Export and Archive actions (no role/status) */
+  simpleActions?: boolean;
+  /** When true, selection bar is in archived view and should show Unarchive labels */
+  archivedView?: boolean;
 }
 
 export const SelectionBar: React.FC<Props> = ({
@@ -44,8 +52,14 @@ export const SelectionBar: React.FC<Props> = ({
   onBulkChangeStatus,
   onBulkAccept,
   onBulkReject,
-  mode = 'users'
-  , onExport, showAcceptReject = true, activeTab
+  mode = 'users',
+  onExport,
+  showAcceptReject = true,
+  activeTab,
+  archiveOnly = false,
+  entityName,
+  simpleActions = false,
+  archivedView = false,
 }) => {
   const [pendingBulkAction, setPendingBulkAction] = useState<{
     type: 'accept' | 'reject' | 'archive' | 'changeRole' | 'changeStatus';
@@ -85,7 +99,6 @@ export const SelectionBar: React.FC<Props> = ({
           >
             Clear
           </button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center">
@@ -95,7 +108,61 @@ export const SelectionBar: React.FC<Props> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              {mode === 'sellers' ? (
+              {archiveOnly ? (
+                <>
+                  <DropdownMenuItem onClick={() => {
+                    if (onExport) onExport(selectedRows);
+                    else {
+                      const headers = ['id', 'serialNumber', 'name', 'type', 'location', 'status'];
+                      const rows = selectedRows.map(r => headers.map(h => String(r[h] ?? '')));
+                      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `devices-export-${Date.now()}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }
+                  }}>
+                    <Activity className="h-4 w-4 mr-2" />
+                    Export Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
+                    <Archive className="h-4 w-4 mr-2 text-destructive" />
+                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
+                  </DropdownMenuItem>
+                </>
+              ) : simpleActions ? (
+                <>
+                  <DropdownMenuItem onClick={() => {
+                    if (onExport) onExport(selectedRows);
+                    else {
+                      const headers = ['id', 'name', 'chamberNumber', 'deviceId', 'contactNumber', 'email'];
+                      const rows = selectedRows.map(r => headers.map(h => String(r[h] ?? '')));
+                      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `users-export-${Date.now()}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }
+                  }}>
+                    <Activity className="h-4 w-4 mr-2" />
+                    Export Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
+                    <Archive className="h-4 w-4 mr-2 text-destructive" />
+                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
+                  </DropdownMenuItem>
+                </>
+              ) : mode === 'sellers' ? (
                 <>
                   <DropdownMenuItem onClick={() => {
                     // Trigger export using provided handler or default
@@ -134,7 +201,7 @@ export const SelectionBar: React.FC<Props> = ({
                   )}
                   <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
                     <Archive className="h-4 w-4 mr-2 text-destructive" />
-                    Archive Selected
+                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
                   </DropdownMenuItem>
                 </>
               ) : (
@@ -162,7 +229,7 @@ export const SelectionBar: React.FC<Props> = ({
 
                   <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
                     <Archive className="h-4 w-4 mr-2 text-destructive" />
-                    Archive Selected
+                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Change Role</DropdownMenuLabel>
@@ -239,7 +306,7 @@ export const SelectionBar: React.FC<Props> = ({
       {pendingBulkAction?.type === 'accept' && (
         <ConfirmationPopover
           action="accept"
-          entity={`${selectedCount} ${mode === 'sellers' ? 'seller' : 'user'}${selectedCount > 1 ? 's' : ''}`}
+          entity={`${selectedCount} ${mode === 'sellers' ? 'seller' : (entityName ?? 'user')}${selectedCount > 1 ? 's' : ''}`}
           onConfirm={() => {
             onBulkAccept?.(selectedIds);
             setPendingBulkAction(null);
@@ -250,8 +317,8 @@ export const SelectionBar: React.FC<Props> = ({
 
       {pendingBulkAction?.type === 'archive' && (
         <ConfirmationPopover
-          action="Archive"
-          entity={`${selectedCount} ${mode === 'sellers' ? 'seller' : 'user'}${selectedCount > 1 ? 's' : ''}`}
+          action={archivedView ? "Unarchive" : "Archive"}
+          entity={`${selectedCount} ${mode === 'sellers' ? 'seller' : (entityName ?? 'user')}${selectedCount > 1 ? 's' : ''}`}
           onConfirm={() => {
             onArchive?.(selectedIds);
             setPendingBulkAction(null);
