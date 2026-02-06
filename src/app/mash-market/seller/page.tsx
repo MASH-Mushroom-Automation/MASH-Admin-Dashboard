@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
 import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
+import { useUserManagementStore } from "@/store/userManagementStore";
 import TableSkeleton from "@/components/ui/table-skeleton";
 import CardSkeleton from "@/components/ui/card-skeleton";
 import InlineSpinner from "@/components/ui/inline-spinner";
@@ -199,9 +200,20 @@ export default function SellerContent() {
     }
   };
 
-  const handleArchive = (id: string) => {
-    toast.success("Seller archived successfully — opening archive page");
-    router.push(`/mash-market/seller/archive?id=${id}`);
+  const { archiveUser } = useUserManagementStore();
+
+  const handleArchive = async (id: string) => {
+    try {
+      toast.loading("Archiving seller...", { id: "archive-seller" });
+      await archiveUser(id, true);
+      toast.success("Seller archived successfully", { id: "archive-seller" });
+      // Refresh the list
+      const status = activeTab === "pending" ? "PENDING" : "FAILED";
+      await fetchAllApplications({ status });
+    } catch (err) {
+      console.error("Failed to archive seller:", err);
+      toast.error("Failed to archive seller", { id: "archive-seller" });
+    }
   };
 
   const handleBulkArchive = async () => {
@@ -219,12 +231,9 @@ export default function SellerContent() {
 
     try {
       toast.loading("Archiving seller(s)...", { id: "archive-seller" });
-      // Run all in parallel but keep frontend-only behavior (no backend changes)
+      // Run all archive requests in parallel via backend API
       const results = await Promise.allSettled(
-        idsToArchive.map(async (id) => {
-          await new Promise((res) => setTimeout(res, 50));
-          return { id, status: "ok" };
-        })
+        idsToArchive.map((id) => archiveUser(id, true))
       );
 
       const successes = results.filter((r) => r.status === "fulfilled").length;
@@ -243,7 +252,9 @@ export default function SellerContent() {
       setDeletingId(null);
       setBulkArchiveIds(null);
       setBulkArchiveNames(null);
-      router.push(`/mash-market/seller/archive`);
+      // Refresh the list
+      const status = activeTab === "pending" ? "PENDING" : "FAILED";
+      await fetchAllApplications({ status });
     } catch (err) {
       console.error(err);
       toast.error("Failed to archive seller(s). Please try again.");

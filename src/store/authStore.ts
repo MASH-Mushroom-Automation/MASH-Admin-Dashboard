@@ -141,6 +141,8 @@ export const useAuthStore = create<AuthState>()(
               email: user.email,
               firstName: user.firstName,
               lastName: user.lastName,
+              role: user.role,
+              isActive: user.isActive,
             },
             isAuthenticated: true,
             error: null,

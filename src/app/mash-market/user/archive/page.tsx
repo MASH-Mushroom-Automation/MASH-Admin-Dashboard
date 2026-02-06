@@ -20,6 +20,7 @@ export default function UserArchivePage() {
     loading: storeLoading,
     error: storeError,
     fetchUsers,
+    archiveUser,
   } = useUserManagementStore();
 
   // Filter to show only archived users (isActive === false), excluding SUPER_ADMIN
@@ -52,16 +53,24 @@ export default function UserArchivePage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedUsers = archivedUsers.slice(startIndex, endIndex);
 
-  // Handle bulk unarchive (frontend structure only)
+  // Handle bulk unarchive
   const handleUnarchive = async (ids: string[]) => {
     if (ids.length === 0) {
       toast.error("No users selected for unarchiving");
       return;
     }
 
-    // Frontend structure - no backend integration yet
-    toast.success(`Unarchive functionality for ${ids.length} user(s) - Coming soon!`);
-    console.log("[ArchivePage] Unarchive requested for IDs:", ids);
+    try {
+      toast.loading(`Unarchiving ${ids.length} user(s)...`, { id: "unarchive-users" });
+      await Promise.all(ids.map((id) => archiveUser(id, false)));
+      toast.success(`${ids.length} user(s) unarchived successfully`, { id: "unarchive-users" });
+      // Refresh the list
+      fetchUsers();
+    } catch (err) {
+      const errorMessage = (err as Error).message || "Failed to unarchive users";
+      toast.error(errorMessage, { id: "unarchive-users" });
+      console.error("[ArchivePage] Unarchive error:", err);
+    }
   };
 
   // Handle export

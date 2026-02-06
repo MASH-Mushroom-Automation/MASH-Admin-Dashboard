@@ -107,8 +107,23 @@ export default function RegisteredUsersPage() {
       });
 
       setUsers((usersResp.data || []).map(mapUserAPI));
-      setAllUsers((allUsersResp.data || []).map(mapUserAPI));
-      setDevices((devicesResp.data || []).map((d: ApiDevice) => ({
+      // Filter allUsers to only show GROWER role in user selection modals
+      const mappedAllUsers = (allUsersResp.data || []).map(mapUserAPI);
+      const growerUsers = (allUsersResp.data || [])
+        .filter((u: any) => u.role === 'GROWER')
+        .map(mapUserAPI);
+      setAllUsers(growerUsers.length > 0 ? growerUsers : mappedAllUsers);
+      // Filter out archived/inactive devices from the device list
+      // Backend returns isActive field; archived devices have isActive=false
+      // Guard against string "false" from API by checking both boolean and string
+      setDevices((devicesResp.data || [])
+        .filter((d: ApiDevice) => {
+          const isActive = d.isActive;
+          if (isActive === false || (isActive as any) === 'false') return false;
+          if (d.archived === true || (d.archived as any) === 'true') return false;
+          return true;
+        })
+        .map((d: ApiDevice) => ({
         id: d.id,
         deviceId: d.serialNumber,
         name: d.name,

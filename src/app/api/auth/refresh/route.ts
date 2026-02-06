@@ -42,17 +42,20 @@ export async function POST() {
 
     // Call backend refresh endpoint
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+    const baseUrl = backendUrl?.endsWith("/")
+      ? backendUrl.slice(0, -1)
+      : backendUrl;
     console.log(
       "[refresh] Calling backend:",
-      `${backendUrl}/api/v1/auth/refresh-token`
+      `${baseUrl}/api/v1/auth/refresh`
     );
 
-    const response = await fetch(`${backendUrl}/api/v1/auth/refresh-token`, {
+    const response = await fetch(`${baseUrl}/api/v1/auth/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${refreshToken}`,
       },
+      body: JSON.stringify({ refreshToken }),
     });
 
     console.log("[refresh] Backend response status:", response.status);

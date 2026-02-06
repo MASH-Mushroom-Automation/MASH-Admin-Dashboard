@@ -68,7 +68,7 @@ interface UserManagementState {
   fetchUsers: (page?: number, limit?: number) => Promise<void>;
   fetchUserById: (id: string) => Promise<void>;
   fetchUserByUsername: (username: string) => Promise<void>;
-  archiveUser: (id: string) => Promise<void>;
+  archiveUser: (id: string, archive?: boolean) => Promise<void>;
   clearSelectedUser: () => void;
 }
 
@@ -392,18 +392,13 @@ export const useUserManagementStore = create<UserManagementState>()(
       }
     },
 
-    archiveUser: async (id: string) => {
-      console.log("[userManagementStore] archiveUser called with id:", id);
+    archiveUser: async (id: string, archive: boolean = true) => {
+      const action = archive ? 'archive' : 'unarchive';
+      console.log(`[userManagementStore] ${action}User called with id:`, id);
 
       if (!id) {
         console.error("[userManagementStore] Invalid user ID provided");
         throw new Error("Invalid user ID");
-      }
-
-      if (typeof window !== "undefined") {
-        console.log(
-          "[userManagementStore] 🔐 Archiving user (refreshToken sent automatically via HttpOnly cookie)"
-        );
       }
 
       set({
@@ -412,87 +407,47 @@ export const useUserManagementStore = create<UserManagementState>()(
       });
 
       try {
-        // Archive user via dedicated API route that handles CSRF internally
-        // This avoids CORS issues with direct backend calls
-        console.log(
-          `[userManagementStore] Archiving user via API route: DELETE /api/users/${id}`
-        );
-
-        // Get access token from tokenManager
-        const { getAccessToken } = await import("@/lib/tokenManager");
-        const accessToken = getAccessToken();
-
-        if (!accessToken) {
-          throw new Error("Access token not found - please login again");
+        if (archive) {
+          // Archive: use DELETE endpoint (backend sets isActive: false)
+          console.log(`[userManagementStore] Archiving user via DELETE v1/users/${id}`);
+          await api.delete(`v1/users/${id}`);
+        } else {
+          // Unarchive: use PUT endpoint to set isActive: true
+          // Note: Backend uses @Put(':id') as primary decorator; PATCH returns 405
+          console.log(`[userManagementStore] Unarchiving user via PUT v1/users/${id}`);
+          await api.put(`v1/users/${id}`, { isActive: true });
         }
 
-        const response = await fetch(`/api/users/${id}`, {
-          method: "DELETE",
-          credentials: "include", // Send cookies for CSRF
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        });
+        console.log(`[userManagementStore] User ${action}d successfully`);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("[userManagementStore] Delete failed:", errorData);
-          throw new Error(
-            errorData.message || `Delete failed: ${response.status}`
-          );
-        }
-
-        const resData = await response.json();
-        console.log("[userManagementStore] Archive API response:", resData);
-
-        // Remove user from cached list if it exists
+        // Remove user from cached list
         const currentUsers = get().users;
         if (currentUsers) {
           const updatedUsers = currentUsers.filter((u) => u.id !== id);
-          console.log(
-            `[userManagementStore] Removed user ${id} from cache. Remaining users:`,
-            updatedUsers.length
-          );
           set({ users: updatedUsers });
         }
 
-        // Clear selected user if it was the archived one
+        // Clear selected user if it was the affected one
         if (get().selectedUser?.id === id) {
-          console.log(
-            "[userManagementStore] Clearing selected user as it was archived"
-          );
           set({ selectedUser: null });
         }
 
         set({
           loading: { ...get().loading, archiveUser: false },
         });
-
-        console.log("[userManagementStore] User archived successfully");
       } catch (err) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const axiosError = err as any;
-        let errorMessage = "Failed to archive user";
+        let errorMessage = `Failed to ${action} user`;
 
-        // Handle 403 Forbidden - insufficient permissions
         if (axiosError?.response?.status === 403) {
-          errorMessage =
-            "Access denied: Only ADMIN or SUPER_ADMIN can archive users";
-          console.error(
-            "[userManagementStore] 403 Forbidden - Current user lacks required role (ADMIN/SUPER_ADMIN)"
-          );
+          errorMessage = "Access denied: Only ADMIN or SUPER_ADMIN can manage users";
         } else {
-          errorMessage =
-            axiosError?.message ||
-            axiosError?.response?.data?.message ||
-            errorMessage;
+          errorMessage = axiosError?.response?.data?.message || axiosError?.message || errorMessage;
         }
 
-        console.error("[userManagementStore] archiveUser error:", {
+        console.error(`[userManagementStore] ${action}User error:`, {
           message: errorMessage,
           status: axiosError?.response?.status,
-          error: err,
         });
 
         set({
@@ -500,7 +455,7 @@ export const useUserManagementStore = create<UserManagementState>()(
           loading: { ...get().loading, archiveUser: false },
         });
 
-        throw new Error(errorMessage); // Re-throw with clear message
+        throw new Error(errorMessage);
       }
     },
 

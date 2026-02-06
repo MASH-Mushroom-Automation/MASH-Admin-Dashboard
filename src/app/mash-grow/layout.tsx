@@ -5,8 +5,12 @@ import React from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import AppSidebar from "@/components/sidebar"
 import Navbar from "@/components/navbar"
+import { useTokenRefresh } from "@/hooks/useTokenRefresh"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  // Proactively refresh access token on page load (handles browser refresh)
+  useTokenRefresh()
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background overflow-hidden">
