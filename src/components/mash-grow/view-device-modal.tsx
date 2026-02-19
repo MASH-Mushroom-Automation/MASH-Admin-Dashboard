@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Cpu, MapPin, Activity, Tag, Server, Layers, Globe } from "lucide-react"
+import { Cpu, MapPin, Activity, Tag, Server, Layers, Globe, Database } from "lucide-react"
+import SensorLogsModal from "./sensor-logs-modal"
 
 interface ViewDeviceModalProps {
   open: boolean
@@ -24,9 +26,12 @@ interface ViewDeviceModalProps {
 }
 
 export default function ViewDeviceModal({ open, onOpenChange, device }: ViewDeviceModalProps) {
+  const [showSensorLogs, setShowSensorLogs] = useState(false)
+  
   if (!device) return null
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -105,10 +110,26 @@ export default function ViewDeviceModal({ open, onOpenChange, device }: ViewDevi
           </div>
         )}
 
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          {device.serialNumber && (
+            <Button onClick={() => setShowSensorLogs(!showSensorLogs)} className="gap-2">
+              <Database className="h-4 w-4" />
+              {showSensorLogs ? "Hide" : "Show"} Sensor Logs
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Sensor Logs Modal - Side by Side */}
+    {device.serialNumber && (
+      <SensorLogsModal 
+        open={showSensorLogs} 
+        onOpenChange={setShowSensorLogs}
+        serialNumber={device.serialNumber}
+      />
+    )}
+    </>
   )
 }
