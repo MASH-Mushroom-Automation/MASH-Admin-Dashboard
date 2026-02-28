@@ -1,30 +1,22 @@
 "use client"
 
-import { useState } from "react"
-import Sidebar from "@/components/sidebar"
-import Navbar from "@/components/dashboard/navbar"
+import React from "react"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import AppSidebar from "@/components/sidebar"
+import Navbar from "@/components/navbar"
 
-
-export default function MashMarketLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-
-    const [sidebarOpen, setSidebarOpen] = useState(true)
-
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex bg-background">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <div className="flex flex-col flex-1 overflow-hidden">
-        <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background overflow-hidden">
+        <AppSidebar />
+
+        <SidebarInset className="flex flex-col flex-1 overflow-hidden">
+          <Navbar />
+
+          <main className="flex-1 overflow-auto">{children}</main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }
-
-
-

@@ -1,7 +1,25 @@
 // src/store/dashboardStore.ts
+/**
+ * Dashboard Store - Secure Token Management Implementation
+ *
+ * SECURITY ARCHITECTURE:
+ * ✅ Access Token: Stored in memory via tokenManager (XSS protection)
+ * ✅ Refresh Token: HttpOnly cookie (automatic, XSS protection)
+ * ✅ All API calls use `api` instance which automatically:
+ *    - Adds Authorization: Bearer {accessToken} header
+ *    - Includes credentials: "include" for refresh cookie
+ *    - Handles 401 errors with automatic token refresh + retry
+ *
+ * NO COOKIE PARSING: This store never reads document.cookie directly.
+ * Token management is handled by:
+ * - /src/lib/tokenManager.ts (in-memory access token)
+ * - /src/lib/api.ts (axios interceptors for automatic refresh)
+ *
+ * See SECURE_TOKEN_IMPLEMENTATION.md for complete documentation.
+ */
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 // Define interfaces based on inferred data from components
 interface Overview {
@@ -73,49 +91,42 @@ export const useDashboardStore = create<DashboardState>()(
       });
 
       try {
-        console.log("📡 Fetching overview...");
-        // Log whether authToken cookie is present client-side
-        try {
-          const cookie = typeof document !== "undefined" ? document.cookie : "";
-          const tokenPair = cookie
-            .split(";")
-            .map((p) => p.trim())
-            .find((p) => p.startsWith("authToken="));
-          let tokenValue: string | undefined = undefined;
-          if (tokenPair) {
-            tokenValue = decodeURIComponent(tokenPair.split("=")[1] || "");
-          }
-          console.log(
-            "[dashboard] authToken present:",
-            !!tokenValue,
-            tokenValue
-              ? `${tokenValue.slice(0, 8)}...(${tokenValue.length})`
-              : "none"
-          );
-        } catch (e) {
-          console.warn("[dashboard] failed to parse cookie", e);
-        }
-
         const res = await api.get(`v1/super-admin/dashboard/overview`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: any = res.data;
 
-        // Some backend responses are wrapped: { success, statusCode, data: { ... } }
-        // Normalize to the inner data object if present.
-        const payload = res.data as any;
-        const data: Overview = (payload && payload.data) ? payload.data : payload;
+        // Extract nested cards data
+        let data: Overview | null = null;
+
+        if (payload?.data?.cards) {
+          data = payload.data.cards;
+        } else if (payload?.data) {
+          data = payload.data;
+        } else {
+          data = payload;
+        }
 
         // Defensive normalization: ensure nested objects exist to avoid runtime errors
         const normalized: Overview = {
           chambers: data?.chambers ?? { active: 0, inactive: 0 },
           orders: data?.orders ?? { completed: 0, pending: 0 },
           products: data?.products ?? { pending: 0, approved: 0 },
-          sellerApplications: data?.sellerApplications ?? { pending: 0, approved: 0 },
+          sellerApplications: data?.sellerApplications ?? {
+            pending: 0,
+            approved: 0,
+          },
         };
 
-        set({ overview: normalized, loading: { ...get().loading, overview: false } });
-      } catch (err) {
-        console.error("Failed to fetch overview:", err);
         set({
-          error: { ...get().error, overview: (err as Error).message },
+          overview: normalized,
+          loading: { ...get().loading, overview: false },
+        });
+      } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch overview";
+
+        set({
+          error: { ...get().error, overview: errorMessage },
           loading: { ...get().loading, overview: false },
         });
       }
@@ -131,33 +142,79 @@ export const useDashboardStore = create<DashboardState>()(
           params: { days },
         });
 
-        // API may return wrapped payload: { success, statusCode, data: { labels: [...], values: [...] } }
         const payload = res.data as Record<string, unknown>;
-
         let mapped: DailySale[] = [];
+
+        // Helper function to convert ISO date to readable format
+        const formatDate = (dateString: string): string => {
+          try {
+            const date = new Date(dateString);
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+              return dateString; // Return original if invalid
+            }
+
+            // For dates within last 7 days, show day name (Mon, Tue, etc.)
+            const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            const monthNames = [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "May",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
+            ];
+
+            // Format: "Mon 13" or "Nov 13" depending on range
+            if (days <= 7) {
+              return `${dayNames[date.getDay()]} ${date.getDate()}`;
+            } else if (days <= 31) {
+              return `${monthNames[date.getMonth()]} ${date.getDate()}`;
+            } else {
+              return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            }
+          } catch {
+            return dateString; // Return original on error
+          }
+        };
 
         if (Array.isArray(payload)) {
           // legacy: array of { day, sales }
-          mapped = payload as DailySale[];
-        } else if (payload?.data && typeof payload.data === 'object') {
+          mapped = (payload as DailySale[]).map((item) => ({
+            day: formatDate(item.day),
+            sales: item.sales,
+          }));
+        } else if (payload?.data && typeof payload.data === "object") {
           const data = payload.data as { labels?: string[]; values?: number[] };
           if (data.labels && data.values) {
             const labels: string[] = data.labels || [];
             const values: number[] = data.values || [];
             mapped = labels.map((lbl, idx) => ({
-              day: lbl,
+              day: formatDate(lbl),
               sales: Number(values[idx] ?? 0),
             }));
           } else if (Array.isArray(data)) {
             // sometimes data is already an array of objects
-            mapped = data as DailySale[];
+            mapped = (data as DailySale[]).map((item) => ({
+              day: formatDate(item.day),
+              sales: item.sales,
+            }));
           }
         }
 
         set({ sales: mapped, loading: { ...get().loading, sales: false } });
       } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch sales data";
+
         set({
-          error: { ...get().error, sales: (err as Error).message },
+          error: { ...get().error, sales: errorMessage },
           loading: { ...get().loading, sales: false },
         });
       }
@@ -169,9 +226,6 @@ export const useDashboardStore = create<DashboardState>()(
         error: { ...get().error, chambers: null },
       });
 
-      console.log(
-        `[store] GET v1/super-admin/dashboard/chambers → page=${page}, limit=${limit}`
-      );
       try {
         const res = await api.get(`v1/super-admin/dashboard/chambers`, {
           params: { page, limit },
@@ -180,9 +234,15 @@ export const useDashboardStore = create<DashboardState>()(
         // The API response is wrapped. Example shape:
         // { success, statusCode, data: { data: [ ...items ], meta: { total, page, limit } } }
         const payload = res.data as Record<string, unknown>;
-        const dataObj = payload?.data as { data?: unknown[]; meta?: Record<string, unknown> } | undefined;
+        const dataObj = payload?.data as
+          | { data?: unknown[]; meta?: Record<string, unknown> }
+          | undefined;
         const items = (dataObj?.data || []) as Record<string, unknown>[];
-        const meta = (dataObj?.meta || {}) as { total?: number; page?: number; limit?: number };
+        const meta = (dataObj?.meta || {}) as {
+          total?: number;
+          page?: number;
+          limit?: number;
+        };
 
         // Map API fields to internal Chamber type
         const mapped: Chamber[] = items.map((it) => ({
@@ -204,8 +264,11 @@ export const useDashboardStore = create<DashboardState>()(
           loading: { ...get().loading, chambers: false },
         });
       } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch chambers";
+
         set({
-          error: { ...get().error, chambers: (err as Error).message },
+          error: { ...get().error, chambers: errorMessage },
           loading: { ...get().loading, chambers: false },
         });
       }
@@ -218,8 +281,6 @@ export const useDashboardStore = create<DashboardState>()(
       });
       try {
         const res = await api.get(`v1/super-admin/dashboard/users-stats`);
-
-        // API returns: { success, statusCode, data: { USER: 1, BUYER: 5, ... } }
         const payload = res.data as Record<string, unknown>;
         const data: UsersStats = (payload?.data as UsersStats) || {};
 
@@ -228,8 +289,11 @@ export const useDashboardStore = create<DashboardState>()(
           loading: { ...get().loading, usersStats: false },
         });
       } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch user statistics";
+
         set({
-          error: { ...get().error, usersStats: (err as Error).message },
+          error: { ...get().error, usersStats: errorMessage },
           loading: { ...get().loading, usersStats: false },
         });
       }
@@ -243,10 +307,14 @@ export const useDashboardStore = create<DashboardState>()(
       try {
         const res = await api.get(`v1/super-admin/dashboard/cards`);
         const data: CardsSummary = res.data;
+
         set({ cards: data, loading: { ...get().loading, cards: false } });
       } catch (err) {
+        const errorMessage =
+          (err as Error).message || "Failed to fetch summary cards";
+
         set({
-          error: { ...get().error, cards: (err as Error).message },
+          error: { ...get().error, cards: errorMessage },
           loading: { ...get().loading, cards: false },
         });
       }

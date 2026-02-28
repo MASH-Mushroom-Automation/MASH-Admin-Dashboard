@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,11 +17,50 @@ import {
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
+/**
+ * FORGOT PASSWORD - STEP 3: Reset Password
+ * =========================================
+ * 
+ * API Endpoint: POST http://localhost:3000/api/v1/auth/reset-password
+ * 
+ * Features:
+ * - Single-use code (code becomes invalid after successful reset)
+ * - Password validation: 8+ chars, mixed case, numbers, special chars
+ * - Secure password reset with 6-digit verification code
+ * 
+ * Request Body:
+ * {
+ *   "email": "user@example.com",
+ *   "code": "123456",
+ *   "newPassword": "SecurePass123!"
+ * }
+ * 
+ * Response (Success):
+ * {
+ *   "success": true,
+ *   "message": "Password has been reset successfully",
+ *   "nextStep": "You can now log in with your new password"
+ * }
+ * 
+ * Password Requirements:
+ * - Minimum 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ * - At least one special character
+ */
+
 const resetSchema = z
   .object({
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
     confirmPassword: z.string(),
-    otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"), // Added OTP field
+    otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match",
@@ -40,9 +79,18 @@ export default function ResetPasswordPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm<ResetFormData>({
     resolver: zodResolver(resetSchema),
   });
+
+  // Auto-fill the code if it was verified in the previous step
+  useEffect(() => {
+    const verifiedCode = sessionStorage.getItem("resetCode");
+    if (verifiedCode) {
+      setValue("otp", verifiedCode);
+    }
+  }, [setValue]);
 
   // Uncomment below to display password strength indicator
   // const password = watch("newPassword");
@@ -70,14 +118,29 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (data: ResetFormData) => {
     setIsLoading(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading("Resetting your password...");
+    
     try {
       const email = sessionStorage.getItem("resetEmail");
       if (!email) {
-        throw new Error("Session expired. Please start over.");
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        toast.error("Session Expired", {
+          description: "Please start the password reset process again.",
+          duration: 5000,
+        });
+        
+        // Redirect to start of flow
+        router.push("/forgot-password/forgot-pass");
+        return;
       }
 
+      // Call localhost backend for password reset
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/forgot-password`,
+        `http://localhost:3000/api/v1/auth/reset-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,20 +152,59 @@ export default function ResetPasswordPage() {
         }
       );
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to reset password");
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+        
+        // Extract error message from nested structure
+        const errorMessage = 
+          result.error?.message || 
+          result.message || 
+          result.error?.details?.message ||
+          "Failed to reset password";
+        
+        // Handle specific error cases
+        if (errorMessage.includes("expired")) {
+          throw new Error("Reset code has expired. Please request a new one.");
+        }
+        if (errorMessage.includes("invalid")) {
+          throw new Error("Invalid reset code. Please check and try again.");
+        }
+        if (errorMessage.includes("password") || errorMessage.includes("requirement")) {
+          throw new Error("Password does not meet security requirements.");
+        }
+        throw new Error(errorMessage);
       }
 
-      toast.success("Password successfully reset. Redirecting to login...");
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Success toast
+      toast.success("Password Reset Successful!", {
+        description: "Your password has been changed. Redirecting to login...",
+        duration: 3000,
+      });
+      
+      // Clean up session storage
       sessionStorage.removeItem("resetEmail");
+      sessionStorage.removeItem("resetCode");
+      
+      // Redirect to login after brief delay
       setTimeout(() => {
         router.push("/login");
       }, 1500);
+      
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to reset password"
-      );
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show error toast
+      toast.error("Password Reset Failed", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false);
     }

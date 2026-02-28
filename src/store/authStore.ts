@@ -1,12 +1,19 @@
 // src/store/authStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { logger } from "@/lib/logger";
+import { sentry } from "@/lib/sentry";
+import { setAccessToken, clearAccessToken } from "@/lib/tokenManager";
+import { clearCsrfToken } from "@/lib/csrfService";
 
 interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  role?: string; // User role for RBAC: SUPER_ADMIN, ADMIN, GROWER, BUYER, etc.
+  isActive?: boolean;
+  phoneNumber?: string;
 }
 
 interface AuthState {
@@ -36,6 +43,15 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       logout: () => {
+        logger.info("User logged out");
+        sentry.setUser(null);
+
+        // Clear in-memory access token
+        clearAccessToken();
+
+        // Clear cached CSRF token
+        clearCsrfToken();
+
         // Call logout endpoint to clear HttpOnly cookies
         fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
         set({
@@ -47,51 +63,104 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email: string, password: string) => {
         try {
-          console.log("Calling /api/auth/login proxy...");
-          const response = await fetch(`/api/auth/login`, {
+          logger.info("Attempting login", { email });
+
+          // Step 1: Fetch CSRF token from backend (optional)
+          logger.info("Fetching CSRF token");
+          const csrfResponse = await fetch("/api/auth/csrf", {
+            method: "GET",
+            credentials: "include", // ← CRITICAL: Receive CSRF cookie
+          });
+
+          let csrfToken: string | null = null;
+          if (csrfResponse.ok) {
+            const csrfData = await csrfResponse.json();
+            if (csrfData.optional) {
+              logger.info("CSRF token not available (backend not implemented) - proceeding without it");
+            } else if (csrfData.csrfToken) {
+              csrfToken = csrfData.csrfToken;
+              logger.info("CSRF token fetched successfully");
+            }
+          } else {
+            logger.warn("Failed to fetch CSRF token, proceeding without it");
+          }
+
+          // Step 2: Call Next.js login API route with CSRF token (if available)
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          };
+
+          if (csrfToken) {
+            headers["x-csrf-token"] = csrfToken;
+          }
+
+          const response = await fetch("/api/auth/login", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers,
+            credentials: "include", // ← CRITICAL: Send/receive cookies (includes CSRF cookie)
             body: JSON.stringify({ email, password }),
           });
 
-          if (!response.ok) {
-            const err = await response
-              .json()
-              .catch(() => ({ message: "Login failed" }));
-            throw new Error(err.message || "Invalid credentials");
-          }
-
+          // Parse response (handle both success and error cases)
           const result = await response.json();
 
-          if (!result.success || !result.user) {
-            throw new Error("Login failed: invalid response");
+          if (!response.ok) {
+            // Extract error message from API response
+            const errorMessage =
+              result.message ||
+              result.error?.message ||
+              result.data?.message ||
+              "Login failed";
+
+            logger.error("Login failed", {
+              status: response.status,
+              message: errorMessage,
+            });
+
+            set({
+              error: errorMessage,
+              user: null,
+              isAuthenticated: false,
+            });
+
+            throw new Error(errorMessage);
           }
 
-          // ONLY STORE USER — NO TOKENS!
+          // API returns: { success, user, accessToken, expiresIn }
+          const { accessToken, expiresIn, user } = result;
+
+          if (!accessToken || !user) {
+            throw new Error("Invalid response from server");
+          }
+
+          // Store user in Zustand (persisted to localStorage)
           set({
-            user: result.user,
+            user: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              isActive: user.isActive,
+            },
             isAuthenticated: true,
             error: null,
           });
 
-          console.log("Login successful. HttpOnly cookies set by proxy.");
+          // Store access token in MEMORY only (XSS protection)
+          setAccessToken(accessToken, expiresIn || 3600);
+          logger.info("Access token stored in memory", { expiresIn });
 
-          // DEBUG: Cookie is HttpOnly → JS cannot read it → expect "none"
-          try {
-            const cookie = document.cookie;
-            const hasAuth = cookie.includes("authToken=");
-            console.log(
-              "[authStore] authToken cookie visible to JS:",
-              hasAuth ? "YES (not HttpOnly!)" : "none (correct – HttpOnly)"
-            );
-          } catch {
-            console.warn("Cookie check failed");
-          }
+          // ✅ Refresh token automatically stored in HttpOnly cookie by backend
+          // ✅ No localStorage usage - eliminates XSS vulnerability
+
+          logger.info("Login successful", { userId: user.id });
+          sentry.setUser({ id: user.id, email: user.email });
+          sentry.addBreadcrumb("User logged in", "auth");
         } catch (err: unknown) {
           const error = err as { message?: string };
-          console.error("Login error:", err);
+          logger.error("Login failed", { error: err, email });
           set({
             error: error.message || "Login failed",
             user: null,
@@ -104,6 +173,8 @@ export const useAuthStore = create<AuthState>()(
       forgotPassword: async (email: string) => {
         try {
           set({ error: null });
+          logger.info("Forgot password request", { email });
+
           const response = await fetch(`/api/auth/forgot-password`, {
             method: "POST",
             headers: {
@@ -125,11 +196,11 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(result.message || "Failed to send reset link");
           }
 
-          // success - don't change auth state, just clear error
+          logger.info("Password reset email sent", { email });
           set({ error: null });
         } catch (err: unknown) {
           const error = err as { message?: string };
-          console.error("forgotPassword error:", err);
+          logger.error("Forgot password failed", { error: err, email });
           set({ error: error?.message || "Failed to request password reset" });
           throw err;
         }

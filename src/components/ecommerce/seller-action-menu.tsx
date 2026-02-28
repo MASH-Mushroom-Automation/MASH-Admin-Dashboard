@@ -1,28 +1,27 @@
-// components/ecommerce/seller-action-menu.tsx
-"use client"
+"use client";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { MoreVertical, Eye, Edit, Check, X, Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import type { ComponentType, SVGProps } from "react"
-import type { TabType } from "@/app/mash-market/seller/page"
+import { Button } from "@/components/ui/button";
+import { Eye, Edit, Check, X, Trash2, Archive } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { ComponentType, SVGProps } from "react";
+import type { TabType } from "@/app/mash-market/seller/page";
 
 interface Seller {
-  id: string
-  name: string
-  storeName: string
-  email: string
-  status: "pending" | "approved" | "rejected"
+  id: string;
+  name: string;
+  storeName: string;
+  email: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 interface SellerActionMenuProps {
-  seller: Seller
-  activeTab?: TabType
-  mode?: "default" | "all" | "pending"
-  onReject?: () => void
-  onDelete: () => void
-  onAccept?: () => void
+  seller: Seller;
+  activeTab?: TabType | string;
+  mode?: "default" | "all" | "pending";
+  onReject?: () => void;
+  onArchive: () => void;
+  onAccept?: () => void;
+  onView?: () => void;
 }
 
 export function SellerActionMenu({
@@ -30,16 +29,17 @@ export function SellerActionMenu({
   activeTab,
   mode = "default",
   onReject,
-  onDelete,
+  onArchive,
   onAccept,
+  onView,
 }: SellerActionMenuProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   interface MenuItem {
-    label: string
-    icon: ComponentType<SVGProps<SVGSVGElement>>
-    action: () => void
-    destructive?: boolean
+    label: string;
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
+    action: () => void;
+    destructive?: boolean;
   }
 
   const getMenuItems = (): MenuItem[] => {
@@ -47,25 +47,28 @@ export function SellerActionMenu({
       {
         label: "View",
         icon: Eye,
-        action: () => router.push(`/mash-market/account-details?id=${seller.id}`),
+        action: () => {
+          if (onView) return onView();
+          // Navigate to the seller detail page instead of an account-details modal
+          return router.push(`/mash-market/seller/${seller.id}`);
+        },
       },
-    ]
+    ];
 
     // --- NEW MODE SYSTEM ---
     if (mode === "all") {
       return [
         ...baseItems,
         {
-          label: "Delete",
+          label: "Archive",
           icon: Trash2,
-          action: onDelete,
+          action: onArchive,
           destructive: true,
         },
-      ]
+      ];
     }
 
     if (mode === "pending") {
-
       return [
         ...baseItems,
         {
@@ -78,7 +81,7 @@ export function SellerActionMenu({
           icon: X,
           action: onReject!,
         },
-      ]
+      ];
     }
 
     switch (activeTab) {
@@ -87,45 +90,58 @@ export function SellerActionMenu({
           ...baseItems,
           { label: "Accept", icon: Check, action: onAccept! },
           { label: "Reject", icon: X, action: onReject! },
-        ]
+        ];
       case "approved":
         return [
           ...baseItems,
-          { label: "Edit", icon: Edit, action: () => console.log("Edit", seller.id) },
-          { label: "Delete", icon: Trash2, action: onDelete, destructive: true },
-        ]
+          {
+            label: "Edit",
+            icon: Edit,
+            action: () => console.log("Edit", seller.id),
+          },
+          {
+            label: "Archive",
+            icon: Archive,
+            action: onArchive,
+            destructive: true,
+          },
+        ];
       case "rejected":
         return [
           ...baseItems,
-          { label: "Delete", icon: Trash2, action: onDelete, destructive: true },
-        ]
+          {
+            label: "Archive",
+            icon: Archive,
+            action: onArchive,
+            destructive: true,
+          },
+        ];
       default:
-        return baseItems
+        return baseItems;
     }
-  }
+  };
 
-  const menuItems = getMenuItems()
-  const destructiveTextClass = "text-destructive"
+  const menuItems = getMenuItems();
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {menuItems.map((item) => (
-          <DropdownMenuItem
+    <div className="flex items-center gap-2">
+      {menuItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Button
             key={item.label}
+            variant="ghost"
+            size="icon"
+            className={
+              item.destructive ? `h-8 w-8 text-destructive p-0` : `h-8 w-8 p-0`
+            }
             onClick={item.action}
-            className={item.destructive ? destructiveTextClass : ""}
+            aria-label={item.label}
           >
-            <item.icon className="mr-2 h-4 w-4" />
-            {item.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
+            <Icon className="h-4 w-4" />
+          </Button>
+        );
+      })}
+    </div>
+  );
 }

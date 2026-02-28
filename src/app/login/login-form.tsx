@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -20,13 +21,29 @@ export function LoginForm() {
   const [emailError, setEmailError] = useState("");
   const { login, isAuthenticated, user, error } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Check if user was redirected due to session expiration
+    const expired = searchParams.get("expired");
+    if (expired === "true") {
+      toast.info("Session Expired", {
+        description: "Your session has expired. Please log in again to continue.",
+        duration: 5000,
+      });
+      
+      // Clean up URL without triggering navigation
+      window.history.replaceState({}, "", "/login");
+    }
+
+    // If user is authenticated, redirect to dashboard
     const storedUser = useAuthStore.getState().user;
-    if (storedUser) {
+
+    if (storedUser && isAuthenticated) {
+      console.log("User already authenticated, redirecting to dashboard");
       router.push("/dashboard");
     }
-  }, [router]);
+  }, [router, isAuthenticated, searchParams]);
 
   const validateEmail = (email: string) => {
     if (!email.includes(".com")) {
@@ -41,33 +58,91 @@ export function LoginForm() {
     e.preventDefault();
 
     if (!validateEmail(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (!password) {
+      toast.error("Please enter your password");
       return;
     }
 
     console.log("Login form submitted");
-    console.log("Input values:", { email, password });
+    console.log("Input values:", { email, password: "***" });
 
     try {
       setIsLoading(true);
+
+      // Show loading toast
+      toast.loading("Signing in...", { id: "login-loading" });
+
       await login(email, password);
+
+      // Dismiss loading toast
+      toast.dismiss("login-loading");
+
+      // Show success toast
+      toast.success("Login successful! Redirecting...", {
+        duration: 2000,
+      });
+
       console.log("Login successful");
 
+      // Clear form
       setEmail("");
       setPassword("");
       setRememberMe(false);
-      router.push("/dashboard");
+
+      // Redirect to dashboard after brief delay
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
     } catch (err: unknown) {
+      // Dismiss loading toast
+      toast.dismiss("login-loading");
+
+      // Show error toast with specific message
       if (err instanceof Error) {
         console.error("Login failed:", err.message);
-      } else if (err && typeof err === "object" && "response" in err) {
-        const axiosErr = err as { response: { data: unknown } };
-        const dataStr =
-          typeof axiosErr.response.data === "object"
-            ? JSON.stringify(axiosErr.response.data)
-            : String(axiosErr.response.data);
-        console.error("Backend error response:", dataStr);
+
+        // Show user-friendly error messages
+        if (err.message.includes("Super Administrator") || err.message.includes("insufficient-permissions")) {
+          toast.error("Access Denied", {
+            description: "This admin dashboard is only available to Super Administrators.",
+            duration: 6000,
+          });
+        } else if (err.message.includes("verify")) {
+          toast.error("Please verify your email before logging in", {
+            duration: 5000,
+          });
+        } else if (err.message.includes("Invalid email or password")) {
+          toast.error("Invalid email or password", {
+            duration: 4000,
+          });
+        } else if (err.message.includes("Too many")) {
+          toast.error("Too many login attempts. Please try again later", {
+            duration: 5000,
+          });
+        } else if (
+          err.message.includes("connect") ||
+          err.message.includes("network")
+        ) {
+          toast.error(
+            "Unable to connect to server. Please check your internet connection",
+            {
+              duration: 5000,
+            }
+          );
+        } else {
+          toast.error(err.message || "Login failed. Please try again", {
+            duration: 4000,
+          });
+        }
       } else {
         console.error("Unexpected error:", err);
+        toast.error("An unexpected error occurred. Please try again", {
+          duration: 4000,
+        });
       }
     } finally {
       setIsLoading(false);

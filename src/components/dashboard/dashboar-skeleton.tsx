@@ -12,8 +12,8 @@ export default function DashboardSkeleton() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
           <Card key={i} className="overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -24,11 +24,11 @@ export default function DashboardSkeleton() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <Skeleton className="h-8 w-12 mx-auto mb-1" />
+                  <Skeleton className="h-20 w-12 mx-auto mb-1" />
                   <Skeleton className="h-3 w-16 mx-auto" />
                 </div>
                 <div className="text-center">
-                  <Skeleton className="h-8 w-12 mx-auto mb-1" />
+                  <Skeleton className="h-20 w-12 mx-auto mb-1" />
                   <Skeleton className="h-3 w-16 mx-auto" />
                 </div>
               </div>
@@ -40,12 +40,11 @@ export default function DashboardSkeleton() {
 
       {/* Overview Sections */}
       <div className="space-y-6 pt-4">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-4 w-64" />
+        {/* <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-4 w-64" /> */}
 
         {/* ECommerce + Chamber Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sales Summary */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="pb-2">
               <Skeleton className="h-6 w-32" />
@@ -61,7 +60,6 @@ export default function DashboardSkeleton() {
             </CardContent>
           </Card>
 
-          {/* Daily Sales Chart */}
           <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
               <Skeleton className="h-6 w-32" />
@@ -71,7 +69,7 @@ export default function DashboardSkeleton() {
               <Skeleton className="h-52 w-full rounded-lg" />
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Chamber Inventory */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

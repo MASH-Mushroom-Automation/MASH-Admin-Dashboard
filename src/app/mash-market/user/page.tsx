@@ -1,265 +1,520 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
-import { Card } from "@/components/ui/card"
-import UserAvatar from "@/components/ecommerce/user-avatar"
-import StatusBadge from "@/components/ecommerce/status-badge"
-import { ConfirmationPopover } from "@/components/confirmation-popover"
-import { ActionsMenu } from "@/components/user-actions-menu"
-import { SearchFilterBar } from "@/components/search-filter-bar"
+import { useState, useMemo, useEffect } from "react";
+import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { ConfirmationPopover } from "@/components/confirmation-popover";
+import { SearchFilterBar } from "@/components/search-filter-bar";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+// DataTable replaces the legacy table and pagination components
+import { Button } from "@/components/ui/button";
+import PaginationWrapper from "@/components/pagination";
+import { Archive, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useUserManagementStore } from "@/store/userManagementStore";
+import { DataTable } from "@/components/data-table";
+import TableSkeleton from "@/components/ui/table-skeleton";
+import CardSkeleton from "@/components/ui/card-skeleton";
+import InlineSpinner from "@/components/ui/inline-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
-
-interface User {
-  id: string
-  name: string
-  username: string
-  email: string
-  phone: string
-  role: "Admin" | "Seller" | "User"
-  status: "Active" | "Inactive"
-  avatar: string
-}
-
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    username: "sarahjohn",
-    email: "sarah@example.com",
-    phone: "+1 (555) 123-4567",
-    role: "Admin",
-    status: "Active",
-    avatar: "SJ",
-  },
-  
-  {
-    id: "2",
-    name: "Emma Davis",
-    username: "emmadavis",
-    email: "emma@example.com",
-    phone: "+1 (555) 345-6789",
-    role: "User",
-    status: "Inactive",
-    avatar: "ED",
-  },
- 
-  {
-    id: "3",
-    name: "Sophie Brown",
-    username: "sophieb",
-    email: "sophie@example.com",
-    phone: "+1 (555) 789-0123",
-    role: "User",
-    status: "Active",
-    avatar: "SB",
-  },
-  
- 
- 
-]
-
-const ITEMS_PER_PAGE = 5
+// Controlled items per page (rows per page selector)
+const DEFAULT_ITEMS_PER_PAGE = 5;
+// Fixed rows-per-page options per requirement
+const FIXED_ROWS_OPTIONS = [5, 10, 25, 50, 100];
 
 export default function UsersManagement() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [roleFilter, setRoleFilter] = useState<"All" | "Admin" | "Seller" | "User">("All")
-  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All")
-  const [currentPage, setCurrentPage] = useState(1)
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  // Multi-select bulk filters (checkboxes) - Role filter removed since we only show USER role
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | "Active" | "Inactive"
+  >("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(DEFAULT_ITEMS_PER_PAGE);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
+  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(null);
 
+  const {
+    users: allUsers,
+    loading: storeLoading,
+    error: storeError,
+    fetchUsers,
+    archiveUser,
+  } = useUserManagementStore();
+
+  // Show only active users (isActive === true), excluding SUPER_ADMIN
+  const users = useMemo(() => {
+    const total = (allUsers || []).length;
+    const filtered = (allUsers || []).filter(
+      (user) =>
+        user.role?.toUpperCase() !== "SUPER_ADMIN" && user.isActive === true
+    );
+    console.log(
+      "[UserPage] Total users from API:",
+      total,
+      "| Filtered (active users, excluding SUPER_ADMIN):",
+      filtered.length
+    );
+    return filtered;
+  }, [allUsers]);
+
+  const loading = storeLoading.users ?? false;
+  const error = storeError.users ?? null;
+
+  // Control content visibility to allow a smooth transition from skeleton -> content
+  const [contentVisible, setContentVisible] = useState(false);
+
+  useEffect(() => {
+    if (loading) {
+      setContentVisible(false);
+    } else {
+      // small delay to allow skeleton fade-out then show content
+      const t = setTimeout(() => setContentVisible(true), 80);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
+
+  // Fetch users from API on mount
+  useEffect(() => {
+    console.log("[UserPage] useEffect triggered - calling fetchUsers()");
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Debug logging - runs only on client after hydration
+  useEffect(() => {
+    console.log("[UserPage] All users from store:", allUsers?.length || 0);
+    console.log("[UserPage] All users data:", allUsers);
+    console.log(
+      "[UserPage] Displaying all roles (ADMIN + USER):",
+      users.length
+    );
+    console.log("[UserPage] Users:", users);
+    console.log("[UserPage] Loading state:", loading);
+    console.log("[UserPage] Error state:", error);
+  }, [allUsers, users, loading, error]);
+
+  // Filtered users (showing all roles: ADMIN and USER)
   const filteredUsers = useMemo(() => {
-    return MOCK_USERS.filter((user) => {
+    const q = (searchQuery || "").trim().toLowerCase();
+
+    return users.filter((user) => {
       const matchesSearch =
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+        q === "" || [user.name, user.email, user.username].some((field) =>
+          String(field ?? "").toLowerCase().includes(q)
+        );
 
-      const matchesRole = roleFilter === "All" || user.role === roleFilter
-      const matchesStatus = statusFilter === "All" || user.status === statusFilter
+      let matchesStatus = true;
+      if (selectedStatuses.length > 0) {
+        matchesStatus = user.status
+          ? selectedStatuses.includes(user.status)
+          : false;
+      } else if (statusFilter !== "All") {
+        matchesStatus = user.status === statusFilter;
+      }
 
-      return matchesSearch && matchesRole && matchesStatus
-    })
-  }, [searchQuery, roleFilter, statusFilter])
+      const matchesRegion =
+        selectedRegions.length > 0
+          ? selectedRegions.includes(user.region || "")
+          : true;
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+      const matchesRole =
+        selectedRoles.length > 0
+          ? selectedRoles.includes(user.role || "")
+          : true;
 
-  // Uncomment if needed for filter changes
-  // const handleFilterChange = (callback: () => void) => {
-  //   setCurrentPage(1)
-  //   callback()
-  // }
+      return matchesSearch && matchesStatus && matchesRegion && matchesRole;
+    });
+  }, [users, searchQuery, statusFilter, selectedStatuses, selectedRegions, selectedRoles]);
+  const rowsPerPageOptions = FIXED_ROWS_OPTIONS;
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Falls back to a sensible static list if there are no regions yet.
+  const regionOptions = useMemo(() => {
+    const set = new Set<string>();
+    (allUsers || []).forEach((u) => {
+      if (u.region) set.add(String(u.region));
+    });
+    const arr = Array.from(set).filter(Boolean).sort();
+    return arr;
+  }, [allUsers]);
+
+  useEffect(() => {
+    const total = filteredUsers.length;
+    const totalPages = total === 0 ? 0 : Math.ceil(total / itemsPerPage);
+    // if there are no items, reset to page 1 for consistent UI
+    if (totalPages === 0) {
+      setCurrentPage(1);
+      return;
+    }
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredUsers.length, itemsPerPage]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    console.log("[UserPage] After all filters:", filteredUsers.length, "users");
+    console.log(
+      "[UserPage] Paginated users for display:",
+      paginatedUsers.length
+    );
+    console.log(
+      "[UserPage] Current page:",
+      currentPage,
+      "Start index:",
+      startIndex
+    );
+  }, [filteredUsers, paginatedUsers, currentPage, startIndex]);
+
+  const handleArchive = async () => {
+    // Support bulk archive (bulkArchiveIds) or single id (deletingId)
+    const idsToArchive = bulkArchiveIds && bulkArchiveIds.length > 0 ? bulkArchiveIds : deletingId ? [deletingId] : [];
+    if (idsToArchive.length === 0) {
+      toast.error("No user selected for archiving");
+      setShowArchiveConfirm(false);
+      return;
+    }
+
+    try {
+      toast.loading("Archiving user(s)...", { id: "archive-user" });
+
+      // Run archive requests in parallel and handle results
+      const results = await Promise.allSettled(idsToArchive.map((id) => archiveUser(id)));
+      const successes = results.filter((r) => r.status === "fulfilled").length;
+      const failures = results.filter((r) => r.status === "rejected").length;
+
+      if (successes > 0) {
+        toast.success(`Archived ${successes} user(s)`, { id: "archive-user" });
+      }
+      if (failures > 0) {
+        toast.error(`${failures} user(s) failed to archive`, { id: "archive-user" });
+      }
+
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
+      // refresh
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to archive user(s):", error);
+      toast.error("Failed to archive user(s). Please try again.", {
+        id: "archive-user",
+      });
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
+    }
+  };
+
+  // dynamic filter sections (data-driven)
+  const FILTER_SECTIONS = [
+    {
+      key: "statuses",
+      label: "Status",
+      options: ["Active", "Inactive"],
+    },
+    {
+      key: "regions",
+      label: "Region",
+      options: regionOptions,
+    },
+    {
+      key: "roles",
+      label: "Role",
+      // value = backend role code, label = friendly text shown in UI
+      options: [
+        { value: "ADMIN", label: "Seller" },
+        { value: "USER", label: "Buyer" },
+        { value: "GROWER", label: "Grower" },
+      ],
+    },
+  ];
+
+  const activeFiltersCount = selectedStatuses.length + selectedRegions.length + selectedRoles.length;
+
+  // helper to toggle selection generically
+  const toggleFilter = (sectionKey: string, value: string) => {
+    setCurrentPage(1);
+    if (sectionKey === "statuses") {
+      setSelectedStatuses((prev) => (prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]));
+    } else if (sectionKey === "regions") {
+      setSelectedRegions((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
+    } else if (sectionKey === "roles") {
+      setSelectedRoles((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto w-full space-y-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Users Management</h1>
-          <p className="text-muted-foreground">Accounts Overview</p>
-        </div>
-
-       {/* Filter Bar */}
-          <SearchFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            placeholder="Search by name, email, or username..."
-
-            filter1Value={roleFilter}
-            onFilter1Change={(v) => {
-              setRoleFilter(v as typeof roleFilter)
-              setCurrentPage(1)
-            }}
-            filter1Options={[ 
-              { value: "All", label: "All Roles" },
-              { value: "Admin", label: "Admin" },
-              { value: "Seller", label: "Seller" },
-              { value: "User", label: "User" },
-            ]}
-            filter1Label="Role"
-          
-            filter2Value={statusFilter}
-            onFilter2Change={(v) => {
-              setStatusFilter(v as typeof statusFilter)
-              setCurrentPage(1)
-            }}
-            filter2Options={[
-              { value: "All", label: "All Status" },
-              { value: "Active", label: "Active" },
-              { value: "Inactive", label: "Inactive" },
-            ]}
-            filter2Label="Status"
-          />
-
-
-        {/* Table Section */}
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Profile</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Username</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Phone Number</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Role</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-border transition-colors hover:bg-muted/50">
-                    <td className="px-6 py-4">
-                      <UserAvatar initials={user.avatar} />
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{user.name}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{user.username}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{user.phone}</td>
-                    <td className="px-6 py-4 text-sm text-foreground">{user.role}</td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={user.status} />
-                    </td>
-                   <td className="px-6 py-4">
-                      <ActionsMenu
-                      id={user.id}
-                      viewUrl={`/users/view/${user.id}`}
-                      onDelete={() => {
-                        setDeletingId(user.id)           
-                        setShowDeleteConfirm(true)    
-                      }}
-                        />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <header>
+          <div className="flex items-center gap-3">
+            <h1 className="sm:text-3xl text-2xl font-bold">User Management</h1>
+            {loading && <InlineSpinner />}
           </div>
-      
-        </Card>
+          <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
+            Buyers & Sellers Overview
+          </p>
+        </header>
 
-             {/* Pagination Section */}
-      <div className="w-full border-t border-border bg-muted/30 py-4 mt-4">
-  <div className="mx-auto flex w-full max-w-7xl flex-col sm:flex-row items-center justify-between gap-4">
-    <div className="text-sm text-muted-foreground">
-      Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredUsers.length)} of{" "}
-{filteredUsers.length} users
-    </div> 
+        {/* Page-level loading skeleton (header + table) */}
+        {loading && (
+          <div className="space-y-4">
+            <div>
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-72 mt-2" />
+            </div>
 
-    <Pagination className="flex justify-end">
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              setCurrentPage((prev) => Math.max(prev - 1, 1))
-            }}
-            className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-          />
-        </PaginationItem>
+            <div>
+              <CardSkeleton />
+            </div>
 
-        {[...Array(totalPages)].map((_, i) => (
-          <PaginationItem key={i}>
-            <PaginationLink
-              href="#"
-              isActive={currentPage === i + 1}
-              onClick={(e) => {
-                e.preventDefault()
-                setCurrentPage(i + 1)
-              }}
-            >
-              {i + 1}
-            </PaginationLink>
-          </PaginationItem>
-        ))}
+            <div>
+              <TableSkeleton rows={itemsPerPage} />
+            </div>
+          </div>
+        )}
 
-        <PaginationItem>
-          <PaginationNext
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }}
-            className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  </div>
-</div>
+        {/* Error State */}
+        {error && !loading && (
+          <Card className="p-8">
+            <div className="text-center">
+              <p className="text-destructive mb-4">Error: {error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </Card>
+        )}
 
-        {showDeleteConfirm && (
-        <ConfirmationPopover
-          action="delete"
-          entity="User"
-          onConfirm={() => {
-            console.log("Confirmed delete user:", deletingId)
-            // TODO: Call your delete API here
-            setShowDeleteConfirm(false)
-            setDeletingId(null)
-          }}
-          onCancel={() => {
-            setShowDeleteConfirm(false)
-            setDeletingId(null)
-          }}
-        />
-      )}
+        {/* Main Content - Only show when not loading and no error */}
+        {!loading && !error && (
+          <>
+            {/* Search and Filters */}
+            <div className="flex items-center">
+              <div className="flex-1">
+                <div className="flex items-center gap-1">
+                  <div className="flex-1 sm:-mb-6 -mb-9">
+                    <SearchFilterBar
+                      searchQuery={searchQuery}
+                      onSearchChange={setSearchQuery}
+                      placeholder="Search by name, email, or username..."
+                    />
+                  </div>
 
+                  {/* Bulk filters as a dropdown - dynamic config-driven */}
+                  <div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center py-4.5"
+                          aria-label={`Filter${activeFiltersCount ? ` (${activeFiltersCount})` : ""}`}
+                        >
+                          <Filter className="h-4 w-4" />
+                          <span className="font-medium">{activeFiltersCount ? `Filters (${activeFiltersCount})` : "Filter"}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+
+                      <DropdownMenuContent className="w-64 p-2">
+                        {FILTER_SECTIONS.map((section) => (
+                          <div key={section.key} className="mb-2">
+                            <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+                            <div className="px-1">
+                              {section.options.map((opt: any) => {
+                                const optValue = typeof opt === "string" ? opt : opt.value;
+                                const optLabel = typeof opt === "string" ? opt : opt.label;
+                                const checked =
+                                  section.key === "statuses"
+                                    ? selectedStatuses.includes(optValue)
+                                    : section.key === "regions"
+                                      ? selectedRegions.includes(optValue)
+                                      : selectedRoles.includes(String(optValue));
+                                return (
+                                  <label
+                                    key={String(optValue)}
+                                    className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
+                                      checked={checked}
+                                      onChange={() => toggleFilter(section.key, String(optValue))}
+                                    />
+                                    <span className="text-sm">{optLabel}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <DropdownMenuSeparator />
+                          </div>
+                        ))}
+
+                        <div className="px-1">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              // select all for all sections
+                              const statuses = FILTER_SECTIONS.find(s => s.key === "statuses")?.options as string[] | undefined;
+                              const regions = FILTER_SECTIONS.find(s => s.key === "regions")?.options as string[] | undefined;
+                              // roles are objects with {value,label}
+                              const roles = FILTER_SECTIONS.find(s => s.key === "roles")?.options as any[] | undefined;
+                              setSelectedStatuses(statuses ?? []);
+                              setSelectedRegions(regions ?? []);
+                              setSelectedRoles((roles ?? []).map((o: any) => (typeof o === 'string' ? o : o.value)));
+                              setCurrentPage(1);
+                            }}
+                          >
+                            Select all
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              // clear
+                              setSelectedStatuses([]);
+                              setSelectedRegions([]);
+                              setSelectedRoles([]);
+                              setStatusFilter("All");
+                              setCurrentPage(1);
+                            }}
+                          >
+                            Clear
+                          </DropdownMenuItem>
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </div>
+
+              {/* Archive icon */}
+              <div className="flex items-center -mt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/mash-market/user/archive")}
+                  aria-label="View archives"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Users Table (TanStack DataTable) - we pass paginated users and hide internal pagination */}
+            <Card className="overflow-hidden">
+              <div className="p-4">
+                {!loading ? (
+                  <div className={`transition-all duration-200 ease-in-out ${contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+                    <DataTable
+                      data={paginatedUsers}
+                      initialPageSize={itemsPerPage}
+                      hidePagination
+                      mode="users"
+                      onExport={(rows) => {
+                        try {
+                          const headers = ['id', 'name', 'username', 'email', 'role', 'region', 'status'];
+                          const csvRows = rows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+                          const csv = [headers.join(','), ...csvRows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+                          const blob = new Blob([csv], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `users-export-${Date.now()}.csv`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                          toast.success(`Exported ${rows.length} user(s)`);
+                        } catch (err) {
+                          console.error('Export failed', err);
+                          toast.error('Export failed');
+                        }
+                      }}
+                      onArchive={(ids) => {
+                        // open confirmation for bulk archive
+                        const idsArr = ids && ids.length ? ids : null;
+                        setBulkArchiveIds(idsArr);
+                        if (idsArr) {
+                          const names = idsArr.map((id) => filteredUsers.find((u) => u.id === id)?.name || id);
+                          setBulkArchiveNames(names.length ? names : null);
+                        } else {
+                          setBulkArchiveNames(null);
+                        }
+                        setShowArchiveConfirm(true);
+                      }}
+                      onBulkChangeRole={(ids, newRole) => {
+                        // TODO: Implement bulk role change
+                        console.log('Bulk change role:', ids, newRole);
+                        toast.success(`Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`);
+                      }}
+                      onBulkChangeStatus={(ids, newStatus) => {
+                        // TODO: Implement bulk status change
+                        console.log('Bulk change status:', ids, newStatus);
+                        toast.success(`Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <TableSkeleton rows={itemsPerPage} />
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            <div className="flex items-center justify-between">
+              <PaginationWrapper
+                totalItems={filteredUsers.length}
+                itemsPerPage={itemsPerPage}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                label="users"
+                // pass fixed options
+                rowsPerPageOptions={rowsPerPageOptions}
+                onItemsPerPageChange={(n) => {
+                  setItemsPerPage(n);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            {/* Archive Confirmation */}
+            {showArchiveConfirm && (
+              <ConfirmationPopover
+                action="Archive"
+                entity={
+                  bulkArchiveNames && bulkArchiveNames.length > 1
+                    ? `${bulkArchiveNames.length} Users (${bulkArchiveNames.join(", ")})`
+                    : bulkArchiveNames && bulkArchiveNames.length === 1
+                      ? `User (${bulkArchiveNames[0]})`
+                      : "User"
+                }
+                onConfirm={handleArchive}
+                onCancel={() => {
+                  setShowArchiveConfirm(false);
+                  setDeletingId(null);
+                  setBulkArchiveIds(null);
+                  setBulkArchiveNames(null);
+                }}
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
-  )
+  );
 }
