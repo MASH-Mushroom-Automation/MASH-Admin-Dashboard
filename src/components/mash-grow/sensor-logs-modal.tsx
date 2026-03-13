@@ -1281,7 +1281,6 @@ export default function SensorLogsModal({
                                             selected={chartDateFrom}
                                             onSelect={(date) => {
                                               setChartDateFrom(date);
-                                              setChartTimePeriod("day");
                                             }}
                                             initialFocus
                                           />
@@ -1317,7 +1316,6 @@ export default function SensorLogsModal({
                                             selected={chartDateTo}
                                             onSelect={(date) => {
                                               setChartDateTo(date);
-                                              setChartTimePeriod("day");
                                             }}
                                             initialFocus
                                           />
