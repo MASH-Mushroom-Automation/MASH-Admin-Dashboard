@@ -1,3 +1,5 @@
+ 
+ 
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -39,7 +41,7 @@ interface Seller {
   businessType?: string;
 }
 
-export type TabType = "pending" | "rejected";
+export type TabType = "pending" | "approved" | "rejected";
 
 export default function SellerContent() {
   const [activeTab, setActiveTab] = useState<TabType>("pending");
@@ -50,7 +52,7 @@ export default function SellerContent() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
-  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(
+  const [, setBulkArchiveNames] = useState<string[] | null>(
     null,
   );
   const [bulkRejectIds, setBulkRejectIds] = useState<string[] | null>(null);
@@ -62,7 +64,12 @@ export default function SellerContent() {
   const router = useRouter();
 
   // Use seller application React Query hooks
-  const apiStatus = activeTab === "pending" ? "PENDING" : "FAILED";
+  const apiStatus =
+    activeTab === "pending"
+      ? "PENDING"
+      : activeTab === "approved"
+        ? "COMPLETED"
+        : "FAILED";
   const {
     data: allApplications = [],
     isLoading,
@@ -106,6 +113,7 @@ export default function SellerContent() {
   // Filter sellers by active tab
   const tabFilteredSellers = sellers.filter((seller) => {
     if (activeTab === "pending") return seller.status === "pending";
+    if (activeTab === "approved") return seller.status === "approved";
     if (activeTab === "rejected") return seller.status === "rejected";
     return true;
   });
@@ -122,30 +130,6 @@ export default function SellerContent() {
   const paginatedSellers = filteredSellers.slice(startIndex, endIndex);
 
   // Dynamic rows-per-page options
-  const getRowsPerPageOptions = (total: number) => {
-    const opts = new Set<number>();
-    // always include current itemsPerPage so the select remains controlled
-    opts.add(itemsPerPage);
-
-    if (total <= 1) {
-      opts.add(Math.max(1, total));
-      return Array.from(opts).sort((a, b) => a - b);
-    }
-
-    // build sensible multiples of 5 up to total (5,10,15,...)
-    for (let v = 5; v <= total; v += 5) {
-      opts.add(v);
-    }
-
-    // always include total as an option (exact all)
-    opts.add(total);
-
-    // ensure small totals still show an option
-    if (total < 5) opts.add(total);
-
-    return Array.from(opts).sort((a, b) => a - b);
-  };
-  const rowsPerPageOptions = getRowsPerPageOptions(filteredSellers.length);
 
   const handleView = async (seller: Seller) => {
     try {
@@ -368,7 +352,7 @@ export default function SellerContent() {
             header: "Status",
             cell: ({ getValue }: any) => (
               <div
-                className="max-w-[160px] truncate"
+                className="max-w-40 truncate"
                 title={String(getValue() ?? "")}
               >
                 <span
@@ -478,6 +462,7 @@ export default function SellerContent() {
           >
             <TabsList className="flex w-full ">
               <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="approved">Approved</TabsTrigger>
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
             </TabsList>
           </Tabs>

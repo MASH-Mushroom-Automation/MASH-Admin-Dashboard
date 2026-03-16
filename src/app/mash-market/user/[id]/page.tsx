@@ -146,9 +146,9 @@ export default function UserViewPage({
   const role =
     user.role?.toLowerCase() === "user"
       ? "Customer"
-      : user.role === "ADMIN"
+      : user.role?.toLowerCase() === "seller" || user.role === "ADMIN"
         ? "Seller"
-        : user.role || "Customer";
+        : "Customer";
 
   return (
     <div className="bg-background p-6 ">

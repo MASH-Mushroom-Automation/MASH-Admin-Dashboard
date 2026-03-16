@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
+import { useState, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import RejectReasonModal from "@/components/ecommerce/reject-reason-modal";
@@ -40,12 +40,14 @@ interface Seller {
   accountHolderName?: string;
 }
 
-export default function SellerDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id: username } = use(params); // This is the username from URL path
+export default function SellerDetailPage(
+  {
+    // params, // Kept to match Next.js signature
+  }: {
+    params: Promise<{ id: string }>;
+  },
+) {
+  // const { id: username } = use(params); // Unused username from URL path
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId"); // This is the requestId from query param
   const router = useRouter();
@@ -356,6 +358,7 @@ export default function SellerDetailPage({
                     {selectedApplication.documents.governmentId.match(
                       /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i,
                     ) ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={selectedApplication.documents.governmentId}
                         alt="Government ID"

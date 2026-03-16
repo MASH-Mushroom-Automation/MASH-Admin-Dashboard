@@ -12,10 +12,7 @@ import {
   useDashboardChambers,
   useDashboardUsersStats,
 } from "@/hooks/useDashboardData";
-import {
-  useUserManagementStore,
-  type UserItem,
-} from "@/store/userManagementStore";
+import { useUsers } from "@/hooks/useUsers";
 import {
   Table,
   TableBody,
@@ -24,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { UserItem } from "@/store/userManagementStore";
 
 export default function ChamberInventorySection() {
   const {
@@ -47,10 +45,10 @@ export default function ChamberInventorySection() {
   };
 
   const {
-    users,
-    loading: userLoading,
+    data: users = [],
+    isLoading: userLoading,
     error: userError,
-  } = useUserManagementStore();
+  } = useUsers(1, 10);
 
   // Combine loading and error states
   const loading = { ...dashboardLoading, users: userLoading };

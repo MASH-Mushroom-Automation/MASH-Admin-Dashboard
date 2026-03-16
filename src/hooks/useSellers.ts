@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -18,7 +18,7 @@ export const useSellers = (params?: {
       const endpoint =
         params?.status === "PENDING" && !params?.userId
           ? "v1/super-admin/seller-applications/pending"
-          : "v1/super-admin/seller-applications";
+          : "v1/super-admin/seller-applications/all";
 
       const res = await api.get(endpoint, { params });
       const payload: any = res.data;
@@ -79,6 +79,7 @@ export const useSellers = (params?: {
 };
 
 export const useSellerById = (requestId: string) => {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.sellers.detail(requestId),
     queryFn: async () => {
@@ -96,7 +97,28 @@ export const useSellerById = (requestId: string) => {
 
       if (!data) throw new Error("Seller application not found");
 
-      const userObj = data.user || data.userData || {};
+      let userObj = data.user || data.userData || {};
+
+      // Fallback to cache if user details are missing
+      if (!userObj.firstName || !userObj.lastName || !userObj.email) {
+        const cachedLists = queryClient.getQueriesData<any[]>({
+          queryKey: queryKeys.sellers.lists(),
+        });
+        for (const [, cacheData] of cachedLists) {
+          if (Array.isArray(cacheData)) {
+            const found = cacheData.find(
+              (app) =>
+                String(app.requestId || app.id || app._id) ===
+                String(requestId),
+            );
+            if (found && found.user) {
+              userObj = { ...userObj, ...found.user };
+              break;
+            }
+          }
+        }
+      }
+
       const firstName = userObj.firstName || data.firstName || "";
       const lastName = userObj.lastName || data.lastName || "";
 

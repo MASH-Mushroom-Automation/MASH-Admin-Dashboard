@@ -14,18 +14,21 @@ import {
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
 import { useDashboardOverview } from "@/hooks/useDashboardData";
+import { useSellers } from "@/hooks/useSellers";
 import PromoCarousel from "./promo-carousel";
 
 export default function DashboardContent() {
   const { data: overview } = useDashboardOverview();
+  const { data: pendingApplications } = useSellers({ status: "PENDING" });
 
   // Use fetched data from store, fallback to 0 if not available
   const chambers = overview?.chambers || { active: 0, inactive: 0 };
   const orders = overview?.orders || { completed: 0, pending: 0 };
   const products = overview?.products || { pending: 0, approved: 0 };
-  const sellerApplications = overview?.sellerApplications || {
-    pending: 0,
-    approved: 0,
+  const sellerApplications = {
+    pending:
+      pendingApplications?.length ?? overview?.sellerApplications?.pending ?? 0,
+    approved: overview?.sellerApplications?.approved ?? 0,
   };
 
   console.log("[DashboardContent] Rendering with data:", {
