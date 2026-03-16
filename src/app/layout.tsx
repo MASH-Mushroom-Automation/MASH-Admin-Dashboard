@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Providers } from "@/components/providers";
 
 // const _poppins = Poppins({
 //   subsets: ["latin"],
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased bg-background text-foreground">
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <ErrorBoundary>
+          <Providers>{children}</Providers>
+        </ErrorBoundary>
         {/* Sonner Toaster for global toast UI */}
         <Toaster position="top-right" richColors />
       </body>

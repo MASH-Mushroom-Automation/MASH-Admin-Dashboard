@@ -9,12 +9,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useDashboardStore } from "../../store/dashboardStore";
+import { useDashboardSales } from "@/hooks/useDashboardData";
 
 export default function SalesChart() {
-  const { sales, loading } = useDashboardStore();
+  const { data: sales, isLoading } = useDashboardSales(7);
 
-  if (loading.sales)
+  if (isLoading)
     return <div className="h-[300px] animate-pulse bg-muted/20 rounded" />;
 
   return (

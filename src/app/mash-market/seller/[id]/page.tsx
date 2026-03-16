@@ -8,7 +8,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X } from "lucide-react";
-import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
+import {
+  useSellerById,
+  useApproveSeller,
+  useRejectSeller,
+} from "@/hooks/useSellers";
 
 interface Seller {
   id: string;
@@ -47,61 +51,18 @@ export default function SellerDetailPage({
   const router = useRouter();
 
   const {
-    selectedApplication,
-    loading: storeLoading,
+    data: selectedApplication,
+    isLoading: storeLoading,
     error: storeError,
-    fetchApplicationById,
-    approveApplication,
-    rejectApplication,
-    clearSelectedApplication,
-  } = useSellerApplicationStore();
+  } = useSellerById(requestId as string);
+  const { mutateAsync: approveApplication } = useApproveSeller();
+  const { mutateAsync: rejectApplication } = useRejectSeller();
 
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
-  // Fetch seller application data if not already loaded
-  useEffect(() => {
-    if (!requestId) {
-      console.warn("[SellerDetailPage] No requestId provided in query params");
-      return;
-    }
-
-    // If we already have the correct application, don't refetch
-    if (selectedApplication?.requestId === requestId) {
-      console.log(
-        "[SellerDetailPage] Using cached application data:",
-        selectedApplication.requestId
-      );
-      return;
-    }
-
-    // Fetch the application
-    console.log(
-      "[SellerDetailPage] Fetching seller application with requestId:",
-      requestId,
-      "| Username in URL:",
-      username
-    );
-    fetchApplicationById(requestId);
-  }, [
-    requestId,
-    username,
-    selectedApplication?.requestId,
-    fetchApplicationById,
-  ]);
-
-  // Cleanup on unmount only
-  useEffect(() => {
-    return () => {
-      console.log(
-        "[SellerDetailPage] Clearing selected application on unmount"
-      );
-      clearSelectedApplication();
-    };
-  }, [clearSelectedApplication]);
-
   // Loading state
-  if (storeLoading.selectedApplication) {
+  if (storeLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -143,19 +104,16 @@ export default function SellerDetailPage({
   }
 
   // Error state
-  if (storeError.selectedApplication && !storeLoading.selectedApplication) {
+  if (storeError && !storeLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium text-destructive">Error</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              {storeError.selectedApplication}
+              {(storeError as Error).message || "Failed to load"}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => fetchApplicationById(requestId)}>
-                Retry
-              </Button>
               <Button
                 variant="ghost"
                 onClick={() => router.push("/mash-market/seller")}
@@ -172,7 +130,7 @@ export default function SellerDetailPage({
   // Wait for selectedApplication to be available (either from cache or fetch)
   if (!selectedApplication) {
     // If no error and not loading, but still no data, it means we're waiting for the effect to run
-    if (!storeLoading.selectedApplication && !storeError.selectedApplication) {
+    if (!storeLoading && !storeError) {
       return (
         <div className="min-h-screen bg-background p-6">
           <div className="mx-auto max-w-4xl">
@@ -212,8 +170,9 @@ export default function SellerDetailPage({
   // Map application data to seller format
   const seller: Seller = {
     id: selectedApplication!.requestId,
-    name: `${selectedApplication!.user.firstName} ${selectedApplication!.user.lastName
-      }`,
+    name: `${selectedApplication!.user.firstName} ${
+      selectedApplication!.user.lastName
+    }`,
     username: selectedApplication!.user.username,
     email: selectedApplication!.user.email,
     phone: undefined, // Not in application response
@@ -236,7 +195,7 @@ export default function SellerDetailPage({
 
     setLoading(true);
     try {
-      await approveApplication(seller.id);
+      await approveApplication({ requestId: seller.id });
       toast.success("Seller application approved successfully");
       router.push("/mash-market/seller");
     } catch (err) {
@@ -251,7 +210,7 @@ export default function SellerDetailPage({
   const handleReject = async (reason?: string) => {
     setLoading(true);
     try {
-      await rejectApplication(seller.id, reason);
+      await rejectApplication({ requestId: seller.id, reason });
       toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
       router.push("/mash-market/seller");
     } catch (e) {
@@ -269,7 +228,9 @@ export default function SellerDetailPage({
         <Button
           variant="ghost"
           onClick={() => router.push("/mash-market/seller")}
-        > <ArrowLeft className="mr-2 h-4 w-4" />
+        >
+          {" "}
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
       </div>
@@ -393,7 +354,7 @@ export default function SellerDetailPage({
                   </div>
                   <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
                     {selectedApplication.documents.governmentId.match(
-                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i,
                     ) ? (
                       <img
                         src={selectedApplication.documents.governmentId}
@@ -416,7 +377,7 @@ export default function SellerDetailPage({
                       onClick={() =>
                         window.open(
                           selectedApplication.documents.governmentId,
-                          "_blank"
+                          "_blank",
                         )
                       }
                     >
@@ -432,7 +393,7 @@ export default function SellerDetailPage({
                   <div className="text-sm font-medium">BIR Certificate</div>
                   <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
                     {selectedApplication.documents.birCertificate.match(
-                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i,
                     ) ? (
                       <img
                         src={selectedApplication.documents.birCertificate}
@@ -455,7 +416,7 @@ export default function SellerDetailPage({
                       onClick={() =>
                         window.open(
                           selectedApplication.documents.birCertificate,
-                          "_blank"
+                          "_blank",
                         )
                       }
                     >
@@ -473,7 +434,7 @@ export default function SellerDetailPage({
                   </div>
                   <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
                     {selectedApplication.documents.businessCertificate.match(
-                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
+                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i,
                     ) ? (
                       <img
                         src={selectedApplication.documents.businessCertificate}
@@ -496,7 +457,7 @@ export default function SellerDetailPage({
                       onClick={() =>
                         window.open(
                           selectedApplication.documents.businessCertificate,
-                          "_blank"
+                          "_blank",
                         )
                       }
                     >

@@ -1,17 +1,7 @@
-import { useDashboardStore } from "../store/dashboardStore";
+import { useIsFetching } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 export function useDashboardLoading() {
-  const { loading } = useDashboardStore();
-
-  // Only check loading states for dashboard page calls
-  const relevantKeys = [
-    "overview",
-    "sales",
-    "chambers",
-    "usersStats",
-    "users",
-    "cards",
-  ];
-
-  return relevantKeys.some((key) => loading[key] === true);
+  const isFetchingDashboard = useIsFetching({ queryKey: ["dashboard"] });
+  return isFetchingDashboard > 0;
 }

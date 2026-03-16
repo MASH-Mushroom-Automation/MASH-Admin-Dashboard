@@ -8,20 +8,44 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { useDashboardStore } from "@/store/dashboardStore";
+import {
+  useDashboardChambers,
+  useDashboardUsersStats,
+} from "@/hooks/useDashboardData";
 import {
   useUserManagementStore,
   type UserItem,
 } from "@/store/userManagementStore";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 export default function ChamberInventorySection() {
   const {
-    usersStats,
-    chambers,
-    loading: dashboardLoading,
-    error: dashboardError,
-  } = useDashboardStore();
+    data: usersStats,
+    isLoading: dashboardUsersLoading,
+    error: dashboardUsersError,
+  } = useDashboardUsersStats();
+  const {
+    data: chambers,
+    isLoading: dashboardChambersLoading,
+    error: dashboardChambersError,
+  } = useDashboardChambers(1, 10);
+
+  const dashboardLoading = {
+    usersStats: dashboardUsersLoading,
+    chambers: dashboardChambersLoading,
+  };
+  const dashboardError = {
+    usersStats: dashboardUsersError,
+    chambers: dashboardChambersError,
+  };
+
   const {
     users,
     loading: userLoading,
@@ -29,8 +53,8 @@ export default function ChamberInventorySection() {
   } = useUserManagementStore();
 
   // Combine loading and error states
-  const loading = { ...dashboardLoading, ...userLoading };
-  const error = { ...dashboardError, ...userError };
+  const loading = { ...dashboardLoading, users: userLoading };
+  const error = { ...dashboardError, users: userError };
 
   // Show loading state while data is being fetched
   if (loading.usersStats || loading.chambers || loading.users) {
@@ -102,7 +126,7 @@ export default function ChamberInventorySection() {
     console.log("[ChamberInventory] usersStats:", actualUsersStats);
     console.log(
       "[ChamberInventory] users (showing up to 5):",
-      actualUsers.slice(0, 5)
+      actualUsers.slice(0, 5),
     );
     console.log("[ChamberInventory] userRoleCount:", userRoleCount);
     if (error.usersStats || error.chambers || error.users) {
@@ -117,9 +141,7 @@ export default function ChamberInventorySection() {
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle className="text-lg">Users Distribution</CardTitle>
-            <CardDescription>
-              User list by role
-            </CardDescription>
+            <CardDescription>User list by role</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -167,24 +189,18 @@ export default function ChamberInventorySection() {
             <Table className="w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead>
-                    Name
-                  </TableHead>
-                  <TableHead>
-                    Email
-                  </TableHead>
-                  <TableHead>
-                    Role
-                  </TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {actualUsers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                        colSpan={3}
-                        className="py-6 text-center text-muted-foreground"
-                      >
+                      colSpan={3}
+                      className="py-6 text-center text-muted-foreground"
+                    >
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -194,7 +210,9 @@ export default function ChamberInventorySection() {
                       key={user.id}
                       className="border-b border-border hover:bg-secondary/50"
                     >
-                      <TableCell className="py-3 px-4 text-foreground">{user.name}</TableCell>
+                      <TableCell className="py-3 px-4 text-foreground">
+                        {user.name}
+                      </TableCell>
                       <TableCell className="py-3 px-4 text-foreground">
                         {user.email}
                       </TableCell>

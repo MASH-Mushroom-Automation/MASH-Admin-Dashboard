@@ -1,166 +1,177 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import StatusBadge from "@/components/status-badge"
-import { Search } from "lucide-react"
-import { ActionsMenu } from "@/components/user-actions-menu"
-import ArchiveConfirmation from "@/components/mash-grow/delete-confirmation"
-import RegisterModal from "@/components/mash-grow/register-modal"
-import { Card } from "@/components/ui/card"
-import ViewUserModal from "@/components/mash-grow/view-user-modal"
-import { growUserService, deviceService, type GrowUser, type Device as ApiDevice } from "@/services/mashGrowService"
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import StatusBadge from "@/components/status-badge";
+import { Search } from "lucide-react";
+import { ActionsMenu } from "@/components/user-actions-menu";
+import ArchiveConfirmation from "@/components/mash-grow/delete-confirmation";
+import RegisterModal from "@/components/mash-grow/register-modal";
+import { Card } from "@/components/ui/card";
+import ViewUserModal from "@/components/mash-grow/view-user-modal";
+import {
+  growUserService,
+  deviceService,
+  type GrowUser,
+  type Device as ApiDevice,
+} from "@/services/mashGrowService";
+import { useGrowUsers } from "@/hooks/useGrowUsers";
+import { useDevices } from "@/hooks/useDevices";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface User {
-  id: string
-  chamberNumber: string
-  name: string
-  address: string
-  contactNumber: string
-  deviceId?: string
-  status: "Active" | "Inactive"
-  registrationDate: string
+  id: string;
+  chamberNumber: string;
+  name: string;
+  address: string;
+  contactNumber: string;
+  deviceId?: string;
+  status: "Active" | "Inactive";
+  registrationDate: string;
 }
 
 interface Device {
-  id: string
-  deviceId: string
-  status: "Online" | "Offline"
-  assigned?: boolean
+  id: string;
+  deviceId: string;
+  status: "Online" | "Offline";
+  assigned?: boolean;
 }
 
 export default function RegisterChamber() {
-  const router = useRouter()
-  const [users, setUsers] = useState<User[]>([])
-  const [devices, setDevices] = useState<Device[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | "Active" | "Inactive"
+  >("All");
+  const [ArchiveUserId, setArchiveUserId] = useState<string | null>(null);
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All")
-  const [ArchiveUserId, setArchiveUserId] = useState<string | null>(null)
-  const [registerModalOpen, setRegisterModalOpen] = useState(false)
+  // Fetch data from React Query
+  const {
+    data: rawUsers = [],
+    isLoading: usersLoading,
+    error: usersError,
+  } = useGrowUsers({ archived: false });
+  const {
+    data: rawDevices = [],
+    isLoading: devicesLoading,
+    error: devicesError,
+  } = useDevices();
 
-  // Fetch data from backend
-  useEffect(() => {
-    fetchData()
-  }, [])
+  const loading = usersLoading || devicesLoading;
+  const error = usersError ? (usersError as Error).message : null;
 
-  const fetchData = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [usersResponse, devicesResponse] = await Promise.all([
-        growUserService.getAll({ archived: false }),
-        deviceService.getAll({ limit: 100 })
-      ])
-      
-      // Map API users to local User type
-      const mappedUsers: User[] = usersResponse.data.map((u: any) => ({
-        id: u.id,
-        // Map chamberNumber from first device name or generate fallback
-        chamberNumber: u.devices?.[0]?.name || (u.devices?.length ? `Device ${u.devices.length}` : '—'),
-        name: (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.username || u.email),
-        address: u.address || "",
-        // Map contact info
-        contactNumber: u.phoneNumber || u.phone || "",
-        // Map deviceId from first device
-        deviceId: u.devices?.[0]?.serialNumber,
-        status: u.isActive ? "Active" : "Inactive",
-        registrationDate: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-      }))
-      
-      // Map devices
-      const mappedDevices: Device[] = devicesResponse.data.map((d: ApiDevice) => ({
-        id: d.id,
-        deviceId: d.serialNumber,
-        status: d.status,
-        assigned: d.assigned
-      }))
-      
-      setUsers(mappedUsers)
-      setDevices(mappedDevices)
-    } catch (err) {
-      const errorMessage = (err as Error).message || 'Failed to load data'
-      setError(errorMessage)
-      toast.error(errorMessage)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const users: User[] = rawUsers.map((u: any) => ({
+    id: u.id,
+    chamberNumber: u.chamberNumber,
+    name: u.name,
+    address: u.address,
+    contactNumber: u.contactNumber,
+    deviceId: u.deviceId,
+    status: u.archived ? "Inactive" : "Active",
+    registrationDate: u.createdAt
+      ? new Date(u.createdAt).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0],
+  }));
+
+  const devices: Device[] = rawDevices.map((d: any) => ({
+    id: d.id,
+    deviceId: d.deviceId,
+    status: d.status,
+    assigned: d.assigned,
+  }));
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.chamberNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.contactNumber.includes(searchTerm)
+      user.contactNumber.includes(searchTerm);
 
-    const matchesStatus = statusFilter === "All" || user.status === statusFilter
+    const matchesStatus =
+      statusFilter === "All" || user.status === statusFilter;
 
-    return matchesSearch && matchesStatus
-  })
+    return matchesSearch && matchesStatus;
+  });
 
   const handleArchive = async (userId: string) => {
     try {
-      await growUserService.delete(userId)
-      setArchiveUserId(null)
-      toast.success("User Archived successfully")
-      fetchData() // Refresh data
+      await growUserService.delete(userId);
+      setArchiveUserId(null);
+      toast.success("User Archived successfully");
+      queryClient.invalidateQueries({ queryKey: ["grow-users"] });
     } catch (err) {
-      const errorMessage = (err as Error).message || 'Failed to archive user'
-      toast.error(errorMessage)
+      const errorMessage = (err as Error).message || "Failed to archive user";
+      toast.error(errorMessage);
     }
-  }
+  };
 
   const handlePingDevice = async (deviceId: string) => {
     // simulate ping
-    toast(`Pinging ${deviceId}...`)
-    await new Promise((r) => setTimeout(r, 800))
-    const isOnline = Math.random() > 0.4
-    toast.success(isOnline ? "Device is Online" : "Device is Offline")
-  }
+    toast(`Pinging ${deviceId}...`);
+    await new Promise((r) => setTimeout(r, 800));
+    const isOnline = Math.random() > 0.4;
+    toast.success(isOnline ? "Device is Online" : "Device is Offline");
+  };
 
   // handle onSave from RegisterModal which may include selectedDeviceId
   type RegistrationPayload = {
-    id?: string
-    chamberName?: string
-    name?: string
-    address?: string
-    contactNumber?: string
-    deviceId?: string
-    selectedDeviceId?: string
-  }
+    id?: string;
+    chamberName?: string;
+    name?: string;
+    address?: string;
+    contactNumber?: string;
+    deviceId?: string;
+    selectedDeviceId?: string;
+  };
 
   const handleRegisterSaveExtended = async (data: RegistrationPayload) => {
     try {
-      const newUser: Omit<GrowUser, 'id' | 'createdAt' | 'updatedAt'> = {
+      const newUser: Omit<GrowUser, "id" | "createdAt" | "updatedAt"> = {
         chamberNumber: `CH${String(users.length + 1).padStart(3, "0")}`,
         name: data.chamberName || data.name || "",
         address: data.address || "",
         contactNumber: data.contactNumber || "",
-        deviceId: data.deviceId || (data.selectedDeviceId ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId : undefined)
-      }
-      await growUserService.create(newUser)
-      toast.success("User registered successfully")
-      fetchData() // Refresh data
+        deviceId:
+          data.deviceId ||
+          (data.selectedDeviceId
+            ? devices.find((d) => d.id === data.selectedDeviceId)?.deviceId
+            : undefined),
+      };
+      await growUserService.create(newUser);
+      toast.success("User registered successfully");
+      queryClient.invalidateQueries({ queryKey: ["grow-users"] });
     } catch (err) {
-      const errorMessage = (err as Error).message || 'Failed to register user'
-      toast.error(errorMessage)
+      const errorMessage = (err as Error).message || "Failed to register user";
+      toast.error(errorMessage);
     }
-  }
+  };
 
   // view modal state
-  const [viewOpen, setViewOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const openView = (u: User) => {
-    setSelectedUser(u)
-    setViewOpen(true)
-  }
+    setSelectedUser(u);
+    setViewOpen(true);
+  };
 
   return (
     <main className="min-h-screen bg-background p-6">
@@ -168,16 +179,35 @@ export default function RegisterChamber() {
         {/* Top controls: Create Device, Register User and device quick-info (header removed per request) */}
         <div className="flex items-center justify-end mb-4 gap-4">
           <div className="flex items-center gap-3">
-            <Button onClick={() => router.push('/mash-grow/devices')} className="gap-2">Create Device</Button>
+            <Button
+              onClick={() => router.push("/mash-grow/devices")}
+              className="gap-2"
+            >
+              Create Device
+            </Button>
           </div>
 
           {/* Device quick info: show first available device id and ping */}
           <div className="p-3 bg-card border border-border rounded-md">
-            <div className="text-xs text-muted-foreground">Chamber Device ID</div>
-            <div className="font-mono text-sm">{devices[0]?.deviceId ?? '—'}</div>
+            <div className="text-xs text-muted-foreground">
+              Chamber Device ID
+            </div>
+            <div className="font-mono text-sm">
+              {devices[0]?.deviceId ?? "—"}
+            </div>
             <div className="mt-2 flex items-center gap-2">
-              <div className={`text-sm ${devices[0]?.status === 'Online' ? 'text-green-600' : 'text-red-600'}`}>{devices[0]?.status ?? 'Unknown'}</div>
-              <Button size="sm" variant="ghost" onClick={() => devices[0] && handlePingDevice(devices[0].deviceId)}>
+              <div
+                className={`text-sm ${devices[0]?.status === "Online" ? "text-green-600" : "text-red-600"}`}
+              >
+                {devices[0]?.status ?? "Unknown"}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  devices[0] && handlePingDevice(devices[0].deviceId)
+                }
+              >
                 Check Ping
               </Button>
             </div>
@@ -195,7 +225,12 @@ export default function RegisterChamber() {
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(value: "Active" | "Inactive" | "All") => setStatusFilter(value)}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value: "Active" | "Inactive" | "All") =>
+              setStatusFilter(value)
+            }
+          >
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -215,9 +250,7 @@ export default function RegisterChamber() {
                 Loading users...
               </div>
             ) : error ? (
-              <div className="py-8 text-center text-red-500">
-                {error}
-              </div>
+              <div className="py-8 text-center text-red-500">{error}</div>
             ) : (
               <Table className="w-full">
                 <TableHeader>
@@ -237,23 +270,34 @@ export default function RegisterChamber() {
                       <TableRow key={user.id}>
                         <TableCell>{user.chamberNumber}</TableCell>
                         <TableCell className="truncate">{user.name}</TableCell>
-                        <TableCell className="truncate">{user.address}</TableCell>
-                        <TableCell className="whitespace-nowrap">{user.contactNumber}</TableCell>
+                        <TableCell className="truncate">
+                          {user.address}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {user.contactNumber}
+                        </TableCell>
                         <TableCell>
                           <StatusBadge status={user.status} />
                         </TableCell>
                         <TableCell>{user.registrationDate}</TableCell>
                         <TableCell className="text-center flex items-center justify-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => openView(user)}>View</Button>
-                          <ActionsMenu id={user.id} onArchive={() => setArchiveUserId(user.id)} />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openView(user)}
+                          >
+                            View
+                          </Button>
+                          <ActionsMenu
+                            id={user.id}
+                            onArchive={() => setArchiveUserId(user.id)}
+                          />
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7}>
-                        No users found
-                      </TableCell>
+                      <TableCell colSpan={7}>No users found</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -270,12 +314,19 @@ export default function RegisterChamber() {
         availableDevices={devices.filter((d) => !d.assigned)}
       />
 
-      <ViewUserModal open={viewOpen} onOpenChange={setViewOpen} user={selectedUser ?? undefined} />
+      <ViewUserModal
+        open={viewOpen}
+        onOpenChange={setViewOpen}
+        user={selectedUser ?? undefined}
+      />
 
       {/* Archive Confirmation Dialog */}
       {ArchiveUserId && (
-        <ArchiveConfirmation onConfirm={() => handleArchive(ArchiveUserId)} onCancel={() => setArchiveUserId(null)} />
+        <ArchiveConfirmation
+          onConfirm={() => handleArchive(ArchiveUserId)}
+          onCancel={() => setArchiveUserId(null)}
+        />
       )}
     </main>
-  )
+  );
 }

@@ -14,8 +14,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive } from "lucide-react";
-import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
-import { useUserManagementStore } from "@/store/userManagementStore";
+import {
+  useSellers,
+  useApproveSeller,
+  useRejectSeller,
+} from "@/hooks/useSellers";
+import { useArchiveUser } from "@/hooks/useUsers";
 import TableSkeleton from "@/components/ui/table-skeleton";
 import CardSkeleton from "@/components/ui/card-skeleton";
 import InlineSpinner from "@/components/ui/inline-spinner";
@@ -47,7 +51,7 @@ export default function SellerContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
   const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(
-    null
+    null,
   );
   const [bulkRejectIds, setBulkRejectIds] = useState<string[] | null>(null);
   const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
@@ -57,31 +61,20 @@ export default function SellerContent() {
   } | null>(null);
   const router = useRouter();
 
-  // Use seller application store
+  // Use seller application React Query hooks
+  const apiStatus = activeTab === "pending" ? "PENDING" : "FAILED";
   const {
-    allApplications,
-    fetchAllApplications,
-    fetchApplicationById,
-    approveApplication,
-    rejectApplication,
-    bulkApproveApplications,
-    bulkRejectApplications,
-    loading,
+    data: allApplications = [],
+    isLoading,
     error,
-  } = useSellerApplicationStore();
-
-  // Fetch applications on mount and when tab changes
-  useEffect(() => {
-    const status = activeTab === "pending" ? "PENDING" : "FAILED";
-    fetchAllApplications({ status }).catch((err) => {
-      console.error("Failed to fetch seller applications:", err);
-      toast.error("Failed to load seller applications");
-    });
-  }, [activeTab, fetchAllApplications]);
+  } = useSellers({ status: apiStatus });
+  const { mutateAsync: approveApplication } = useApproveSeller();
+  const { mutateAsync: rejectApplication } = useRejectSeller();
+  const { mutateAsync: archiveUser } = useArchiveUser();
 
   // Transform applications to Seller format
   const sellers: Seller[] =
-    allApplications?.map((app) => ({
+    allApplications.map((app) => ({
       id: app.requestId,
       name: app.sellerName,
       storeName: app.storeName || "N/A",
@@ -91,16 +84,15 @@ export default function SellerContent() {
         : activeTab === "rejected"
           ? "rejected"
           : "pending",
-      rejectReason: undefined, // Will be fetched from detail view if needed
+      rejectReason: undefined,
       address: app.address,
       username: app.user.username,
-      phone: undefined, // Not in current API response
+      phone: undefined,
       businessName: app.storeName,
-      businessType: undefined, // Not in current API response
+      businessType: undefined,
     })) || [];
 
-  const isLoading = loading.allApplications;
-  const fetchError = error.allApplications;
+  const fetchError = error ? (error as Error).message : null;
 
   useEffect(() => {
     if (isLoading) {
@@ -122,7 +114,7 @@ export default function SellerContent() {
     (seller) =>
       seller.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seller.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      seller.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -157,14 +149,12 @@ export default function SellerContent() {
 
   const handleView = async (seller: Seller) => {
     try {
-      // Fetch detailed application data before navigating
-      // seller.id is the requestId from the application
-      await fetchApplicationById(seller.id);
       // Navigate to seller detail page with requestId
       // URL shows username for better UX, but requestId is passed via query
       router.push(
-        `/mash-market/seller/${seller.username || seller.id}?requestId=${seller.id
-        }`
+        `/mash-market/seller/${seller.username || seller.id}?requestId=${
+          seller.id
+        }`,
       );
     } catch (err) {
       console.error("Failed to fetch seller details:", err);
@@ -176,11 +166,8 @@ export default function SellerContent() {
     console.log("[SellerPage] Approving seller:", sellerId);
 
     try {
-      await approveApplication(sellerId);
+      await approveApplication({ requestId: sellerId });
       toast.success("Seller application approved successfully");
-      // Refresh the list
-      const status = activeTab === "pending" ? "PENDING" : "FAILED";
-      await fetchAllApplications({ status });
     } catch (err) {
       console.error("Failed to approve seller:", err);
       toast.error("Failed to approve seller application");
@@ -189,27 +176,20 @@ export default function SellerContent() {
 
   const handleReject = async (sellerId: string, reason?: string) => {
     try {
-      await rejectApplication(sellerId, reason);
+      await rejectApplication({ requestId: sellerId, reason });
       toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
       setActiveTab("rejected");
-      // Refresh the list
-      await fetchAllApplications({ status: "FAILED" });
     } catch (err) {
       console.error("Failed to reject seller:", err);
       toast.error("Failed to reject seller application");
     }
   };
 
-  const { archiveUser } = useUserManagementStore();
-
   const handleArchive = async (id: string) => {
     try {
       toast.loading("Archiving seller...", { id: "archive-seller" });
-      await archiveUser(id, true);
+      await archiveUser({ id, archive: true });
       toast.success("Seller archived successfully", { id: "archive-seller" });
-      // Refresh the list
-      const status = activeTab === "pending" ? "PENDING" : "FAILED";
-      await fetchAllApplications({ status });
     } catch (err) {
       console.error("Failed to archive seller:", err);
       toast.error("Failed to archive seller", { id: "archive-seller" });
@@ -233,7 +213,7 @@ export default function SellerContent() {
       toast.loading("Archiving seller(s)...", { id: "archive-seller" });
       // Run all archive requests in parallel via backend API
       const results = await Promise.allSettled(
-        idsToArchive.map((id) => archiveUser(id, true))
+        idsToArchive.map((id) => archiveUser({ id, archive: true })),
       );
 
       const successes = results.filter((r) => r.status === "fulfilled").length;
@@ -252,9 +232,6 @@ export default function SellerContent() {
       setDeletingId(null);
       setBulkArchiveIds(null);
       setBulkArchiveNames(null);
-      // Refresh the list
-      const status = activeTab === "pending" ? "PENDING" : "FAILED";
-      await fetchAllApplications({ status });
     } catch (err) {
       console.error(err);
       toast.error("Failed to archive seller(s). Please try again.");
@@ -375,35 +352,35 @@ export default function SellerContent() {
       },
       activeTab === "rejected"
         ? {
-          accessorKey: "rejectReason",
-          header: "Reason",
-          cell: ({ getValue }: any) => (
-            <div
-              className="max-w-[300px] truncate"
-              title={String(getValue() ?? "—")}
-            >
-              {getValue() ?? "—"}
-            </div>
-          ),
-        }
-        : {
-          accessorKey: "status",
-          header: "Status",
-          cell: ({ getValue }: any) => (
-            <div
-              className="max-w-[160px] truncate"
-              title={String(getValue() ?? "")}
-            >
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
-                  getValue() ?? ""
-                )}`}
+            accessorKey: "rejectReason",
+            header: "Reason",
+            cell: ({ getValue }: any) => (
+              <div
+                className="max-w-[300px] truncate"
+                title={String(getValue() ?? "—")}
               >
-                {getValue() === "pending" ? "For Approval" : getValue()}
-              </span>
-            </div>
-          ),
-        },
+                {getValue() ?? "—"}
+              </div>
+            ),
+          }
+        : {
+            accessorKey: "status",
+            header: "Status",
+            cell: ({ getValue }: any) => (
+              <div
+                className="max-w-[160px] truncate"
+                title={String(getValue() ?? "")}
+              >
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
+                    getValue() ?? "",
+                  )}`}
+                >
+                  {getValue() === "pending" ? "For Approval" : getValue()}
+                </span>
+              </div>
+            ),
+          },
       {
         id: "actions",
         header: "Actions",
@@ -459,7 +436,9 @@ export default function SellerContent() {
           <h1 className="text-3xl font-bold">Seller Management</h1>
           {isLoading && <InlineSpinner />}
         </div>
-        <p className="text-muted-foreground mt-1">Review and manage seller applications</p>
+        <p className="text-muted-foreground mt-1">
+          Review and manage seller applications
+        </p>
       </div>
 
       {/* Loading State */}
@@ -479,8 +458,7 @@ export default function SellerContent() {
             <p className="text-destructive mb-4">Error: {fetchError}</p>
             <Button
               onClick={() => {
-                const status = activeTab === "pending" ? "PENDING" : "FAILED";
-                fetchAllApplications({ status }).catch(console.error);
+                window.location.reload();
               }}
             >
               Retry
@@ -532,16 +510,18 @@ export default function SellerContent() {
           {/* Table Section */}
           <Card className="overflow-hidden">
             <div className="p-4">
-              <div className={`transition-all duration-200 ease-in-out ${contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+              <div
+                className={`transition-all duration-200 ease-in-out ${contentVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}`}
+              >
                 <DataTable
                   data={paginatedSellers.filter(
-                    (seller) => seller.status === activeTab
+                    (seller) => seller.status === activeTab,
                   )}
                   initialPageSize={itemsPerPage}
                   hidePagination
                   columns={columns}
                   mode="sellers"
-                  showAcceptReject={activeTab === 'pending'}
+                  showAcceptReject={activeTab === "pending"}
                   activeTab={activeTab}
                   onArchive={(ids: string[]) => {
                     const idsArr = ids && ids.length ? ids : null;
@@ -549,7 +529,7 @@ export default function SellerContent() {
                     if (idsArr) {
                       const names = idsArr.map(
                         (id) =>
-                          filteredSellers.find((s) => s.id === id)?.name || id
+                          filteredSellers.find((s) => s.id === id)?.name || id,
                       );
                       setBulkArchiveNames(names.length ? names : null);
                     } else {
@@ -568,12 +548,22 @@ export default function SellerContent() {
                         id: "bulk-approve",
                       });
 
-                      const result = await bulkApproveApplications(
-                        ids,
-                        "Bulk approval"
+                      const results = await Promise.allSettled(
+                        ids.map((requestId) =>
+                          approveApplication({
+                            requestId,
+                            adminNotes: "Bulk approval",
+                          }),
+                        ),
                       );
+                      const approved = results.filter(
+                        (r) => r.status === "fulfilled",
+                      ).length;
+                      const failed = results.filter(
+                        (r) => r.status === "rejected",
+                      ).length;
 
-                      console.log("Bulk approve result:", result);
+                      console.log("Bulk approve result:", { approved, failed });
 
                       // Explicitly dismiss loading toast
                       toast.dismiss("bulk-approve");
@@ -581,22 +571,16 @@ export default function SellerContent() {
                       // Wait a tiny bit for dismiss to process
                       await new Promise((resolve) => setTimeout(resolve, 100));
 
-                      if (result.approved > 0) {
+                      if (approved > 0) {
                         toast.success(
-                          `Successfully approved ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""
+                          `Successfully approved ${approved} seller(s)${
+                            failed > 0 ? `, ${failed} failed` : ""
                           }`,
-                          { duration: 4000 }
+                          { duration: 4000 },
                         );
-                      } else if (result.failed > 0) {
-                        toast.error(
-                          `Failed to approve ${result.failed} seller(s)`
-                        );
+                      } else if (failed > 0) {
+                        toast.error(`Failed to approve ${failed} seller(s)`);
                       }
-
-                      // Refresh the list
-                      const status =
-                        activeTab === "pending" ? "PENDING" : "FAILED";
-                      await fetchAllApplications({ status });
                     } catch (err) {
                       console.error("Bulk approve failed:", err);
                       toast.error("Failed to approve sellers", {
@@ -625,7 +609,7 @@ export default function SellerContent() {
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-            label={activeTab === 'pending' ? 'Pending' : 'Rejected'}
+            label={activeTab === "pending" ? "Pending" : "Rejected"}
             rowsPerPageOptions={[5, 10, 25, 50, 100]}
             onItemsPerPageChange={(n) => {
               setItemsPerPage(n);
@@ -664,15 +648,26 @@ export default function SellerContent() {
                 try {
                   toast.loading(
                     `Rejecting ${bulkRejectIds.length} seller(s)...`,
-                    { id: "bulk-reject" }
+                    { id: "bulk-reject" },
                   );
 
-                  const result = await bulkRejectApplications(
-                    bulkRejectIds,
-                    reason || "Bulk rejection"
+                  const results = await Promise.allSettled(
+                    bulkRejectIds.map((requestId) =>
+                      rejectApplication({
+                        requestId,
+                        reason: reason || "Bulk rejection",
+                      }),
+                    ),
                   );
 
-                  console.log("Bulk reject result:", result);
+                  const approved = results.filter(
+                    (r) => r.status === "fulfilled",
+                  ).length;
+                  const failed = results.filter(
+                    (r) => r.status === "rejected",
+                  ).length;
+
+                  console.log("Bulk reject result:", { approved, failed });
 
                   // Explicitly dismiss loading toast
                   toast.dismiss("bulk-reject");
@@ -680,19 +675,19 @@ export default function SellerContent() {
                   // Wait a tiny bit for dismiss to process
                   await new Promise((resolve) => setTimeout(resolve, 100));
 
-                  if (result.approved > 0) {
+                  if (approved > 0) {
                     toast.success(
-                      `Successfully rejected ${result.approved} seller(s)${result.failed > 0 ? `, ${result.failed} failed` : ""
+                      `Successfully rejected ${approved} seller(s)${
+                        failed > 0 ? `, ${failed} failed` : ""
                       }`,
-                      { duration: 4000 }
+                      { duration: 4000 },
                     );
-                  } else if (result.failed > 0) {
-                    toast.error(`Failed to reject ${result.failed} seller(s)`);
+                  } else if (failed > 0) {
+                    toast.error(`Failed to reject ${failed} seller(s)`);
                   }
 
                   // Switch to rejected tab and refresh
                   setActiveTab("rejected");
-                  await fetchAllApplications({ status: "FAILED" });
                 } catch (err) {
                   console.error("Bulk reject failed:", err);
                   toast.error("Failed to reject sellers", {

@@ -7,7 +7,7 @@ import UserAvatar from "@/components/ecommerce/user-avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUserManagementStore } from "@/store/userManagementStore";
+import { useUserById } from "@/hooks/useUsers";
 import { ArrowLeft } from "lucide-react";
 
 interface User {
@@ -46,35 +46,18 @@ export default function UserViewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: username } = use(params); 
+  const { id: username } = use(params);
   const searchParams = useSearchParams();
-  const userId = searchParams.get("id"); 
+  const userId = searchParams.get("id");
 
-  const { selectedUser, loading, error, fetchUserById, clearSelectedUser } =
-    useUserManagementStore();
-
-  // Fetch user data when component mounts using the actual ID
-  useEffect(() => {
-    if (userId) {
-      console.log(
-        "[UserViewPage] Fetching user with ID:",
-        userId,
-        "| Username in URL:",
-        username
-      );
-      fetchUserById(userId);
-    } else {
-      console.warn("[UserViewPage] No user ID provided in query params");
-    }
-
-    // Cleanup: clear selected user when leaving page
-    return () => {
-      clearSelectedUser();
-    };
-  }, [userId, username, fetchUserById, clearSelectedUser]);
+  const {
+    data: selectedUser,
+    isLoading: loading,
+    error,
+  } = useUserById(userId as string);
 
   // Loading state
-  if (loading.selectedUser) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -116,17 +99,16 @@ export default function UserViewPage({
   }
 
   // Error state
-  if (error.selectedUser && !loading.selectedUser) {
+  if (error && !loading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium text-destructive">Error</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              {error.selectedUser}
+              {(error as Error).message}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => fetchUserById(userId)}>Retry</Button>
               <Link href="/mash-market/user">
                 <Button variant="ghost">Back to users</Button>
               </Link>
@@ -138,7 +120,7 @@ export default function UserViewPage({
   }
 
   // User not found state
-  if (!selectedUser && !loading.selectedUser) {
+  if (!selectedUser && !loading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -173,7 +155,9 @@ export default function UserViewPage({
       <div className="mb-6">
         <Link href="/mash-market/user">
           <Button variant="ghost">
-            <ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
         </Link>
       </div>
       <div>
@@ -354,12 +338,7 @@ export default function UserViewPage({
                       <label className="block text-sm font-medium text-muted-foreground">
                         Industry Category
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
@@ -376,78 +355,43 @@ export default function UserViewPage({
                       <label className="block text-sm font-medium text-muted-foreground">
                         Business Registration Number / Permit Number
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Years in Operation
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-muted-foreground">
                         Business Description
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Building/Street
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Barangay
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Province
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         ZIP Code
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                   </div>
                 </div>
@@ -493,23 +437,13 @@ export default function UserViewPage({
                       <label className="block text-sm font-medium text-muted-foreground">
                         Alternative / Secondary Contact Number
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Contact Person Position/Role
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                   </div>
                 </div>
@@ -535,23 +469,13 @@ export default function UserViewPage({
                       <label className="block text-sm font-medium text-muted-foreground">
                         Product Formats
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Average Monthly Output
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
@@ -568,31 +492,22 @@ export default function UserViewPage({
                       <label className="block text-sm font-medium text-muted-foreground">
                         Pricing Range
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Min. Order Quantity (MOQ)
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                   </div>
                 </div>
 
-
                 {/* Business Documents */}
                 <div className="border rounded-lg p-4">
-                  <h3 className="text-lg font-medium mb-3">Business Documents</h3>
+                  <h3 className="text-lg font-medium mb-3">
+                    Business Documents
+                  </h3>
                   <p className="text-sm text-muted-foreground mb-3">
                     Documents required for verification.
                   </p>
@@ -600,12 +515,16 @@ export default function UserViewPage({
                   <div className="grid grid-cols-3 gap-4">
                     {/** Government ID */}
                     <div className="border rounded-md p-3 flex flex-col items-start">
-                      <div className="text-sm font-medium">Valid ID of Business Owner</div>
+                      <div className="text-sm font-medium">
+                        Valid ID of Business Owner
+                      </div>
                       <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
                         <span className="text-gray-500">📄 Document</span>
                       </div>
                       <div className="mt-3 w-full">
-                        <Button size="sm" className="mt-2">View</Button>
+                        <Button size="sm" className="mt-2">
+                          View
+                        </Button>
                       </div>
                     </div>
 
@@ -616,18 +535,24 @@ export default function UserViewPage({
                         <span className="text-gray-500">📄 PDF</span>
                       </div>
                       <div className="mt-3 w-full">
-                        <Button size="sm" className="mt-2">View</Button>
+                        <Button size="sm" className="mt-2">
+                          View
+                        </Button>
                       </div>
                     </div>
 
                     {/** Business Certificate */}
                     <div className="border rounded-md p-3 flex flex-col items-start">
-                      <div className="text-sm font-medium">Business Certificate</div>
+                      <div className="text-sm font-medium">
+                        Business Certificate
+                      </div>
                       <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
                         <span className="text-gray-500">📄 PDF</span>
                       </div>
                       <div className="mt-3 w-full">
-                        <Button size="sm" className="mt-2">View</Button>
+                        <Button size="sm" className="mt-2">
+                          View
+                        </Button>
                       </div>
                     </div>
                   </div>

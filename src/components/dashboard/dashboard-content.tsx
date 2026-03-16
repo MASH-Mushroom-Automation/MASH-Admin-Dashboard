@@ -13,11 +13,11 @@ import {
   TrendingDown,
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
-import { useDashboardStore } from "@/store/dashboardStore";
+import { useDashboardOverview } from "@/hooks/useDashboardData";
 import PromoCarousel from "./promo-carousel";
 
 export default function DashboardContent() {
-  const { overview } = useDashboardStore();
+  const { data: overview } = useDashboardOverview();
 
   // Use fetched data from store, fallback to 0 if not available
   const chambers = overview?.chambers || { active: 0, inactive: 0 };
@@ -48,7 +48,7 @@ export default function DashboardContent() {
   const productsDelta = computeDelta(products.pending, products.approved);
   const sellerApplicationsDelta = computeDelta(
     sellerApplications.pending,
-    sellerApplications.approved
+    sellerApplications.approved,
   );
 
   return (
@@ -85,8 +85,6 @@ export default function DashboardContent() {
             viewMorePath="/mash-market/seller"
             delta={sellerApplicationsDelta}
           />
-
-
         </div>
       </div>
 
