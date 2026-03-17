@@ -7,7 +7,9 @@ import UserAvatar from "@/components/ecommerce/user-avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUserManagementStore } from "@/store/userManagementStore";
+import { useUserById } from "@/hooks/useUsers";
+import { useSellers, useSellerById } from "@/hooks/useSellers";
+import { useGrowUsers } from "@/hooks/useGrowUsers";
 import { ArrowLeft } from "lucide-react";
 
 interface User {
@@ -46,35 +48,41 @@ export default function UserViewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: username } = use(params); 
+  const { id: username } = use(params);
   const searchParams = useSearchParams();
-  const userId = searchParams.get("id"); 
+  const userId = searchParams.get("id");
 
-  const { selectedUser, loading, error, fetchUserById, clearSelectedUser } =
-    useUserManagementStore();
+  const {
+    data: selectedUser,
+    isLoading: loading,
+    error,
+  } = useUserById(userId as string);
 
-  // Fetch user data when component mounts using the actual ID
-  useEffect(() => {
-    if (userId) {
-      console.log(
-        "[UserViewPage] Fetching user with ID:",
-        userId,
-        "| Username in URL:",
-        username
-      );
-      fetchUserById(userId);
-    } else {
-      console.warn("[UserViewPage] No user ID provided in query params");
-    }
+  const normalizedRole = String(selectedUser?.role || "").toUpperCase();
+  const isSellerRole = normalizedRole === "ADMIN" || normalizedRole === "SELLER";
+  const isGrowerRole = normalizedRole === "GROWER";
 
-    // Cleanup: clear selected user when leaving page
-    return () => {
-      clearSelectedUser();
-    };
-  }, [userId, username, fetchUserById, clearSelectedUser]);
+  const { data: sellerApplications = [] } = useSellers(
+    selectedUser?.id && isSellerRole ? { userId: selectedUser.id } : undefined,
+    Boolean(selectedUser?.id && isSellerRole),
+  );
+
+  const sellerRequestId = sellerApplications?.[0]?.requestId || "";
+  const { data: sellerApplicationDetail } = useSellerById(sellerRequestId);
+
+  const { data: growUsers = [] } = useGrowUsers(
+    undefined,
+    Boolean(selectedUser?.id && isGrowerRole),
+  );
+
+  const growerDetail = growUsers.find(
+    (growUser) =>
+      growUser.id === selectedUser?.id ||
+      (selectedUser?.email && growUser.email === selectedUser.email),
+  );
 
   // Loading state
-  if (loading.selectedUser) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -116,17 +124,16 @@ export default function UserViewPage({
   }
 
   // Error state
-  if (error.selectedUser && !loading.selectedUser) {
+  if (error && !loading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium text-destructive">Error</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              {error.selectedUser}
+              {(error as Error).message}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => fetchUserById(userId)}>Retry</Button>
               <Link href="/mash-market/user">
                 <Button variant="ghost">Back to users</Button>
               </Link>
@@ -138,7 +145,7 @@ export default function UserViewPage({
   }
 
   // User not found state
-  if (!selectedUser && !loading.selectedUser) {
+  if (!selectedUser && !loading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -161,19 +168,60 @@ export default function UserViewPage({
   const user = selectedUser!;
 
   // Map role to display format (handle both "user" and "USER" from API)
-  const role =
-    user.role?.toLowerCase() === "user"
-      ? "Customer"
-      : user.role === "ADMIN"
-        ? "Seller"
-        : user.role || "Customer";
+  const role = isSellerRole ? "Seller" : isGrowerRole ? "Grower" : "Buyer";
+
+  const sellerBusinessName =
+    sellerApplicationDetail?.businessInfo?.businessName || user.businessName || "";
+  const sellerBusinessType =
+    sellerApplicationDetail?.businessInfo?.businessType || user.businessType || "";
+  const sellerTaxId =
+    sellerApplicationDetail?.businessInfo?.taxIdNumber || user.taxId || "";
+  const sellerAddress =
+    sellerApplicationDetail?.contactInfo?.completeAddress ||
+    sellerApplicationDetail?.businessInfo?.businessAddress ||
+    user.completeAddress ||
+    user.businessAddress ||
+    "";
+  const sellerCity =
+    sellerApplicationDetail?.contactInfo?.city || user.city || "";
+  const sellerRegion =
+    sellerApplicationDetail?.contactInfo?.region || user.region || "";
+  const sellerMushroomTypes =
+    sellerApplicationDetail?.productInfo?.typesOfMushrooms ||
+    user.typesOfMushroom ||
+    [];
+  const sellerMonthlyCapacity =
+    sellerApplicationDetail?.productInfo?.monthlyProductionCapacity ||
+    user.monthlyProductionCapacity ||
+    "";
+  const sellerCertifications =
+    sellerApplicationDetail?.productInfo?.certifications ||
+    user.certifications ||
+    [];
+
+  const sellerDocumentItems = [
+    {
+      label: "Valid ID of Business Owner",
+      url: sellerApplicationDetail?.documents?.governmentId,
+    },
+    {
+      label: "BIR Certificate",
+      url: sellerApplicationDetail?.documents?.birCertificate,
+    },
+    {
+      label: "Business Certificate",
+      url: sellerApplicationDetail?.documents?.businessCertificate,
+    },
+  ].filter((item) => Boolean(item.url));
 
   return (
     <div className="bg-background p-6 ">
       <div className="mb-6">
         <Link href="/mash-market/user">
           <Button variant="ghost">
-            <ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
         </Link>
       </div>
       <div>
@@ -189,7 +237,11 @@ export default function UserViewPage({
             <div>
               <h1 className="text-2xl font-bold">{user.name}</h1>
               <div className="text-sm text-muted-foreground">
-                {role === "Seller" ? "Seller profile" : "Customer profile"}
+                {role === "Seller"
+                  ? "Seller profile"
+                  : role === "Grower"
+                    ? "Grower profile"
+                    : "Buyer profile"}
               </div>
             </div>
           </div>
@@ -197,7 +249,7 @@ export default function UserViewPage({
 
         <Card className="p-6">
           <div className="space-y-6">
-            {role === "Customer" && (
+            {role === "Buyer" && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground">
@@ -269,7 +321,7 @@ export default function UserViewPage({
                     Preferred Payment Method
                   </label>
                   <Input
-                    value={user.preferredPaymentMethod ?? "-"}
+                    value={user.preferredPaymentMethod ?? ""}
                     disabled
                     readOnly
                     aria-readonly
@@ -333,7 +385,7 @@ export default function UserViewPage({
                         Business Name
                       </label>
                       <Input
-                        value={user.businessName ?? ""}
+                        value={sellerBusinessName}
                         disabled
                         readOnly
                         className="mt-1"
@@ -341,21 +393,10 @@ export default function UserViewPage({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
-                        Business Classification
+                        Business Type
                       </label>
                       <Input
-                        value={user.businessType ?? ""}
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Industry Category
-                      </label>
-                      <Input
-                        value=""
+                        value={sellerBusinessType}
                         disabled
                         readOnly
                         className="mt-1"
@@ -366,7 +407,7 @@ export default function UserViewPage({
                         TAX ID Number
                       </label>
                       <Input
-                        value={user.taxId ?? ""}
+                        value={sellerTaxId}
                         disabled
                         readOnly
                         className="mt-1"
@@ -374,80 +415,21 @@ export default function UserViewPage({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
-                        Business Registration Number / Permit Number
+                        City
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value={sellerCity} disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
-                        Years in Operation
+                        Region
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value={sellerRegion} disabled readOnly className="mt-1" />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-muted-foreground">
-                        Business Description
+                        Complete Address
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Building/Street
-                      </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Barangay
-                      </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Province
-                      </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        ZIP Code
-                      </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value={sellerAddress} disabled readOnly className="mt-1" />
                     </div>
                   </div>
                 </div>
@@ -493,23 +475,13 @@ export default function UserViewPage({
                       <label className="block text-sm font-medium text-muted-foreground">
                         Alternative / Secondary Contact Number
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
                         Contact Person Position/Role
                       </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
+                      <Input value="" disabled readOnly className="mt-1" />
                     </div>
                   </div>
                 </div>
@@ -525,7 +497,7 @@ export default function UserViewPage({
                         Varieties
                       </label>
                       <Input
-                        value={(user.typesOfMushroom || []).join(", ")}
+                        value={sellerMushroomTypes.join(", ")}
                         disabled
                         readOnly
                         className="mt-1"
@@ -533,54 +505,21 @@ export default function UserViewPage({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-muted-foreground">
-                        Product Formats
+                        Monthly Production Capacity
                       </label>
                       <Input
-                        value=""
+                        value={sellerMonthlyCapacity}
                         disabled
                         readOnly
                         className="mt-1"
                       />
                     </div>
-                    <div>
+                    <div className="col-span-2">
                       <label className="block text-sm font-medium text-muted-foreground">
-                        Average Monthly Output
+                        Certifications
                       </label>
                       <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Maximum Capacity
-                      </label>
-                      <Input
-                        value={user.monthlyProductionCapacity ?? ""}
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Pricing Range
-                      </label>
-                      <Input
-                        value=""
-                        disabled
-                        readOnly
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground">
-                        Min. Order Quantity (MOQ)
-                      </label>
-                      <Input
-                        value=""
+                        value={sellerCertifications.join(", ")}
                         disabled
                         readOnly
                         className="mt-1"
@@ -589,46 +528,94 @@ export default function UserViewPage({
                   </div>
                 </div>
 
-
                 {/* Business Documents */}
                 <div className="border rounded-lg p-4">
-                  <h3 className="text-lg font-medium mb-3">Business Documents</h3>
+                  <h3 className="text-lg font-medium mb-3">
+                    Business Documents
+                  </h3>
                   <p className="text-sm text-muted-foreground mb-3">
                     Documents required for verification.
                   </p>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    {/** Government ID */}
-                    <div className="border rounded-md p-3 flex flex-col items-start">
-                      <div className="text-sm font-medium">Valid ID of Business Owner</div>
-                      <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
-                        <span className="text-gray-500">📄 Document</span>
-                      </div>
-                      <div className="mt-3 w-full">
-                        <Button size="sm" className="mt-2">View</Button>
-                      </div>
+                  {sellerDocumentItems.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No uploaded documents found in this seller application record.
                     </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-4">
+                      {sellerDocumentItems.map((item) => {
+                        const isImage = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(
+                          String(item.url),
+                        );
 
-                    {/** BIR Certificate */}
-                    <div className="border rounded-md p-3 flex flex-col items-start">
-                      <div className="text-sm font-medium">BIR Certificate</div>
-                      <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
-                        <span className="text-gray-500">📄 PDF</span>
-                      </div>
-                      <div className="mt-3 w-full">
-                        <Button size="sm" className="mt-2">View</Button>
-                      </div>
+                        return (
+                          <div
+                            key={item.label}
+                            className="border rounded-md p-3 flex flex-col items-start"
+                          >
+                            <div className="text-sm font-medium">{item.label}</div>
+                            <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                              {isImage ? (
+                                <img
+                                  src={String(item.url)}
+                                  alt={item.label}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full" />
+                              )}
+                            </div>
+                            <div className="mt-3 w-full">
+                              <Button
+                                size="sm"
+                                className="mt-2"
+                                onClick={() => window.open(String(item.url), "_blank")}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-                    {/** Business Certificate */}
-                    <div className="border rounded-md p-3 flex flex-col items-start">
-                      <div className="text-sm font-medium">Business Certificate</div>
-                      <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
-                        <span className="text-gray-500">📄 PDF</span>
-                      </div>
-                      <div className="mt-3 w-full">
-                        <Button size="sm" className="mt-2">View</Button>
-                      </div>
+            {role === "Grower" && (
+              <div className="space-y-6">
+                <div className="border rounded-lg p-4">
+                  <h3 className="text-lg font-medium mb-3">Grower Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground">Full Name</label>
+                      <Input value={user.name ?? ""} disabled readOnly className="mt-1" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground">Email</label>
+                      <Input value={user.email ?? ""} disabled readOnly className="mt-1" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground">Phone Number</label>
+                      <Input
+                        value={growerDetail?.contactNumber || growerDetail?.phoneNumber || user.phone || ""}
+                        disabled
+                        readOnly
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground">Chamber Number</label>
+                      <Input value={growerDetail?.chamberNumber || ""} disabled readOnly className="mt-1" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground">Device ID</label>
+                      <Input value={growerDetail?.deviceId || ""} disabled readOnly className="mt-1" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground">Address</label>
+                      <Input value={growerDetail?.address || user.completeAddress || ""} disabled readOnly className="mt-1" />
                     </div>
                   </div>
                 </div>

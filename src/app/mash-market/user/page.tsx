@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import PaginationWrapper from "@/components/pagination";
 import { Archive, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useUserManagementStore } from "@/store/userManagementStore";
+import { useUsers, useArchiveUser } from "@/hooks/useUsers";
 import { DataTable } from "@/components/data-table";
 import TableSkeleton from "@/components/ui/table-skeleton";
 import CardSkeleton from "@/components/ui/card-skeleton";
@@ -41,38 +41,40 @@ export default function UsersManagement() {
     "All" | "Active" | "Inactive"
   >("All");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(DEFAULT_ITEMS_PER_PAGE);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(
+    DEFAULT_ITEMS_PER_PAGE,
+  );
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkArchiveIds, setBulkArchiveIds] = useState<string[] | null>(null);
-  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(null);
+  const [bulkArchiveNames, setBulkArchiveNames] = useState<string[] | null>(
+    null,
+  );
 
   const {
-    users: allUsers,
-    loading: storeLoading,
+    data: allUsers = [],
+    isLoading: loading,
     error: storeError,
-    fetchUsers,
-    archiveUser,
-  } = useUserManagementStore();
+  } = useUsers(1, 100);
+  const { mutateAsync: archiveUser } = useArchiveUser();
 
   // Show only active users (isActive === true), excluding SUPER_ADMIN
   const users = useMemo(() => {
     const total = (allUsers || []).length;
     const filtered = (allUsers || []).filter(
       (user) =>
-        user.role?.toUpperCase() !== "SUPER_ADMIN" && user.isActive === true
+        user.role?.toUpperCase() !== "SUPER_ADMIN" && user.isActive === true,
     );
     console.log(
       "[UserPage] Total users from API:",
       total,
       "| Filtered (active users, excluding SUPER_ADMIN):",
-      filtered.length
+      filtered.length,
     );
     return filtered;
   }, [allUsers]);
 
-  const loading = storeLoading.users ?? false;
-  const error = storeError.users ?? null;
+  const error = storeError ? (storeError as Error).message : null;
 
   // Control content visibility to allow a smooth transition from skeleton -> content
   const [contentVisible, setContentVisible] = useState(false);
@@ -87,19 +89,13 @@ export default function UsersManagement() {
     }
   }, [loading]);
 
-  // Fetch users from API on mount
-  useEffect(() => {
-    console.log("[UserPage] useEffect triggered - calling fetchUsers()");
-    fetchUsers();
-  }, [fetchUsers]);
-
   // Debug logging - runs only on client after hydration
   useEffect(() => {
     console.log("[UserPage] All users from store:", allUsers?.length || 0);
     console.log("[UserPage] All users data:", allUsers);
     console.log(
       "[UserPage] Displaying all roles (ADMIN + USER):",
-      users.length
+      users.length,
     );
     console.log("[UserPage] Users:", users);
     console.log("[UserPage] Loading state:", loading);
@@ -112,8 +108,11 @@ export default function UsersManagement() {
 
     return users.filter((user) => {
       const matchesSearch =
-        q === "" || [user.name, user.email, user.username].some((field) =>
-          String(field ?? "").toLowerCase().includes(q)
+        q === "" ||
+        [user.name, user.email, user.username].some((field) =>
+          String(field ?? "")
+            .toLowerCase()
+            .includes(q),
         );
 
       let matchesStatus = true;
@@ -137,7 +136,14 @@ export default function UsersManagement() {
 
       return matchesSearch && matchesStatus && matchesRegion && matchesRole;
     });
-  }, [users, searchQuery, statusFilter, selectedStatuses, selectedRegions, selectedRoles]);
+  }, [
+    users,
+    searchQuery,
+    statusFilter,
+    selectedStatuses,
+    selectedRegions,
+    selectedRoles,
+  ]);
   const rowsPerPageOptions = FIXED_ROWS_OPTIONS;
 
   // Falls back to a sensible static list if there are no regions yet.
@@ -164,25 +170,33 @@ export default function UsersManagement() {
   }, [filteredUsers.length, itemsPerPage]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   useEffect(() => {
     console.log("[UserPage] After all filters:", filteredUsers.length, "users");
     console.log(
       "[UserPage] Paginated users for display:",
-      paginatedUsers.length
+      paginatedUsers.length,
     );
     console.log(
       "[UserPage] Current page:",
       currentPage,
       "Start index:",
-      startIndex
+      startIndex,
     );
   }, [filteredUsers, paginatedUsers, currentPage, startIndex]);
 
   const handleArchive = async () => {
     // Support bulk archive (bulkArchiveIds) or single id (deletingId)
-    const idsToArchive = bulkArchiveIds && bulkArchiveIds.length > 0 ? bulkArchiveIds : deletingId ? [deletingId] : [];
+    const idsToArchive =
+      bulkArchiveIds && bulkArchiveIds.length > 0
+        ? bulkArchiveIds
+        : deletingId
+          ? [deletingId]
+          : [];
     if (idsToArchive.length === 0) {
       toast.error("No user selected for archiving");
       setShowArchiveConfirm(false);
@@ -193,7 +207,9 @@ export default function UsersManagement() {
       toast.loading("Archiving user(s)...", { id: "archive-user" });
 
       // Run archive requests in parallel and handle results
-      const results = await Promise.allSettled(idsToArchive.map((id) => archiveUser(id)));
+      const results = await Promise.allSettled(
+        idsToArchive.map((id) => archiveUser({ id })),
+      );
       const successes = results.filter((r) => r.status === "fulfilled").length;
       const failures = results.filter((r) => r.status === "rejected").length;
 
@@ -201,15 +217,15 @@ export default function UsersManagement() {
         toast.success(`Archived ${successes} user(s)`, { id: "archive-user" });
       }
       if (failures > 0) {
-        toast.error(`${failures} user(s) failed to archive`, { id: "archive-user" });
+        toast.error(`${failures} user(s) failed to archive`, {
+          id: "archive-user",
+        });
       }
 
       setShowArchiveConfirm(false);
       setDeletingId(null);
       setBulkArchiveIds(null);
       setBulkArchiveNames(null);
-      // refresh
-      fetchUsers();
     } catch (error) {
       console.error("Failed to archive user(s):", error);
       toast.error("Failed to archive user(s). Please try again.", {
@@ -224,16 +240,16 @@ export default function UsersManagement() {
 
   // dynamic filter sections (data-driven)
   const FILTER_SECTIONS = [
-    {
-      key: "statuses",
-      label: "Status",
-      options: ["Active", "Inactive"],
-    },
-    {
-      key: "regions",
-      label: "Region",
-      options: regionOptions,
-    },
+    // {
+    //   key: "statuses",
+    //   label: "Status",
+    //   options: ["Active", "Inactive"],
+    // },
+    // {
+    //   key: "regions",
+    //   label: "Region",
+    //   options: regionOptions,
+    // },
     {
       key: "roles",
       label: "Role",
@@ -246,17 +262,30 @@ export default function UsersManagement() {
     },
   ];
 
-  const activeFiltersCount = selectedStatuses.length + selectedRegions.length + selectedRoles.length;
+  const activeFiltersCount =
+    selectedStatuses.length + selectedRegions.length + selectedRoles.length;
 
   // helper to toggle selection generically
   const toggleFilter = (sectionKey: string, value: string) => {
     setCurrentPage(1);
     if (sectionKey === "statuses") {
-      setSelectedStatuses((prev) => (prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]));
+      setSelectedStatuses((prev) =>
+        prev.includes(value)
+          ? prev.filter((s) => s !== value)
+          : [...prev, value],
+      );
     } else if (sectionKey === "regions") {
-      setSelectedRegions((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
+      setSelectedRegions((prev) =>
+        prev.includes(value)
+          ? prev.filter((r) => r !== value)
+          : [...prev, value],
+      );
     } else if (sectionKey === "roles") {
-      setSelectedRoles((prev) => (prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]));
+      setSelectedRoles((prev) =>
+        prev.includes(value)
+          ? prev.filter((r) => r !== value)
+          : [...prev, value],
+      );
     }
   };
 
@@ -328,24 +357,34 @@ export default function UsersManagement() {
                           aria-label={`Filter${activeFiltersCount ? ` (${activeFiltersCount})` : ""}`}
                         >
                           <Filter className="h-4 w-4" />
-                          <span className="font-medium">{activeFiltersCount ? `Filters (${activeFiltersCount})` : "Filter"}</span>
+                          <span className="font-medium">
+                            {activeFiltersCount
+                              ? `Filters (${activeFiltersCount})`
+                              : "Filter"}
+                          </span>
                         </Button>
                       </DropdownMenuTrigger>
 
                       <DropdownMenuContent className="w-64 p-2">
                         {FILTER_SECTIONS.map((section) => (
                           <div key={section.key} className="mb-2">
-                            <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+                            <DropdownMenuLabel>
+                              {section.label}
+                            </DropdownMenuLabel>
                             <div className="px-1">
                               {section.options.map((opt: any) => {
-                                const optValue = typeof opt === "string" ? opt : opt.value;
-                                const optLabel = typeof opt === "string" ? opt : opt.label;
+                                const optValue =
+                                  typeof opt === "string" ? opt : opt.value;
+                                const optLabel =
+                                  typeof opt === "string" ? opt : opt.label;
                                 const checked =
                                   section.key === "statuses"
                                     ? selectedStatuses.includes(optValue)
                                     : section.key === "regions"
                                       ? selectedRegions.includes(optValue)
-                                      : selectedRoles.includes(String(optValue));
+                                      : selectedRoles.includes(
+                                        String(optValue),
+                                      );
                                 return (
                                   <label
                                     key={String(optValue)}
@@ -355,7 +394,12 @@ export default function UsersManagement() {
                                       type="checkbox"
                                       className="rounded-sm transition-colors duration-150 ease-in-out focus:ring-2 focus:ring-primary/30"
                                       checked={checked}
-                                      onChange={() => toggleFilter(section.key, String(optValue))}
+                                      onChange={() =>
+                                        toggleFilter(
+                                          section.key,
+                                          String(optValue),
+                                        )
+                                      }
                                     />
                                     <span className="text-sm">{optLabel}</span>
                                   </label>
@@ -370,13 +414,23 @@ export default function UsersManagement() {
                           <DropdownMenuItem
                             onSelect={() => {
                               // select all for all sections
-                              const statuses = FILTER_SECTIONS.find(s => s.key === "statuses")?.options as string[] | undefined;
-                              const regions = FILTER_SECTIONS.find(s => s.key === "regions")?.options as string[] | undefined;
+                              const statuses = FILTER_SECTIONS.find(
+                                (s) => s.key === "statuses",
+                              )?.options as string[] | undefined;
+                              const regions = FILTER_SECTIONS.find(
+                                (s) => s.key === "regions",
+                              )?.options as string[] | undefined;
                               // roles are objects with {value,label}
-                              const roles = FILTER_SECTIONS.find(s => s.key === "roles")?.options as any[] | undefined;
+                              const roles = FILTER_SECTIONS.find(
+                                (s) => s.key === "roles",
+                              )?.options as any[] | undefined;
                               setSelectedStatuses(statuses ?? []);
                               setSelectedRegions(regions ?? []);
-                              setSelectedRoles((roles ?? []).map((o: any) => (typeof o === 'string' ? o : o.value)));
+                              setSelectedRoles(
+                                (roles ?? []).map((o: any) =>
+                                  typeof o === "string" ? o : o.value,
+                                ),
+                              );
                               setCurrentPage(1);
                             }}
                           >
@@ -418,7 +472,9 @@ export default function UsersManagement() {
             <Card className="overflow-hidden">
               <div className="p-4">
                 {!loading ? (
-                  <div className={`transition-all duration-200 ease-in-out ${contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+                  <div
+                    className={`transition-all duration-200 ease-in-out ${contentVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}`}
+                  >
                     <DataTable
                       data={paginatedUsers}
                       initialPageSize={itemsPerPage}
@@ -426,12 +482,31 @@ export default function UsersManagement() {
                       mode="users"
                       onExport={(rows) => {
                         try {
-                          const headers = ['id', 'name', 'username', 'email', 'role', 'region', 'status'];
-                          const csvRows = rows.map(r => headers.map(h => String((r as any)[h] ?? '')));
-                          const csv = [headers.join(','), ...csvRows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
-                          const blob = new Blob([csv], { type: 'text/csv' });
+                          const headers = [
+                            "id",
+                            "name",
+                            "username",
+                            "email",
+                            "role",
+                            "region",
+                            "status",
+                          ];
+                          const csvRows = rows.map((r) =>
+                            headers.map((h) => String((r as any)[h] ?? "")),
+                          );
+                          const csv = [
+                            headers.join(","),
+                            ...csvRows.map((r) =>
+                              r
+                                .map(
+                                  (c) => `"${(c || "").replace(/"/g, '""')}"`,
+                                )
+                                .join(","),
+                            ),
+                          ].join("\n");
+                          const blob = new Blob([csv], { type: "text/csv" });
                           const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
+                          const a = document.createElement("a");
                           a.href = url;
                           a.download = `users-export-${Date.now()}.csv`;
                           document.body.appendChild(a);
@@ -440,8 +515,8 @@ export default function UsersManagement() {
                           URL.revokeObjectURL(url);
                           toast.success(`Exported ${rows.length} user(s)`);
                         } catch (err) {
-                          console.error('Export failed', err);
-                          toast.error('Export failed');
+                          console.error("Export failed", err);
+                          toast.error("Export failed");
                         }
                       }}
                       onArchive={(ids) => {
@@ -449,7 +524,11 @@ export default function UsersManagement() {
                         const idsArr = ids && ids.length ? ids : null;
                         setBulkArchiveIds(idsArr);
                         if (idsArr) {
-                          const names = idsArr.map((id) => filteredUsers.find((u) => u.id === id)?.name || id);
+                          const names = idsArr.map(
+                            (id) =>
+                              filteredUsers.find((u) => u.id === id)?.name ||
+                              id,
+                          );
                           setBulkArchiveNames(names.length ? names : null);
                         } else {
                           setBulkArchiveNames(null);
@@ -458,13 +537,17 @@ export default function UsersManagement() {
                       }}
                       onBulkChangeRole={(ids, newRole) => {
                         // TODO: Implement bulk role change
-                        console.log('Bulk change role:', ids, newRole);
-                        toast.success(`Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`);
+                        console.log("Bulk change role:", ids, newRole);
+                        toast.success(
+                          `Changed role to ${newRole} for ${ids.length} user(s) (API integration pending)`,
+                        );
                       }}
                       onBulkChangeStatus={(ids, newStatus) => {
                         // TODO: Implement bulk status change
-                        console.log('Bulk change status:', ids, newStatus);
-                        toast.success(`Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`);
+                        console.log("Bulk change status:", ids, newStatus);
+                        toast.success(
+                          `Changed status to ${newStatus} for ${ids.length} user(s) (API integration pending)`,
+                        );
                       }}
                     />
                   </div>

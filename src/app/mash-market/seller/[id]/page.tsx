@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import RejectReasonModal from "@/components/ecommerce/reject-reason-modal";
@@ -8,7 +8,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X } from "lucide-react";
-import { useSellerApplicationStore } from "@/store/sellerApplicationStore";
+import {
+  useSellerById,
+  useApproveSeller,
+  useRejectSeller,
+} from "@/hooks/useSellers";
 
 interface Seller {
   id: string;
@@ -36,72 +40,31 @@ interface Seller {
   accountHolderName?: string;
 }
 
-export default function SellerDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id: username } = use(params); // This is the username from URL path
+export default function SellerDetailPage(
+  {
+    // params, // Kept to match Next.js signature
+  }: {
+    params: Promise<{ id: string }>;
+  },
+) {
+  // const { id: username } = use(params); // Unused username from URL path
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId"); // This is the requestId from query param
   const router = useRouter();
 
   const {
-    selectedApplication,
-    loading: storeLoading,
+    data: selectedApplication,
+    isLoading: storeLoading,
     error: storeError,
-    fetchApplicationById,
-    approveApplication,
-    rejectApplication,
-    clearSelectedApplication,
-  } = useSellerApplicationStore();
+  } = useSellerById(requestId as string);
+  const { mutateAsync: approveApplication } = useApproveSeller();
+  const { mutateAsync: rejectApplication } = useRejectSeller();
 
   const [loading, setLoading] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
-  // Fetch seller application data if not already loaded
-  useEffect(() => {
-    if (!requestId) {
-      console.warn("[SellerDetailPage] No requestId provided in query params");
-      return;
-    }
-
-    // If we already have the correct application, don't refetch
-    if (selectedApplication?.requestId === requestId) {
-      console.log(
-        "[SellerDetailPage] Using cached application data:",
-        selectedApplication.requestId
-      );
-      return;
-    }
-
-    // Fetch the application
-    console.log(
-      "[SellerDetailPage] Fetching seller application with requestId:",
-      requestId,
-      "| Username in URL:",
-      username
-    );
-    fetchApplicationById(requestId);
-  }, [
-    requestId,
-    username,
-    selectedApplication?.requestId,
-    fetchApplicationById,
-  ]);
-
-  // Cleanup on unmount only
-  useEffect(() => {
-    return () => {
-      console.log(
-        "[SellerDetailPage] Clearing selected application on unmount"
-      );
-      clearSelectedApplication();
-    };
-  }, [clearSelectedApplication]);
-
   // Loading state
-  if (storeLoading.selectedApplication) {
+  if (storeLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
@@ -143,19 +106,16 @@ export default function SellerDetailPage({
   }
 
   // Error state
-  if (storeError.selectedApplication && !storeLoading.selectedApplication) {
+  if (storeError && !storeLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="p-6">
             <h2 className="text-lg font-medium text-destructive">Error</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              {storeError.selectedApplication}
+              {(storeError as Error).message || "Failed to load"}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => fetchApplicationById(requestId)}>
-                Retry
-              </Button>
               <Button
                 variant="ghost"
                 onClick={() => router.push("/mash-market/seller")}
@@ -172,7 +132,7 @@ export default function SellerDetailPage({
   // Wait for selectedApplication to be available (either from cache or fetch)
   if (!selectedApplication) {
     // If no error and not loading, but still no data, it means we're waiting for the effect to run
-    if (!storeLoading.selectedApplication && !storeError.selectedApplication) {
+    if (!storeLoading && !storeError) {
       return (
         <div className="min-h-screen bg-background p-6">
           <div className="mx-auto max-w-4xl">
@@ -216,19 +176,26 @@ export default function SellerDetailPage({
       }`,
     username: selectedApplication!.user.username,
     email: selectedApplication!.user.email,
-    phone: undefined, // Not in application response
+    phone: selectedApplication!.user.phoneNumber,
     status:
       (selectedApplication!.status?.toLowerCase() as
         | "pending"
         | "approved"
         | "rejected") || "pending",
-    city: undefined,
-    region: undefined,
-    completeAddress: selectedApplication!.businessInfo.businessAddress,
+    city: selectedApplication!.contactInfo?.city,
+    region: selectedApplication!.contactInfo?.region,
+    completeAddress:
+      selectedApplication!.contactInfo?.completeAddress ||
+      selectedApplication!.businessInfo.businessAddress,
     // Map business info from application
     storeName: selectedApplication!.businessInfo.businessName,
     businessName: selectedApplication!.businessInfo.businessName,
-    businessType: "company",
+    businessType: selectedApplication!.businessInfo.businessType,
+    taxIdNumber: selectedApplication!.businessInfo.taxIdNumber,
+    typesOfMushroom: selectedApplication!.productInfo?.typesOfMushrooms || [],
+    monthlyProductionCapacity:
+      selectedApplication!.productInfo?.monthlyProductionCapacity,
+    certifications: selectedApplication!.productInfo?.certifications || [],
   };
 
   const handleAccept = async () => {
@@ -236,7 +203,7 @@ export default function SellerDetailPage({
 
     setLoading(true);
     try {
-      await approveApplication(seller.id);
+      await approveApplication({ requestId: seller.id });
       toast.success("Seller application approved successfully");
       router.push("/mash-market/seller");
     } catch (err) {
@@ -251,7 +218,7 @@ export default function SellerDetailPage({
   const handleReject = async (reason?: string) => {
     setLoading(true);
     try {
-      await rejectApplication(seller.id, reason);
+      await rejectApplication({ requestId: seller.id, reason });
       toast.error(`Seller application rejected${reason ? ` — ${reason}` : ""}`);
       router.push("/mash-market/seller");
     } catch (e) {
@@ -263,13 +230,33 @@ export default function SellerDetailPage({
     }
   };
 
+  const documentItems = [
+    {
+      key: "governmentId",
+      label: "Valid ID of Business Owner",
+      url: selectedApplication.documents.governmentId,
+    },
+    {
+      key: "birCertificate",
+      label: "BIR Certificate",
+      url: selectedApplication.documents.birCertificate,
+    },
+    {
+      key: "businessCertificate",
+      label: "Business Certificate",
+      url: selectedApplication.documents.businessCertificate,
+    },
+  ].filter((item) => Boolean(item.url));
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div>
         <Button
           variant="ghost"
           onClick={() => router.push("/mash-market/seller")}
-        > <ArrowLeft className="mr-2 h-4 w-4" />
+        >
+          {" "}
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
       </div>
@@ -282,16 +269,16 @@ export default function SellerDetailPage({
         </div>
 
         <Card className="p-6 space-y-6">
-          {/* User Information */}
+          {/* Business Information */}
           <div>
-            <h3 className="text-lg font-medium mb-3">User Information</h3>
+            <h3 className="text-lg font-medium mb-3">Business Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Full Name
+                  Business Name
                 </label>
                 <Input
-                  value={`${selectedApplication.user.firstName} ${selectedApplication.user.lastName}`}
+                  value={seller.businessName || ""}
                   disabled
                   readOnly
                   className="mt-1"
@@ -299,10 +286,61 @@ export default function SellerDetailPage({
               </div>
               <div>
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Username
+                  Business Type
                 </label>
                 <Input
-                  value={selectedApplication.user.username}
+                  value={seller.businessType || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Tax ID Number
+                </label>
+                <Input
+                  value={seller.taxIdNumber || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Additional Information
+                </label>
+                <Input
+                  value={selectedApplication.businessInfo.additionalInfo || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Business Address
+                </label>
+                <Input
+                  value={seller.completeAddress || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Details */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">Contact Details</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Full Name
+                </label>
+                <Input
+                  value={`${selectedApplication.user.firstName} ${selectedApplication.user.lastName}`}
                   disabled
                   readOnly
                   className="mt-1"
@@ -324,7 +362,40 @@ export default function SellerDetailPage({
                   Phone Number
                 </label>
                 <Input
-                  value={selectedApplication.user.phoneNumber || "N/A"}
+                  value={seller.phone || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  City
+                </label>
+                <Input
+                  value={seller.city || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Region
+                </label>
+                <Input
+                  value={seller.region || ""}
+                  disabled
+                  readOnly
+                  className="mt-1"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-muted-foreground">
+                  Complete Address
+                </label>
+                <Input
+                  value={seller.completeAddress || ""}
                   disabled
                   readOnly
                   className="mt-1"
@@ -333,42 +404,38 @@ export default function SellerDetailPage({
             </div>
           </div>
 
-          {/* Business Information */}
+          {/* Product Information */}
           <div>
-            <h3 className="text-lg font-medium mb-3">Business Information</h3>
+            <h3 className="text-lg font-medium mb-3">Product Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Business Name
+                  Types of Mushrooms You Grow
                 </label>
                 <Input
-                  value={selectedApplication.businessInfo.businessName || "N/A"}
+                  value={(seller.typesOfMushroom || []).join(", ")}
                   disabled
                   readOnly
                   className="mt-1"
                 />
               </div>
-              <div className="col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Business Address
+                  Monthly Production Capacity
                 </label>
                 <Input
-                  value={
-                    selectedApplication.businessInfo.businessAddress || "N/A"
-                  }
+                  value={seller.monthlyProductionCapacity || ""}
                   disabled
                   readOnly
                   className="mt-1"
                 />
               </div>
-              <div className="col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-muted-foreground">
-                  Additional Information
+                  Certifications
                 </label>
                 <Input
-                  value={
-                    selectedApplication.businessInfo.additionalInfo || "N/A"
-                  }
+                  value={(seller.certifications || []).join(", ")}
                   disabled
                   readOnly
                   className="mt-1"
@@ -379,133 +446,53 @@ export default function SellerDetailPage({
 
           {/* Documents */}
           <div className="border rounded-lg p-4">
-            <h3 className="text-lg font-medium mb-3">Business Documents</h3>
+            <h3 className="text-lg font-medium mb-3">Required Documents</h3>
             <p className="text-sm text-muted-foreground mb-3">
               Documents required for verification.
             </p>
 
-            <div className="grid grid-cols-3 gap-4">
-              {/* Government ID */}
-              {selectedApplication.documents.governmentId && (
-                <div className="border rounded-md p-3 flex flex-col items-start">
-                  <div className="text-sm font-medium">
-                    Valid ID of Business Owner
-                  </div>
-                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
-                    {selectedApplication.documents.governmentId.match(
-                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
-                    ) ? (
-                      <img
-                        src={selectedApplication.documents.governmentId}
-                        alt="Government ID"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          e.currentTarget.parentElement!.innerHTML =
-                            '<span class="text-gray-500">📄 Document</span>';
-                        }}
-                      />
-                    ) : (
-                      <span className="text-gray-500">📄 Document</span>
-                    )}
-                  </div>
-                  <div className="mt-3 w-full">
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={() =>
-                        window.open(
-                          selectedApplication.documents.governmentId,
-                          "_blank"
-                        )
-                      }
-                    >
-                      View
-                    </Button>
-                  </div>
-                </div>
-              )}
+            {documentItems.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No uploaded documents found in this seller application record.
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                {documentItems.map((item) => {
+                  const isImage = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(
+                    String(item.url),
+                  );
 
-              {/* BIR Certificate */}
-              {selectedApplication.documents.birCertificate && (
-                <div className="border rounded-md p-3 flex flex-col items-start">
-                  <div className="text-sm font-medium">BIR Certificate</div>
-                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
-                    {selectedApplication.documents.birCertificate.match(
-                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
-                    ) ? (
-                      <img
-                        src={selectedApplication.documents.birCertificate}
-                        alt="BIR Certificate"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          e.currentTarget.parentElement!.innerHTML =
-                            '<span class="text-gray-500">📄 PDF</span>';
-                        }}
-                      />
-                    ) : (
-                      <span className="text-gray-500">📄 PDF</span>
-                    )}
-                  </div>
-                  <div className="mt-3 w-full">
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={() =>
-                        window.open(
-                          selectedApplication.documents.birCertificate,
-                          "_blank"
-                        )
-                      }
+                  return (
+                    <div
+                      key={item.key}
+                      className="border rounded-md p-3 flex flex-col items-start"
                     >
-                      View
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Business Certificate */}
-              {selectedApplication.documents.businessCertificate && (
-                <div className="border rounded-md p-3 flex flex-col items-start">
-                  <div className="text-sm font-medium">
-                    Business Certificate
-                  </div>
-                  <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
-                    {selectedApplication.documents.businessCertificate.match(
-                      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i
-                    ) ? (
-                      <img
-                        src={selectedApplication.documents.businessCertificate}
-                        alt="Business Certificate"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          e.currentTarget.parentElement!.innerHTML =
-                            '<span class="text-gray-500">📄 PDF</span>';
-                        }}
-                      />
-                    ) : (
-                      <span className="text-gray-500">📄 PDF</span>
-                    )}
-                  </div>
-                  <div className="mt-3 w-full">
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={() =>
-                        window.open(
-                          selectedApplication.documents.businessCertificate,
-                          "_blank"
-                        )
-                      }
-                    >
-                      View
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+                      <div className="text-sm font-medium">{item.label}</div>
+                      <div className="mt-2 w-full h-32 bg-gray-100 border flex items-center justify-center">
+                        {isImage ? (
+                          <img
+                            src={String(item.url)}
+                            alt={item.label}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full" />
+                        )}
+                      </div>
+                      <div className="mt-3 w-full">
+                        <Button
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => window.open(String(item.url), "_blank")}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {seller.status === "pending" && (

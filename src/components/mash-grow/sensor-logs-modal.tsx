@@ -913,7 +913,7 @@ export default function SensorLogsModal({
             <div className="flex-1 overflow-auto">
               <div className="relative w-full flex flex-col bg-background">
                 {/* Header */}
-                <div className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                <div className="shrink-0 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
                   <div className="px-3 sm:px-4 pt-3 sm:pt-4 pb-1">
                     <Button
                       variant="ghost"
@@ -1261,7 +1261,7 @@ export default function SensorLogsModal({
                                         <PopoverTrigger asChild>
                                           <Button
                                             variant="outline"
-                                            className="w-[160px] justify-start gap-2"
+                                            className="w-40 justify-start gap-2"
                                           >
                                             <CalendarIcon className="h-4 w-4" />
                                             {chartDateFrom
@@ -1296,7 +1296,7 @@ export default function SensorLogsModal({
                                         <PopoverTrigger asChild>
                                           <Button
                                             variant="outline"
-                                            className="w-[160px] justify-start gap-2"
+                                            className="w-40 justify-start gap-2"
                                           >
                                             <CalendarIcon className="h-4 w-4" />
                                             {chartDateTo
@@ -1346,7 +1346,7 @@ export default function SensorLogsModal({
                       </div>
 
                       {/* Data Summary Stats */}
-                      <Card className="border-none shadow-sm bg-gradient-to-r from-primary/5 to-primary/10">
+                      <Card className="border-none shadow-sm bg-linear-to-r from-primary/5 to-primary/10">
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-sm flex items-center gap-2">
@@ -1839,7 +1839,7 @@ export default function SensorLogsModal({
                                         <PopoverTrigger asChild>
                                           <Button
                                             variant="outline"
-                                            className="w-[160px] justify-start gap-2"
+                                            className="w-40 justify-start gap-2"
                                           >
                                             <CalendarIcon className="h-4 w-4" />
                                             {dateFrom
@@ -1869,7 +1869,7 @@ export default function SensorLogsModal({
                                         <PopoverTrigger asChild>
                                           <Button
                                             variant="outline"
-                                            className="w-[160px] justify-start gap-2"
+                                            className="w-40 justify-start gap-2"
                                           >
                                             <CalendarIcon className="h-4 w-4" />
                                             {dateTo
@@ -1985,7 +1985,7 @@ export default function SensorLogsModal({
                       </Card>
 
                       {/* Sensor Logs Table */}
-                      <div className="w-full rounded-lg border bg-gradient-to-b from-background to-muted/30">
+                      <div className="w-full rounded-lg border bg-linear-to-b from-background to-muted/30">
                         {loading ? (
                           <div className="flex items-center justify-center py-12">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -2258,7 +2258,7 @@ export default function SensorLogsModal({
                           </div>
                         </div>
 
-                        <div className="w-full rounded-lg border bg-gradient-to-b from-background to-muted/30">
+                        <div className="w-full rounded-lg border bg-linear-to-b from-background to-muted/30">
                           {paginatedActuatorLogs.length > 0 ? (
                             <div className="p-2 sm:p-4 space-y-2">
                               {paginatedActuatorLogs.map((log) => (

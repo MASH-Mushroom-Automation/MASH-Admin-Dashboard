@@ -26,7 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useDashboardStore } from "../../store/dashboardStore";
+import { useDashboardSales } from "@/hooks/useDashboardData";
 
 type ChartPoint = {
   day: string;
@@ -35,28 +35,19 @@ type ChartPoint = {
 
 export default function ECommerceSection() {
   const [period, setPeriod] = useState<string>("weekly");
-  const { sales, fetchSales } = useDashboardStore();
-
-  // Fetch sales data when period changes
-  React.useEffect(() => {
-    const daysMap: Record<string, number> = {
-      daily: 1,
-      weekly: 7,
-      monthly: 30,
-      yearly: 365,
-    };
-    const days = daysMap[period] || 7;
-    console.log(
-      `[ECommerceSection] Fetching sales for period: ${period} (${days} days)`
-    );
-    fetchSales(days);
-  }, [period, fetchSales]);
+  const daysMap: Record<string, number> = {
+    daily: 1,
+    weekly: 7,
+    monthly: 30,
+    yearly: 365,
+  };
+  const { data: sales } = useDashboardSales(daysMap[period] || 7);
 
   // Use real data from store, or empty array as fallback
   const displayData = useMemo<ChartPoint[]>(() => {
     if (!sales || sales.length === 0) {
       console.log(
-        "[ECommerceSection] No sales data available, showing empty chart"
+        "[ECommerceSection] No sales data available, showing empty chart",
       );
       return [];
     }
@@ -68,9 +59,9 @@ export default function ECommerceSection() {
     () =>
       displayData.reduce(
         (sum: number, item: ChartPoint) => sum + (item.sales || 0),
-        0
+        0,
       ),
-    [displayData]
+    [displayData],
   );
 
   const todaySales = displayData[displayData.length - 1]?.sales ?? 0;

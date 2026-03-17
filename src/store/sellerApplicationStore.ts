@@ -25,6 +25,14 @@ export interface SellerApplication {
   storeName?: string; // May not be in the response yet
   email: string;
   address?: string; // May not be in the response yet
+  status?:
+  | "PENDING"
+  | "APPROVED"
+  | "COMPLETED"
+  | "FAILED"
+  | "PROCESSING"
+  | "EXPIRED"
+  | "REJECTED";
   currentRole: string;
   requestedRole: string;
   queuedAt: string;
@@ -67,16 +75,28 @@ export interface SellerApplicationDetail {
   };
   businessInfo: {
     businessName?: string;
+    businessType?: string;
+    taxIdNumber?: string;
     additionalInfo?: string;
     businessAddress?: string;
   };
+  contactInfo?: {
+    city?: string;
+    region?: string;
+    completeAddress?: string;
+  };
+  productInfo?: {
+    typesOfMushrooms?: string[];
+    monthlyProductionCapacity?: string;
+    certifications?: string[];
+  };
   status:
-    | "PENDING"
-    | "APPROVED"
-    | "COMPLETED"
-    | "FAILED"
-    | "PROCESSING"
-    | "EXPIRED";
+  | "PENDING"
+  | "APPROVED"
+  | "COMPLETED"
+  | "FAILED"
+  | "PROCESSING"
+  | "EXPIRED";
   queuedAt: string;
   processedAt?: string | null;
   completedAt?: string | null;
@@ -293,9 +313,8 @@ export const useSellerApplicationStore = create<SellerApplicationState>()(
         }
 
         const queryString = queryParams.toString();
-        const endpoint = `v1/super-admin/seller-applications/all${
-          queryString ? `?${queryString}` : ""
-        }`;
+        const endpoint = `v1/super-admin/seller-applications/all${queryString ? `?${queryString}` : ""
+          }`;
 
         console.log("[sellerApplicationStore] Fetching from API:", endpoint);
 
