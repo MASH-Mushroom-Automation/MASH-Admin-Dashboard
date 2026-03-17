@@ -1,8 +1,7 @@
- 
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import { getCsrfToken } from "@/lib/csrfService";
 import { UserItem, UserDetail } from "@/store/userManagementStore";
 
 export const useUsers = (page: number = 1, limit: number = 100) => {
@@ -147,18 +146,16 @@ export const useArchiveUser = () => {
       id: string;
       archive?: boolean;
     }) => {
-      const csrfToken = await getCsrfToken();
-      if (!csrfToken) {
-        throw new Error("Missing CSRF token");
+      if (!id) {
+        throw new Error("Invalid user ID");
       }
 
-      const payload = { isActive: !archive };
+      if (archive) {
+        const res = await api.delete(`v1/users/${id}`);
+        return res.data;
+      }
 
-      const res = await api.put(`v1/users/${id}/status`, payload, {
-        headers: {
-          "x-csrf-token": csrfToken,
-        },
-      });
+      const res = await api.put(`v1/users/${id}`, { isActive: true });
       return res.data;
     },
     onSuccess: () => {

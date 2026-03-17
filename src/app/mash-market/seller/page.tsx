@@ -1,5 +1,5 @@
- 
- 
+
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -29,6 +29,8 @@ import InlineSpinner from "@/components/ui/inline-spinner";
 // Local Seller type (matches SellerTable component expectations)
 interface Seller {
   id: string;
+  requestId: string;
+  userId: string;
   name: string;
   storeName: string;
   email: string;
@@ -64,40 +66,44 @@ export default function SellerContent() {
   const router = useRouter();
 
   // Use seller application React Query hooks
-  const apiStatus =
-    activeTab === "pending"
-      ? "PENDING"
-      : activeTab === "approved"
-        ? "COMPLETED"
-        : "FAILED";
+  const apiStatus = activeTab === "pending" ? "PENDING" : undefined;
   const {
     data: allApplications = [],
     isLoading,
     error,
-  } = useSellers({ status: apiStatus });
+  } = useSellers(apiStatus ? { status: apiStatus } : undefined);
   const { mutateAsync: approveApplication } = useApproveSeller();
   const { mutateAsync: rejectApplication } = useRejectSeller();
   const { mutateAsync: archiveUser } = useArchiveUser();
 
   // Transform applications to Seller format
   const sellers: Seller[] =
-    allApplications.map((app) => ({
-      id: app.requestId,
-      name: app.sellerName,
-      storeName: app.storeName || "N/A",
-      email: app.email,
-      status: app.isApproved
-        ? "approved"
-        : activeTab === "rejected"
-          ? "rejected"
-          : "pending",
-      rejectReason: undefined,
-      address: app.address,
-      username: app.user.username,
-      phone: undefined,
-      businessName: app.storeName,
-      businessType: undefined,
-    })) || [];
+    allApplications.map((app) => {
+      const normalizedStatus = String(app.status || "").toUpperCase();
+
+      return {
+        id: app.requestId,
+        requestId: app.requestId,
+        userId: app.userId || app.user?.id || "",
+        name: app.sellerName,
+        storeName: app.storeName || "",
+        email: app.email,
+        status:
+          normalizedStatus === "COMPLETED" ||
+            normalizedStatus === "APPROVED" ||
+            app.isApproved
+            ? "approved"
+            : normalizedStatus === "FAILED" || normalizedStatus === "REJECTED"
+              ? "rejected"
+              : "pending",
+        rejectReason: undefined,
+        address: app.address,
+        username: app.user?.username || "",
+        phone: undefined,
+        businessName: app.storeName,
+        businessType: undefined,
+      };
+    }) || [];
 
   const fetchError = error ? (error as Error).message : null;
 
@@ -136,8 +142,7 @@ export default function SellerContent() {
       // Navigate to seller detail page with requestId
       // URL shows username for better UX, but requestId is passed via query
       router.push(
-        `/mash-market/seller/${seller.username || seller.id}?requestId=${
-          seller.id
+        `/mash-market/seller/${seller.username || seller.id}?requestId=${seller.id
         }`,
       );
     } catch (err) {
@@ -170,9 +175,18 @@ export default function SellerContent() {
   };
 
   const handleArchive = async (id: string) => {
+    const userId =
+      sellers.find((seller) => seller.id === id || seller.requestId === id)
+        ?.userId || id;
+
+    if (!userId) {
+      toast.error("Unable to archive seller: missing user ID");
+      return;
+    }
+
     try {
       toast.loading("Archiving seller...", { id: "archive-seller" });
-      await archiveUser({ id, archive: true });
+      await archiveUser({ id: userId, archive: true });
       toast.success("Seller archived successfully", { id: "archive-seller" });
     } catch (err) {
       console.error("Failed to archive seller:", err);
@@ -181,15 +195,38 @@ export default function SellerContent() {
   };
 
   const handleBulkArchive = async () => {
-    const idsToArchive =
+    const requestIdsToArchive =
       bulkArchiveIds && bulkArchiveIds.length
         ? bulkArchiveIds
         : deletingId
           ? [deletingId]
           : [];
-    if (idsToArchive.length === 0) {
+    if (requestIdsToArchive.length === 0) {
       toast.error("No seller selected for archiving");
       setShowArchiveConfirm(false);
+      return;
+    }
+
+    const userIdsToArchive = Array.from(
+      new Set(
+        requestIdsToArchive
+          .map(
+            (requestId) =>
+              sellers.find(
+                (seller) =>
+                  seller.id === requestId || seller.requestId === requestId,
+              )?.userId,
+          )
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (userIdsToArchive.length === 0) {
+      toast.error("Unable to archive selected seller(s): missing user IDs");
+      setShowArchiveConfirm(false);
+      setDeletingId(null);
+      setBulkArchiveIds(null);
+      setBulkArchiveNames(null);
       return;
     }
 
@@ -197,7 +234,7 @@ export default function SellerContent() {
       toast.loading("Archiving seller(s)...", { id: "archive-seller" });
       // Run all archive requests in parallel via backend API
       const results = await Promise.allSettled(
-        idsToArchive.map((id) => archiveUser({ id, archive: true })),
+        userIdsToArchive.map((id) => archiveUser({ id, archive: true })),
       );
 
       const successes = results.filter((r) => r.status === "fulfilled").length;
@@ -336,35 +373,35 @@ export default function SellerContent() {
       },
       activeTab === "rejected"
         ? {
-            accessorKey: "rejectReason",
-            header: "Reason",
-            cell: ({ getValue }: any) => (
-              <div
-                className="max-w-[300px] truncate"
-                title={String(getValue() ?? "—")}
-              >
-                {getValue() ?? "—"}
-              </div>
-            ),
-          }
+          accessorKey: "rejectReason",
+          header: "Reason",
+          cell: ({ getValue }: any) => (
+            <div
+              className="max-w-[300px] truncate"
+              title={String(getValue() ?? "—")}
+            >
+              {getValue() ?? "—"}
+            </div>
+          ),
+        }
         : {
-            accessorKey: "status",
-            header: "Status",
-            cell: ({ getValue }: any) => (
-              <div
-                className="max-w-40 truncate"
-                title={String(getValue() ?? "")}
+          accessorKey: "status",
+          header: "Status",
+          cell: ({ getValue }: any) => (
+            <div
+              className="max-w-40 truncate"
+              title={String(getValue() ?? "")}
+            >
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
+                  getValue() ?? "",
+                )}`}
               >
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(
-                    getValue() ?? "",
-                  )}`}
-                >
-                  {getValue() === "pending" ? "For Approval" : getValue()}
-                </span>
-              </div>
-            ),
-          },
+                {getValue() === "pending" ? "For Approval" : getValue()}
+              </span>
+            </div>
+          ),
+        },
       {
         id: "actions",
         header: "Actions",
@@ -558,8 +595,7 @@ export default function SellerContent() {
 
                       if (approved > 0) {
                         toast.success(
-                          `Successfully approved ${approved} seller(s)${
-                            failed > 0 ? `, ${failed} failed` : ""
+                          `Successfully approved ${approved} seller(s)${failed > 0 ? `, ${failed} failed` : ""
                           }`,
                           { duration: 4000 },
                         );
@@ -594,7 +630,13 @@ export default function SellerContent() {
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-            label={activeTab === "pending" ? "Pending" : "Rejected"}
+            label={
+              activeTab === "pending"
+                ? "Pending"
+                : activeTab === "approved"
+                  ? "Approved"
+                  : "Rejected"
+            }
             rowsPerPageOptions={[5, 10, 25, 50, 100]}
             onItemsPerPageChange={(n) => {
               setItemsPerPage(n);
@@ -662,8 +704,7 @@ export default function SellerContent() {
 
                   if (approved > 0) {
                     toast.success(
-                      `Successfully rejected ${approved} seller(s)${
-                        failed > 0 ? `, ${failed} failed` : ""
+                      `Successfully rejected ${approved} seller(s)${failed > 0 ? `, ${failed} failed` : ""
                       }`,
                       { duration: 4000 },
                     );

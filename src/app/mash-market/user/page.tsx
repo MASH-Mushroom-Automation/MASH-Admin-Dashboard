@@ -240,16 +240,16 @@ export default function UsersManagement() {
 
   // dynamic filter sections (data-driven)
   const FILTER_SECTIONS = [
-    {
-      key: "statuses",
-      label: "Status",
-      options: ["Active", "Inactive"],
-    },
-    {
-      key: "regions",
-      label: "Region",
-      options: regionOptions,
-    },
+    // {
+    //   key: "statuses",
+    //   label: "Status",
+    //   options: ["Active", "Inactive"],
+    // },
+    // {
+    //   key: "regions",
+    //   label: "Region",
+    //   options: regionOptions,
+    // },
     {
       key: "roles",
       label: "Role",
@@ -383,8 +383,8 @@ export default function UsersManagement() {
                                     : section.key === "regions"
                                       ? selectedRegions.includes(optValue)
                                       : selectedRoles.includes(
-                                          String(optValue),
-                                        );
+                                        String(optValue),
+                                      );
                                 return (
                                   <label
                                     key={String(optValue)}

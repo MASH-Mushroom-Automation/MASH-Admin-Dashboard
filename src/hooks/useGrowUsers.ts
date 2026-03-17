@@ -5,9 +5,10 @@ import { queryKeys } from "@/lib/query-keys";
 export function useGrowUsers(options?: {
   archived?: boolean;
   hasDevice?: boolean;
-}) {
+}, enabled: boolean = true) {
   return useQuery({
     queryKey: ["grow-users", { ...options }],
+    enabled,
     queryFn: async () => {
       const response = await growUserService.getAll({
         limit: 1000,

@@ -6,11 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
-  Package,
   Warehouse,
   ArrowRight,
-  TrendingUp,
-  TrendingDown,
 } from "lucide-react";
 import ChamberInventorySection from "./chamber-inventory";
 import { useDashboardOverview } from "@/hooks/useDashboardData";
@@ -19,22 +16,34 @@ import PromoCarousel from "./promo-carousel";
 
 export default function DashboardContent() {
   const { data: overview } = useDashboardOverview();
-  const { data: pendingApplications } = useSellers({ status: "PENDING" });
+  const { data: allSellerApplications } = useSellers();
 
   // Use fetched data from store, fallback to 0 if not available
   const chambers = overview?.chambers || { active: 0, inactive: 0 };
-  const orders = overview?.orders || { completed: 0, pending: 0 };
-  const products = overview?.products || { pending: 0, approved: 0 };
+
+  const mappedSellerApplications = (allSellerApplications || []).map((app) => {
+    const normalizedStatus =
+      app.status === "COMPLETED" || app.status === "APPROVED" || app.isApproved
+        ? "approved"
+        : app.status === "FAILED" || app.status === "REJECTED"
+          ? "rejected"
+          : "pending";
+    return { ...app, normalizedStatus };
+  });
+
   const sellerApplications = {
     pending:
-      pendingApplications?.length ?? overview?.sellerApplications?.pending ?? 0,
-    approved: overview?.sellerApplications?.approved ?? 0,
+      mappedSellerApplications.filter((app) => app.normalizedStatus === "pending").length ||
+      overview?.sellerApplications?.pending ||
+      0,
+    approved:
+      mappedSellerApplications.filter((app) => app.normalizedStatus === "approved").length ||
+      overview?.sellerApplications?.approved ||
+      0,
   };
 
   console.log("[DashboardContent] Rendering with data:", {
     chambers,
-    orders,
-    products,
     sellerApplications,
   });
 
@@ -47,8 +56,6 @@ export default function DashboardContent() {
   };
 
   const chambersDelta = computeDelta(chambers.active, chambers.inactive);
-  const ordersDelta = computeDelta(orders.completed, orders.pending);
-  const productsDelta = computeDelta(products.pending, products.approved);
   const sellerApplicationsDelta = computeDelta(
     sellerApplications.pending,
     sellerApplications.approved,

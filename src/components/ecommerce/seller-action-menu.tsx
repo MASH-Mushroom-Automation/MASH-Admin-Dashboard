@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Eye, Edit, Check, X, Trash2, Archive } from "lucide-react";
+import { Eye, Check, X, Trash2, Archive } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ComponentType, SVGProps } from "react";
 import type { TabType } from "@/app/mash-market/seller/page";
@@ -92,20 +92,7 @@ export function SellerActionMenu({
           { label: "Reject", icon: X, action: onReject! },
         ];
       case "approved":
-        return [
-          ...baseItems,
-          {
-            label: "Edit",
-            icon: Edit,
-            action: () => console.log("Edit", seller.id),
-          },
-          {
-            label: "Archive",
-            icon: Archive,
-            action: onArchive,
-            destructive: true,
-          },
-        ];
+        return baseItems;
       case "rejected":
         return [
           ...baseItems,

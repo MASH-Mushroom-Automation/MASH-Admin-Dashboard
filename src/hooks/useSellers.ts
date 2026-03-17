@@ -1,4 +1,4 @@
- 
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -11,9 +11,10 @@ import {
 export const useSellers = (params?: {
   status?: "PENDING" | "COMPLETED" | "FAILED" | "PROCESSING" | "EXPIRED";
   userId?: string;
-}) => {
+}, enabled: boolean = true) => {
   return useQuery({
     queryKey: [...queryKeys.sellers.lists(), { ...params }],
+    enabled,
     queryFn: async () => {
       const endpoint =
         params?.status === "PENDING" && !params?.userId
@@ -91,13 +92,117 @@ export const useSellerById = (requestId: string) => {
       const payload: any = res.data;
       let data: any = null;
 
-      if (payload?.data) data = payload.data;
+      // Normalize possible wrapper structures
+      // e.g. { success, data: { success, data: {...actual} } }
+      if (payload?.data?.data) data = payload.data.data;
+      else if (payload?.data) data = payload.data;
+      else if (payload?.application) data = payload.application;
       else if (payload && !payload.success) data = payload;
       else data = payload;
+
+      // Defensive unwrapping for odd nested responses
+      if (
+        data?.data &&
+        !data?.user &&
+        !data?.businessInfo &&
+        !data?.businessName &&
+        !data?.documents
+      ) {
+        data = data.data;
+      }
 
       if (!data) throw new Error("Seller application not found");
 
       let userObj = data.user || data.userData || {};
+
+      const pickFirst = (...values: any[]) => {
+        for (const value of values) {
+          if (value !== undefined && value !== null && String(value).trim() !== "") {
+            return value;
+          }
+        }
+        return undefined;
+      };
+
+      const normalizeStringArray = (value: any): string[] => {
+        if (Array.isArray(value)) {
+          return value
+            .map((item) => String(item ?? "").trim())
+            .filter(Boolean);
+        }
+        if (typeof value === "string") {
+          return value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }
+        return [];
+      };
+
+      const normalizeDocValue = (value: any): string | undefined => {
+        if (!value) return undefined;
+        if (typeof value === "string") return value.trim() || undefined;
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            const normalized = normalizeDocValue(item);
+            if (normalized) return normalized;
+          }
+          return undefined;
+        }
+        if (typeof value === "object") {
+          return pickFirst(
+            value.url,
+            value.fileUrl,
+            value.path,
+            value.value,
+            value.src,
+            value.location,
+          );
+        }
+        return undefined;
+      };
+
+      const businessInfoObj =
+        data.businessInfo ||
+        data.business_information ||
+        data.businessDetails ||
+        data.business ||
+        {};
+
+      const contactInfoObj = data.contactInfo || data.contact || {};
+      const productInfoObj = data.productInfo || data.product || {};
+
+      const docsObj =
+        data.documents ||
+        data.businessDocuments ||
+        data.document ||
+        businessInfoObj.documents ||
+        {};
+      const docsArray = Array.isArray(docsObj)
+        ? docsObj
+        : [
+          ...(Array.isArray(data.businessDocuments) ? data.businessDocuments : []),
+          ...(Array.isArray(businessInfoObj.documents)
+            ? businessInfoObj.documents
+            : []),
+          ...(Array.isArray(businessInfoObj.requirements)
+            ? businessInfoObj.requirements
+            : []),
+        ];
+
+      const getDocFromArray = (typeKeywords: string[]) => {
+        const matched = docsArray.find((doc: any) => {
+          const t = String(doc?.type || doc?.name || doc?.documentType || "").toLowerCase();
+          return typeKeywords.some((k) => t.includes(k));
+        });
+        return pickFirst(
+          normalizeDocValue(matched),
+          normalizeDocValue(matched?.url),
+          normalizeDocValue(matched?.fileUrl),
+          normalizeDocValue(matched?.path),
+          normalizeDocValue(matched?.value),
+        );
+      };
 
       // Fallback to cache if user details are missing
       if (!userObj.firstName || !userObj.lastName || !userObj.email) {
@@ -139,19 +244,117 @@ export const useSellerById = (requestId: string) => {
         currentRole: data.currentRole || userObj.role || "USER",
         requestedRole: data.requestedRole || "SELLER",
         documents: {
-          governmentId: data.documents?.governmentId,
-          birCertificate: data.documents?.birCertificate,
-          businessCertificate: data.documents?.businessCertificate,
-          bankAccountDocumentation: data.documents?.bankAccountDocumentation,
+          governmentId: normalizeDocValue(
+            pickFirst(
+              docsObj?.governmentId,
+              docsObj?.government_id,
+              docsObj?.validId,
+              docsObj?.valid_id,
+              docsObj?.governmentIdUrl,
+              docsObj?.id,
+            ),
+          ) ||
+            getDocFromArray(["government", "valid id", "id"]),
+          birCertificate: normalizeDocValue(
+            pickFirst(
+              docsObj?.birCertificate,
+              docsObj?.bir_certificate,
+              docsObj?.bir,
+              docsObj?.birCertificateUrl,
+            ),
+          ) ||
+            getDocFromArray(["bir"]),
+          businessCertificate: normalizeDocValue(
+            pickFirst(
+              docsObj?.businessCertificate,
+              docsObj?.business_certificate,
+              docsObj?.dti,
+              docsObj?.sec,
+              docsObj?.businessCertificateUrl,
+              docsObj?.permit,
+            ),
+          ) ||
+            getDocFromArray(["business", "dti", "sec", "certificate"]),
+          bankAccountDocumentation: normalizeDocValue(
+            pickFirst(
+              docsObj?.bankAccountDocumentation,
+              docsObj?.bank_account_documentation,
+              docsObj?.bankDocument,
+              docsObj?.bank,
+            ),
+          ) ||
+            getDocFromArray(["bank", "account"]),
         },
         businessInfo: {
-          businessName: data.businessInfo?.businessName || data.businessName,
-          additionalInfo:
-            data.businessInfo?.additionalInfo || data.additionalInfo,
-          businessAddress:
-            data.businessInfo?.businessAddress ||
-            data.businessAddress ||
+          businessName: pickFirst(
+            businessInfoObj?.businessName,
+            businessInfoObj?.name,
+            data.businessName,
+            data.storeName,
+          ),
+          businessType: pickFirst(
+            businessInfoObj?.businessType,
+            businessInfoObj?.type,
+            data.businessType,
+          ),
+          taxIdNumber: pickFirst(
+            businessInfoObj?.taxIdNumber,
+            businessInfoObj?.taxId,
+            data.taxIdNumber,
+            data.taxId,
+          ),
+          additionalInfo: pickFirst(
+            businessInfoObj?.additionalInfo,
+            businessInfoObj?.description,
+            data.additionalInfo,
+            data.adminNotes,
+          ),
+          businessAddress: pickFirst(
+            businessInfoObj?.businessAddress,
+            businessInfoObj?.address,
+            data.businessAddress,
             data.address,
+          ),
+        },
+        contactInfo: {
+          city: pickFirst(
+            contactInfoObj?.city,
+            userObj?.city,
+            data.city,
+          ),
+          region: pickFirst(
+            contactInfoObj?.region,
+            userObj?.region,
+            data.region,
+          ),
+          completeAddress: pickFirst(
+            contactInfoObj?.completeAddress,
+            contactInfoObj?.address,
+            businessInfoObj?.businessAddress,
+            data.completeAddress,
+            data.address,
+          ),
+        },
+        productInfo: {
+          typesOfMushrooms: normalizeStringArray(
+            pickFirst(
+              productInfoObj?.typesOfMushrooms,
+              productInfoObj?.typesOfMushroom,
+              data.typesOfMushrooms,
+              data.typesOfMushroom,
+            ),
+          ),
+          monthlyProductionCapacity: pickFirst(
+            productInfoObj?.monthlyProductionCapacity,
+            productInfoObj?.capacity,
+            data.monthlyProductionCapacity,
+          ),
+          certifications: normalizeStringArray(
+            pickFirst(
+              productInfoObj?.certifications,
+              data.certifications,
+            ),
+          ),
         },
         status: data.status || "PENDING",
         queuedAt: data.queuedAt || data.createdAt || new Date().toISOString(),
@@ -165,6 +368,9 @@ export const useSellerById = (requestId: string) => {
       return mappedDetail;
     },
     enabled: !!requestId,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };
 
