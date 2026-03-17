@@ -48,7 +48,7 @@ export default function ChamberInventorySection() {
     data: users = [],
     isLoading: userLoading,
     error: userError,
-  } = useUsers(1, 10);
+  } = useUsers(1, 100);
 
   // Combine loading and error states
   const loading = { ...dashboardLoading, users: userLoading };
@@ -86,37 +86,88 @@ export default function ChamberInventorySection() {
     },
   });
 
-  // Use fetched data for pie chart — show only ADMIN, BUYER, GROWER
-  const allowedRoles = ["ADMIN", "BUYER", "GROWER"];
-
-  const roleLabelMap: Record<string, string> = {
-    ADMIN: "Seller",
-    BUYER: "Buyer",
-    GROWER: "Grower",
+  // Role mapping for display labels (frontend friendly names)
+  const getRoleLabel = (backendRole: string): string => {
+    if (!backendRole) return "Unknown";
+    
+    const normalizedRole = backendRole.toLowerCase().trim();
+    
+    // Handle all variations of user roles
+    if (normalizedRole === "user" || normalizedRole === "users" || normalizedRole === "buyer" || normalizedRole === "buyers") {
+      return "Buyers";
+    }
+    if (normalizedRole === "admin") {
+      return "Seller";
+    }
+    if (normalizedRole === "super_admin" || normalizedRole === "super admin" || normalizedRole === "superadmin") {
+      return "Admin";
+    }
+    if (normalizedRole === "grower") {
+      return "Grower";
+    }
+    
+    return backendRole;
   };
 
-  const colors: Record<string, string> = {
-    ADMIN: "#58B33A",
-    BUYER: "#2E5E4E",
-    GROWER: "#C6DABF",
+  const getColorForRole = (backendRole: string): string => {
+    if (!backendRole) return "#888888";
+    
+    const normalizedRole = backendRole.toLowerCase().trim();
+    
+    if (normalizedRole === "user" || normalizedRole === "users" || normalizedRole === "buyer" || normalizedRole === "buyers") {
+      return "#2E5E4E";
+    }
+    if (normalizedRole === "admin") {
+      return "#58B33A";
+    }
+    if (normalizedRole === "super_admin" || normalizedRole === "super admin" || normalizedRole === "superadmin") {
+      return "#FF6B35";
+    }
+    if (normalizedRole === "grower") {
+      return "#C6DABF";
+    }
+    
+    return "#888888";
   };
+
+  // Get role counts from actual users data (not backend stats)
+  // Filter to match User Management page: active users only, excluding SUPER_ADMIN
+  const filteredUsersForStats = actualUsers.filter(
+    (user) =>
+      user.role?.toUpperCase() !== "SUPER_ADMIN" && user.isActive === true,
+  );
+
+  // Calculate role distribution from actual users
+  const userRoleCount: Record<string, number> = {};
+  filteredUsersForStats.forEach((user) => {
+    const role = user.role || "UNKNOWN";
+    userRoleCount[role] = (userRoleCount[role] || 0) + 1;
+  });
+
+  console.log("[ChamberInventory] Calculated role counts from actual users:", userRoleCount);
 
   // Use fetched data for table — show only the 5 most recent entries
   const registryAll = actualChambers?.chambers || [];
   const registry = registryAll.slice(0, 5);
 
-  // Calculate user role distribution from actualUsers array
-  const userRoleCount: Record<string, number> = {};
-  actualUsers.forEach((user: UserItem) => {
-    const role = user.role || "UNKNOWN";
-    userRoleCount[role] = (userRoleCount[role] || 0) + 1;
-  });
-
-  const userPieData = allowedRoles.map((key) => ({
-    name: roleLabelMap[key] ?? key,
-    value: userRoleCount[key] ?? 0,
-    color: colors[key] ?? "#888888",
-  }));
+  // Build pie chart data from backend stats - exclude SUPER_ADMIN from display
+  const userPieData = Object.entries(userRoleCount)
+    .map(([role, count]) => ({
+      name: getRoleLabel(role),
+      value: count as number,
+      color: getColorForRole(role),
+      backendRole: role,
+    }))
+    .filter((item) => {
+      if (item.value <= 0) return false;
+      const normalized = item.backendRole?.toLowerCase().trim() || "";
+      // Exclude super admin and admin roles
+      return (
+        normalized !== "super_admin" &&
+        normalized !== "super admin" &&
+        normalized !== "superadmin"
+      );
+    }); // Only show roles with users, exclude SUPER_ADMIN
 
   // Debug: log registry to help verify data arrives and is mapped correctly
   if (typeof window !== "undefined") {
@@ -216,7 +267,7 @@ export default function ChamberInventorySection() {
                       </TableCell>
                       <TableCell className="py-3 px-4 text-foreground">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-foreground">
-                          {roleLabelMap[user.role || ""] || user.role}
+                          {getRoleLabel(user.role || "")}
                         </span>
                       </TableCell>
                     </TableRow>
