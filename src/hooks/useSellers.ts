@@ -169,7 +169,7 @@ export const useSellerById = (requestId: string) => {
         data.business ||
         {};
 
-      const contactInfoObj = data.contactInfo || data.contact || {};
+      const contactInfoObj = data.contactInfo || data.userInfo || data.contact || {};
       const productInfoObj = data.productInfo || data.product || {};
 
       const docsObj =
@@ -339,8 +339,10 @@ export const useSellerById = (requestId: string) => {
           typesOfMushrooms: normalizeStringArray(
             pickFirst(
               productInfoObj?.typesOfMushrooms,
+              productInfoObj?.mushroomTypes,
               productInfoObj?.typesOfMushroom,
               data.typesOfMushrooms,
+              data.mushroomTypes,
               data.typesOfMushroom,
             ),
           ),
