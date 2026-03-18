@@ -36,7 +36,7 @@ interface Seller {
   email: string;
   status: "pending" | "approved" | "rejected";
   rejectReason?: string;
-  address?: string;
+  region?: string;
   username?: string;
   phone?: string;
   businessName?: string;
@@ -65,13 +65,12 @@ export default function SellerContent() {
   } | null>(null);
   const router = useRouter();
 
-  // Use seller application React Query hooks
-  const apiStatus = activeTab === "pending" ? "PENDING" : undefined;
+  // Use unified seller application source so business fields are consistently available.
   const {
     data: allApplications = [],
     isLoading,
     error,
-  } = useSellers(apiStatus ? { status: apiStatus } : undefined);
+  } = useSellers();
   const { mutateAsync: approveApplication } = useApproveSeller();
   const { mutateAsync: rejectApplication } = useRejectSeller();
   const { mutateAsync: archiveUser } = useArchiveUser();
@@ -80,13 +79,14 @@ export default function SellerContent() {
   const sellers: Seller[] =
     allApplications.map((app) => {
       const normalizedStatus = String(app.status || "").toUpperCase();
+      const businessName = app.storeName || "";
 
       return {
         id: app.requestId,
         requestId: app.requestId,
         userId: app.userId || app.user?.id || "",
         name: app.sellerName,
-        storeName: app.storeName || "",
+        storeName: businessName,
         email: app.email,
         status:
           normalizedStatus === "COMPLETED" ||
@@ -97,10 +97,10 @@ export default function SellerContent() {
               ? "rejected"
               : "pending",
         rejectReason: undefined,
-        address: app.address,
+        region: app.region || "N/A",
         username: app.user?.username || "",
         phone: undefined,
-        businessName: app.storeName,
+        businessName,
         businessType: undefined,
       };
     }) || [];
@@ -128,7 +128,8 @@ export default function SellerContent() {
     (seller) =>
       seller.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seller.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+      seller.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      seller.region?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -337,7 +338,7 @@ export default function SellerContent() {
       },
       {
         accessorKey: "storeName",
-        header: "Store Name",
+        header: "Business Name",
         cell: ({ getValue }: any) => (
           <div
             className="max-w-[220px] truncate"
@@ -360,8 +361,8 @@ export default function SellerContent() {
         ),
       },
       {
-        accessorKey: "address",
-        header: "Address",
+        accessorKey: "region",
+        header: "Region",
         cell: ({ getValue }: any) => (
           <div
             className="max-w-[220px] truncate"
@@ -545,20 +546,24 @@ export default function SellerContent() {
                   mode="sellers"
                   showAcceptReject={activeTab === "pending"}
                   activeTab={activeTab}
-                  onArchive={(ids: string[]) => {
-                    const idsArr = ids && ids.length ? ids : null;
-                    setBulkArchiveIds(idsArr);
-                    if (idsArr) {
-                      const names = idsArr.map(
-                        (id) =>
-                          filteredSellers.find((s) => s.id === id)?.name || id,
-                      );
-                      setBulkArchiveNames(names.length ? names : null);
-                    } else {
-                      setBulkArchiveNames(null);
-                    }
-                    setShowArchiveConfirm(true);
-                  }}
+                  onArchive={
+                    activeTab === "approved"
+                      ? undefined
+                      : (ids: string[]) => {
+                        const idsArr = ids && ids.length ? ids : null;
+                        setBulkArchiveIds(idsArr);
+                        if (idsArr) {
+                          const names = idsArr.map(
+                            (id) =>
+                              filteredSellers.find((s) => s.id === id)?.name || id,
+                          );
+                          setBulkArchiveNames(names.length ? names : null);
+                        } else {
+                          setBulkArchiveNames(null);
+                        }
+                        setShowArchiveConfirm(true);
+                      }
+                  }
                   onBulkAccept={async (ids: string[]) => {
                     if (!ids || ids.length === 0) {
                       toast.error("No sellers selected");

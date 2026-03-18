@@ -141,6 +141,8 @@ export default function UserArchivePage() {
             <Card>
               <DataTable
                 data={paginatedUsers}
+                initialPageSize={itemsPerPage}
+                hidePagination
                 mode="users"
                 onArchive={handleUnarchive}
                 onExport={handleExport}

@@ -40,6 +40,8 @@ interface Props {
   simpleActions?: boolean;
   /** When true, selection bar is in archived view and should show Unarchive labels */
   archivedView?: boolean;
+  /** When false, skip local archive confirmation and delegate directly to parent */
+  confirmArchiveAction?: boolean;
 }
 
 export const SelectionBar: React.FC<Props> = ({
@@ -60,6 +62,7 @@ export const SelectionBar: React.FC<Props> = ({
   entityName,
   simpleActions = false,
   archivedView = false,
+  confirmArchiveAction = true,
 }) => {
   const [pendingBulkAction, setPendingBulkAction] = useState<{
     type: 'accept' | 'reject' | 'archive' | 'changeRole' | 'changeStatus';
@@ -130,10 +133,21 @@ export const SelectionBar: React.FC<Props> = ({
                     <Activity className="h-4 w-4 mr-2" />
                     Export Selected
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
-                    <Archive className="h-4 w-4 mr-2 text-destructive" />
-                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
-                  </DropdownMenuItem>
+                  {onArchive && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => {
+                        if (confirmArchiveAction) {
+                          setPendingBulkAction({ type: 'archive' });
+                          return;
+                        }
+                        onArchive(selectedIds);
+                      }}
+                    >
+                      <Archive className="h-4 w-4 mr-2 text-destructive" />
+                      {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
+                    </DropdownMenuItem>
+                  )}
                 </>
               ) : simpleActions ? (
                 <>
@@ -157,10 +171,21 @@ export const SelectionBar: React.FC<Props> = ({
                     <Activity className="h-4 w-4 mr-2" />
                     Export Selected
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
-                    <Archive className="h-4 w-4 mr-2 text-destructive" />
-                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
-                  </DropdownMenuItem>
+                  {onArchive && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => {
+                        if (confirmArchiveAction) {
+                          setPendingBulkAction({ type: 'archive' });
+                          return;
+                        }
+                        onArchive(selectedIds);
+                      }}
+                    >
+                      <Archive className="h-4 w-4 mr-2 text-destructive" />
+                      {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
+                    </DropdownMenuItem>
+                  )}
                 </>
               ) : mode === 'sellers' ? (
                 <>
@@ -199,10 +224,21 @@ export const SelectionBar: React.FC<Props> = ({
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
-                    <Archive className="h-4 w-4 mr-2 text-destructive" />
-                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
-                  </DropdownMenuItem>
+                  {onArchive && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => {
+                        if (confirmArchiveAction) {
+                          setPendingBulkAction({ type: 'archive' });
+                          return;
+                        }
+                        onArchive(selectedIds);
+                      }}
+                    >
+                      <Archive className="h-4 w-4 mr-2 text-destructive" />
+                      {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
+                    </DropdownMenuItem>
+                  )}
                 </>
               ) : (
                 <>
@@ -227,11 +263,22 @@ export const SelectionBar: React.FC<Props> = ({
                     Export Selected
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem className="text-destructive" onClick={() => setPendingBulkAction({ type: 'archive' })}>
-                    <Archive className="h-4 w-4 mr-2 text-destructive" />
-                    {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {onArchive && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => {
+                        if (confirmArchiveAction) {
+                          setPendingBulkAction({ type: 'archive' });
+                          return;
+                        }
+                        onArchive(selectedIds);
+                      }}
+                    >
+                      <Archive className="h-4 w-4 mr-2 text-destructive" />
+                      {archivedView ? 'Unarchive Selected' : 'Archive Selected'}
+                    </DropdownMenuItem>
+                  )}
+                  {/* <DropdownMenuSeparator />
                   <DropdownMenuLabel>Change Role</DropdownMenuLabel>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -280,7 +327,7 @@ export const SelectionBar: React.FC<Props> = ({
                   <DropdownMenuItem onClick={() => setPendingBulkAction({ type: 'changeStatus', data: 'Inactive' })}>
                     <Activity className="h-4 w-4 mr-2" />
                     Set Inactive
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                 </>
               )}
             </DropdownMenuContent>
@@ -315,7 +362,7 @@ export const SelectionBar: React.FC<Props> = ({
         />
       )}
 
-      {pendingBulkAction?.type === 'archive' && (
+      {confirmArchiveAction && pendingBulkAction?.type === 'archive' && onArchive && (
         <ConfirmationPopover
           action={archivedView ? "Unarchive" : "Archive"}
           entity={`${selectedCount} ${mode === 'sellers' ? 'seller' : (entityName ?? 'user')}${selectedCount > 1 ? 's' : ''}`}

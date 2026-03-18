@@ -19,6 +19,7 @@ import PaginationWrapper from "@/components/pagination";
 import { Archive, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUsers, useArchiveUser } from "@/hooks/useUsers";
+import { useSellers } from "@/hooks/useSellers";
 import { DataTable } from "@/components/data-table";
 import TableSkeleton from "@/components/ui/table-skeleton";
 import CardSkeleton from "@/components/ui/card-skeleton";
@@ -56,23 +57,95 @@ export default function UsersManagement() {
     isLoading: loading,
     error: storeError,
   } = useUsers(1, 100);
+  const {
+    data: sellerApplications = [],
+    isLoading: loadingSellers,
+  } = useSellers();
   const { mutateAsync: archiveUser } = useArchiveUser();
 
-  // Show only active users (isActive === true), excluding SUPER_ADMIN
+  // Show only active users (isActive === true), excluding SUPER_ADMIN.
+  // Seller rows are sourced from approved seller applications to stay aligned with Seller Management > Approved tab.
   const users = useMemo(() => {
+    const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
     const total = (allUsers || []).length;
-    const filtered = (allUsers || []).filter(
-      (user) =>
-        user.role?.toUpperCase() !== "SUPER_ADMIN" && user.isActive === true,
-    );
+
+    const baseUsers = (allUsers || []).filter((user) => {
+      if (user.role?.toUpperCase() === "SUPER_ADMIN") return false;
+      if (user.isActive !== true) return false;
+      // Seller rows come from approved seller applications below.
+      if (user.role?.toUpperCase() === "ADMIN") return false;
+      return true;
+    });
+
+    const approvedSellerRows = (sellerApplications || [])
+      .filter((app) => {
+        const normalizedStatus = String(app.status || "").toUpperCase();
+        return (
+          app.isApproved === true ||
+          normalizedStatus === "COMPLETED" ||
+          normalizedStatus === "APPROVED"
+        );
+      })
+      .map((app) => {
+        const firstName = app.user?.firstName || "";
+        const lastName = app.user?.lastName || "";
+        const fullName =
+          app.sellerName ||
+          `${firstName} ${lastName}`.trim() ||
+          app.user?.username ||
+          "Unknown Seller";
+
+        const sellerId = String(app.userId || app.user?.id || app.requestId || "");
+
+        return {
+          id: sellerId,
+          name: fullName,
+          username: app.user?.username || "",
+          email: app.email || app.user?.email || "",
+          phone: "",
+          role: "ADMIN",
+          status: "Active",
+          isActive: true,
+          avatar: app.user?.imageUrl || null,
+          region: "N/A",
+        };
+      });
+
+    // Merge base users + approved sellers without duplicates.
+    const deduped = new Map<string, (typeof baseUsers)[number]>();
+
+    baseUsers.forEach((user) => {
+      const key =
+        String(user.id || "").trim() ||
+        normalize(user.email) ||
+        normalize(user.username);
+      if (!key) return;
+      deduped.set(key, user);
+    });
+
+    approvedSellerRows.forEach((seller) => {
+      const key =
+        String(seller.id || "").trim() ||
+        normalize(seller.email) ||
+        normalize(seller.username);
+      if (!key) return;
+      deduped.set(key, seller as any);
+    });
+
+    const filtered = Array.from(deduped.values());
+
     console.log(
       "[UserPage] Total users from API:",
       total,
-      "| Filtered (active users, excluding SUPER_ADMIN):",
+      "| Base non-seller users:",
+      baseUsers.length,
+      "| Approved sellers from seller-applications:",
+      approvedSellerRows.length,
+      "| Final merged users:",
       filtered.length,
     );
     return filtered;
-  }, [allUsers]);
+  }, [allUsers, sellerApplications]);
 
   const error = storeError ? (storeError as Error).message : null;
 
@@ -296,7 +369,7 @@ export default function UsersManagement() {
         <header>
           <div className="flex items-center gap-3">
             <h1 className="sm:text-3xl text-2xl font-bold">User Management</h1>
-            {loading && <InlineSpinner />}
+            {(loading || loadingSellers) && <InlineSpinner />}
           </div>
           <p className="text-muted-foreground mt-1 mb-5 sm:text-base text-sm">
             Buyers & Sellers Overview
@@ -304,7 +377,7 @@ export default function UsersManagement() {
         </header>
 
         {/* Page-level loading skeleton (header + table) */}
-        {loading && (
+        {(loading || loadingSellers) && (
           <div className="space-y-4">
             <div>
               <Skeleton className="h-8 w-56" />
@@ -322,7 +395,7 @@ export default function UsersManagement() {
         )}
 
         {/* Error State */}
-        {error && !loading && (
+        {error && !loading && !loadingSellers && (
           <Card className="p-8">
             <div className="text-center">
               <p className="text-destructive mb-4">Error: {error}</p>
@@ -332,7 +405,7 @@ export default function UsersManagement() {
         )}
 
         {/* Main Content - Only show when not loading and no error */}
-        {!loading && !error && (
+        {!loading && !loadingSellers && !error && (
           <>
             {/* Search and Filters */}
             <div className="flex items-center">
@@ -479,6 +552,7 @@ export default function UsersManagement() {
                       data={paginatedUsers}
                       initialPageSize={itemsPerPage}
                       hidePagination
+                      confirmArchiveAction={false}
                       mode="users"
                       onExport={(rows) => {
                         try {
@@ -580,11 +654,9 @@ export default function UsersManagement() {
               <ConfirmationPopover
                 action="Archive"
                 entity={
-                  bulkArchiveNames && bulkArchiveNames.length > 1
-                    ? `${bulkArchiveNames.length} Users (${bulkArchiveNames.join(", ")})`
-                    : bulkArchiveNames && bulkArchiveNames.length === 1
-                      ? `User (${bulkArchiveNames[0]})`
-                      : "User"
+                  bulkArchiveIds && bulkArchiveIds.length > 1
+                    ? `${bulkArchiveIds.length} Users`
+                    : "User"
                 }
                 onConfirm={handleArchive}
                 onCancel={() => {

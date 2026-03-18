@@ -25,6 +25,7 @@ export interface SellerApplication {
   storeName?: string; // May not be in the response yet
   email: string;
   address?: string; // May not be in the response yet
+  region?: string; // Region from contact info / user profile
   status?:
   | "PENDING"
   | "APPROVED"

@@ -93,8 +93,8 @@ export default function ChamberInventorySection() {
     const normalizedRole = backendRole.toLowerCase().trim();
     
     // Handle all variations of user roles
-    if (normalizedRole === "user" || normalizedRole === "users" || normalizedRole === "buyer" || normalizedRole === "buyers") {
-      return "Buyers";
+    if (normalizedRole === "user" || normalizedRole === "users" || normalizedRole === "buyer" || normalizedRole === "buyer") {
+      return "Buyer";
     }
     if (normalizedRole === "admin") {
       return "Seller";
@@ -114,7 +114,7 @@ export default function ChamberInventorySection() {
     
     const normalizedRole = backendRole.toLowerCase().trim();
     
-    if (normalizedRole === "user" || normalizedRole === "users" || normalizedRole === "buyer" || normalizedRole === "buyers") {
+    if (normalizedRole === "user" || normalizedRole === "users" || normalizedRole === "buyer" || normalizedRole === "buyer") {
       return "#2E5E4E";
     }
     if (normalizedRole === "admin") {

@@ -37,6 +37,12 @@ export const useSellers = (params?: {
         const userObj = app.user || app.userData || {};
         const firstName = userObj.firstName || app.firstName || "";
         const lastName = userObj.lastName || app.lastName || "";
+        const businessName =
+          app.businessInfo?.businessName ||
+          app.businessInfo?.business_name ||
+          app.businessName ||
+          app.storeName ||
+          "";
         const fullName =
           `${firstName} ${lastName}`.trim() ||
           userObj.username ||
@@ -47,12 +53,17 @@ export const useSellers = (params?: {
           requestId: String(app.id || app.requestId || app._id || ""),
           userId: String(app.userId || userObj.id || userObj._id || ""),
           sellerName: fullName,
-          storeName: app.businessInfo?.businessName || app.storeName || "",
+          storeName: businessName,
           email: userObj.email || app.email || "",
           address:
             app.businessInfo?.businessAddress ||
             app.address ||
             userObj.location ||
+            "",
+          region:
+            app.contactInfo?.region ||
+            app.region ||
+            userObj.region ||
             "",
           currentRole: app.currentRole || userObj.role || "USER",
           requestedRole: app.requestedRole || "SELLER",
@@ -74,7 +85,81 @@ export const useSellers = (params?: {
         };
       });
 
-      return mappedApplications;
+      const withoutBusinessName = mappedApplications.filter(
+        (app) => !String(app.storeName || "").trim() && app.requestId,
+      );
+
+      const withoutRegion = mappedApplications.filter(
+        (app) => !String(app.region || "").trim() && app.requestId,
+      );
+
+      if (withoutBusinessName.length === 0 && withoutRegion.length === 0) {
+        return mappedApplications;
+      }
+
+      const needsDetailIds = Array.from(
+        new Set(
+          [...withoutBusinessName, ...withoutRegion]
+            .map((app) => app.requestId)
+            .filter(Boolean),
+        ),
+      );
+
+      const detailResults = await Promise.allSettled(
+        needsDetailIds.map(async (requestId) => {
+          const detailRes = await api.get(
+            `v1/super-admin/seller-applications/${requestId}`,
+          );
+
+          const payload: any = detailRes.data;
+          let detail: any = null;
+
+          if (payload?.data?.data) detail = payload.data.data;
+          else if (payload?.data) detail = payload.data;
+          else if (payload?.application) detail = payload.application;
+          else detail = payload;
+
+          const businessName =
+            detail?.businessInfo?.businessName ||
+            detail?.businessInfo?.business_name ||
+            detail?.businessName ||
+            detail?.storeName ||
+            "";
+          const region =
+            detail?.contactInfo?.region ||
+            detail?.region ||
+            detail?.user?.region ||
+            detail?.userData?.region ||
+            "";
+
+          return {
+            requestId,
+            businessName: String(businessName || "").trim(),
+            region: String(region || "").trim(),
+          };
+        }),
+      );
+
+      const businessNameByRequestId = new Map<string, string>();
+      const regionByRequestId = new Map<string, string>();
+      detailResults.forEach((result) => {
+        if (result.status !== "fulfilled") return;
+        const { requestId, businessName, region } = result.value;
+        if (!requestId) return;
+        if (businessName) {
+          businessNameByRequestId.set(requestId, businessName);
+        }
+        if (region) {
+          regionByRequestId.set(requestId, region);
+        }
+      });
+
+      return mappedApplications.map((app) => ({
+        ...app,
+        storeName:
+          app.storeName || businessNameByRequestId.get(app.requestId) || "",
+        region: app.region || regionByRequestId.get(app.requestId) || "",
+      }));
     },
   });
 };

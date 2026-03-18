@@ -38,10 +38,12 @@ interface DataTableProps<TData extends AnyRow> {
   simpleActions?: boolean;
   /** When true, selection bar is in archived view and should show Unarchive actions */
   archivedView?: boolean;
+  /** When false, archive confirmation should be handled by parent page */
+  confirmArchiveAction?: boolean;
 }
 
 export function DataTable(props: DataTableProps<any>) {
-  const { data, initialPageSize = 10, columns, onArchive, onBulkChangeRole, onBulkChangeStatus, onBulkAccept, onBulkReject, onExport, mode = 'users', hidePagination, showAcceptReject = true, activeTab, archiveOnly = false, entityName, simpleActions = false, archivedView = false } = props;
+  const { data, initialPageSize = 10, columns, onArchive, onBulkChangeRole, onBulkChangeStatus, onBulkAccept, onBulkReject, onExport, mode = 'users', hidePagination, showAcceptReject = true, activeTab, archiveOnly = false, entityName, simpleActions = false, archivedView = false, confirmArchiveAction = true } = props;
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<any[]>([]);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
@@ -97,21 +99,21 @@ export function DataTable(props: DataTableProps<any>) {
         header: "Name",
         cell: ({ getValue }) => getValue() ?? "N/A",
       },
-      {
-        accessorKey: "username",
-        header: "Username",
-        cell: ({ getValue }) => getValue() ?? "N/A",
-      },
+      // {
+      //   accessorKey: "username",
+      //   header: "Username",
+      //   cell: ({ getValue }) => getValue() ?? "N/A",
+      // },
       {
         accessorKey: "email",
         header: "Email",
         cell: ({ getValue }) => getValue() ?? "N/A",
       },
-      {
-        accessorKey: "phone",
-        header: "Phone",
-        cell: ({ getValue }) => getValue() ?? "N/A",
-      },
+      // {
+      //   accessorKey: "phone",
+      //   header: "Phone",
+      //   cell: ({ getValue }) => getValue() ?? "N/A",
+      // },
       {
         accessorKey: "region",
         header: "Region",
@@ -218,7 +220,7 @@ export function DataTable(props: DataTableProps<any>) {
         selectedRows={selectedRows}
         mode={mode}
         onClear={() => table.resetRowSelection()}
-        onArchive={(ids) => onArchive && onArchive(ids)}
+        onArchive={onArchive ? (ids) => onArchive(ids) : undefined}
         onBulkChangeRole={(ids, newRole) => onBulkChangeRole && onBulkChangeRole(ids, newRole)}
         onBulkChangeStatus={(ids, newStatus) => onBulkChangeStatus && onBulkChangeStatus(ids, newStatus)}
         onBulkAccept={(ids) => onBulkAccept && onBulkAccept(ids)}
@@ -230,6 +232,7 @@ export function DataTable(props: DataTableProps<any>) {
         entityName={entityName}
         simpleActions={simpleActions}
         archivedView={archivedView}
+        confirmArchiveAction={confirmArchiveAction}
       />
 
       <div className="overflow-x-auto bg-card">
